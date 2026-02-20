@@ -2,6 +2,8 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import axios from 'axios';
 
+const API_URL = 'https://specsmart-production.up.railway.app';
+
 const AuthContext = createContext(null);
 
 export const useAuth = () => {
@@ -17,7 +19,6 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [token, setToken] = useState(localStorage.getItem('token'));
 
-  // Configure axios defaults
   useEffect(() => {
     if (token) {
       axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
@@ -27,24 +28,21 @@ export const AuthProvider = ({ children }) => {
     }
   }, [token]);
 
-  // Fetch current user
   const fetchUser = async () => {
     try {
-      const response = await axios.get('/api/auth/me');
+      const response = await axios.get(`${API_URL}/api/auth/me`);
       setUser(response.data.user);
     } catch (error) {
       console.error('Failed to fetch user:', error);
-      // Token might be invalid, clear it
       logout();
     } finally {
       setLoading(false);
     }
   };
 
-  // Register
   const register = async (userData) => {
     try {
-      const response = await axios.post('/api/auth/register', userData);
+      const response = await axios.post(`${API_URL}/api/auth/register`, userData);
       const { token, user } = response.data;
       
       localStorage.setItem('token', token);
@@ -59,10 +57,9 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Login
   const login = async (email, password) => {
     try {
-      const response = await axios.post('/api/auth/login', { email, password });
+      const response = await axios.post(`${API_URL}/api/auth/login`, { email, password });
       const { token, user } = response.data;
       
       localStorage.setItem('token', token);
@@ -77,7 +74,6 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Logout
   const logout = () => {
     localStorage.removeItem('token');
     setToken(null);
@@ -85,7 +81,6 @@ export const AuthProvider = ({ children }) => {
     delete axios.defaults.headers.common['Authorization'];
   };
 
-  // Update user
   const updateUser = (userData) => {
     setUser(prev => ({ ...prev, ...userData }));
   };

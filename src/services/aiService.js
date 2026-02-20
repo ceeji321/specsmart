@@ -1,19 +1,15 @@
 // src/services/aiService.js
 export async function askAI(messages) {
   try {
-    // Get auth token from localStorage
     const token = localStorage.getItem('token');
     
-    // Format messages for your backend
     const formattedMessages = messages.map(msg => {
-      // Handle image messages
       if (msg.role === 'user' && Array.isArray(msg.content)) {
         return {
           role: msg.role,
           content: msg.content
         };
       }
-      // Handle text messages
       return {
         role: msg.role,
         content: msg.content
@@ -22,8 +18,7 @@ export async function askAI(messages) {
 
     console.log('🤖 Sending to AI API:', formattedMessages);
 
-    // Call your backend at /api/ai/chat
-    const response = await fetch('https://specsmart-production.up.railway.app', {
+    const response = await fetch('https://specsmart-production.up.railway.app/api/ai/chat', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -46,7 +41,6 @@ export async function askAI(messages) {
   } catch (error) {
     console.error('❌ AI Service Error:', error);
     
-    // Handle specific error cases
     if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
       throw new Error('Cannot connect to server. Make sure the backend is running on https://specsmart-production.up.railway.app');
     }
@@ -65,7 +59,7 @@ export async function analyzeImage(base64Image, mimeType = 'image/jpeg') {
 
     console.log('📸 Sending image to AI for analysis...');
 
-    const response = await fetch('https://specsmart-production.up.railway.app', {
+    const response = await fetch('https://specsmart-production.up.railway.app/api/ai/chat', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
