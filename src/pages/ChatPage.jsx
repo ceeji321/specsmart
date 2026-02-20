@@ -1,26 +1,46 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import * as tf from '@tensorflow/tfjs';
+import * as mobilenet from '@tensorflow-models/mobilenet';
 import Navbar from '../components/Navbar';
 import { historyData } from '../data/history';
 import { askAI } from '../services/aiService';
 
+// ─── TF Model Cache ───────────────────────────────────────────────────────────
+let cachedModel = null;
+
+async function loadModel() {
+  if (!cachedModel) {
+    console.log('🧠 Loading MobileNet model...');
+    cachedModel = await mobilenet.load({ version: 2, alpha: 1.0 });
+    console.log('✅ MobileNet model loaded!');
+  }
+  return cachedModel;
+}
+
+async function classifyImage(imgElement) {
+  const model = await loadModel();
+  const predictions = await model.classify(imgElement, 15);
+  return predictions
+    .map(p => `${p.className} (${(p.probability * 100).toFixed(1)}%)`)
+    .join(', ');
+}
+
+// ─── Markdown renderer ────────────────────────────────────────────────────────
 function renderMessage(content) {
-  // Simple markdown-like rendering
-  return content
-    .split('\n')
-    .map((line, i) => {
-      if (line.startsWith('**') && line.endsWith('**')) {
-        return <strong key={i} style={{ display: 'block', marginBottom: '4px' }}>{line.slice(2, -2)}</strong>;
-      }
-      if (line.startsWith('• ') || line.startsWith('- ')) {
-        return <div key={i} style={{ paddingLeft: '12px', marginBottom: '2px' }}>• {line.slice(2)}</div>;
-      }
-      if (line.startsWith('🥇') || line.startsWith('🥈') || line.startsWith('🥉') || line.startsWith('✅') || line.startsWith('❌') || line.startsWith('⚠️') || line.startsWith('📱') || line.startsWith('📷') || line.startsWith('💡')) {
-        return <div key={i} style={{ marginBottom: '4px' }}>{line}</div>;
-      }
-      if (line === '') return <div key={i} style={{ marginBottom: '8px' }} />;
-      return <div key={i}>{line}</div>;
-    });
+  return content.split('\n').map((line, i) => {
+    if (line.startsWith('**') && line.endsWith('**')) {
+      return <strong key={i} style={{ display: 'block', marginBottom: '4px' }}>{line.slice(2, -2)}</strong>;
+    }
+    if (line.startsWith('• ') || line.startsWith('- ')) {
+      return <div key={i} style={{ paddingLeft: '12px', marginBottom: '2px' }}>• {line.slice(2)}</div>;
+    }
+    if (['🥇','🥈','🥉','✅','❌','⚠️','📱','📷','💡'].some(e => line.startsWith(e))) {
+      return <div key={i} style={{ marginBottom: '4px' }}>{line}</div>;
+    }
+    if (line === '') return <div key={i} style={{ marginBottom: '8px' }} />;
+    return <div key={i}>{line}</div>;
+  });
 }
 
 export default function ChatPage({ onLogout }) {
@@ -31,26 +51,36 @@ export default function ChatPage({ onLogout }) {
   const [isLoading, setIsLoading] = useState(false);
   const [uploadedFile, setUploadedFile] = useState(null);
   const [uploadedPreview, setUploadedPreview] = useState(null);
+  const [modelStatus, setModelStatus] = useState('');
   const messagesEndRef = useRef();
   const fileRef = useRef();
   const inputRef = useRef();
 
+  // Preload TF model in background on mount
   useEffect(() => {
-    // Load existing history or start new chat
+    setModelStatus('⏳ Loading image AI model...');
+    loadModel()
+      .then(() => {
+        setModelStatus('✅ Image AI ready');
+        setTimeout(() => setModelStatus(''), 2500);
+      })
+      .catch(err => {
+        console.error('Model load failed:', err);
+        setModelStatus('');
+      });
+  }, []);
+
+  useEffect(() => {
     const historyItem = historyData.find(h => h.id === parseInt(id));
     if (historyItem) {
       setMessages(historyItem.messages.map(m => ({ ...m, id: Math.random() })));
     } else {
-      // New chat — check for pending message
       const pending = sessionStorage.getItem('pendingMessage');
       if (pending) {
         sessionStorage.removeItem('pendingMessage');
-        const { content, file } = JSON.parse(pending);
-        if (content) {
-          setTimeout(() => sendMessage(content), 100);
-        }
+        const { content } = JSON.parse(pending);
+        if (content) setTimeout(() => sendMessage(content), 100);
       } else {
-        // Default welcome
         setMessages([{
           id: 0,
           role: 'assistant',
@@ -64,7 +94,7 @@ export default function ChatPage({ onLogout }) {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const sendMessage = async (messageContent, imageData) => {
+  const sendMessage = async (messageContent, imageData, imageFile) => {
     const userMessage = {
       id: Date.now(),
       role: 'user',
@@ -76,16 +106,63 @@ export default function ChatPage({ onLogout }) {
     setInput('');
     setUploadedFile(null);
     setUploadedPreview(null);
+    // ✅ Reset file input so same image can be selected again next time
+    if (fileRef.current) fileRef.current.value = '';
     setIsLoading(true);
 
     try {
-      const apiMessages = [...messages.filter(m => m.role !== 'assistant' || m.id !== 0), userMessage]
-        .map(m => ({
+      let apiMessages;
+
+      if (imageData) {
+        // ── FRONTEND: classify image with TensorFlow.js ──────────────────────
+        setModelStatus('🔍 Analyzing image with TensorFlow.js...');
+
+        // Create an img element for TF to process
+        const imgEl = new Image();
+        imgEl.src = `data:image/jpeg;base64,${imageData}`;
+        await new Promise((res, rej) => {
+          imgEl.onload = res;
+          imgEl.onerror = rej;
+        });
+
+        let concepts = '';
+        try {
+          concepts = await classifyImage(imgEl);
+          console.log('🏷️ TF MobileNet labels:', concepts);
+        } catch (tfErr) {
+          console.warn('TF classification failed, using fallback:', tfErr);
+          concepts = 'electronic device, hardware component, circuit board, computer part';
+        }
+
+        setModelStatus('');
+
+        // ── BACKEND: send labels to Groq for tech advisor response ───────────
+        const userQuery = messageContent || 'Identify this hardware component and provide its full specifications.';
+
+        apiMessages = [{
+          role: 'user',
+          content: `A hardware image was analyzed by TensorFlow.js MobileNet (running in the browser) and detected these visual elements: [${concepts}].
+
+Based on these labels, ${userQuery}
+
+Please:
+1. Identify what PC hardware component or tech device this likely is
+2. Provide typical specifications for this component/device
+3. Give approximate Philippine Peso price range
+4. Suggest common use cases
+5. If it does not appear to be a tech component, say so politely`
+        }];
+
+      } else {
+        // ── Text only: send conversation history to Groq ─────────────────────
+        apiMessages = [
+          ...messages.filter(m => m.role !== 'assistant' || m.id !== 0),
+          userMessage
+        ].map(m => ({
           role: m.role,
-          content: m.image
-            ? [{ type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: m.image } }, { type: 'text', text: m.content || 'What hardware is in this image? Identify it and provide full specs.' }]
-            : m.content
+          content: typeof m.content === 'string' ? m.content : JSON.stringify(m.content)
         }));
+      }
 
       const response = await askAI(apiMessages);
 
@@ -94,11 +171,14 @@ export default function ChatPage({ onLogout }) {
         role: 'assistant',
         content: response
       }]);
+
     } catch (err) {
+      console.error('Chat error:', err);
+      setModelStatus('');
       setMessages(prev => [...prev, {
         id: Date.now() + 1,
         role: 'assistant',
-        content: '⚠️ Sorry, I couldn\'t connect to the AI service right now. Please check that your API key is configured in the backend .env file (`ANTHROPIC_API_KEY`).'
+        content: err.message || '⚠️ Something went wrong. Make sure your backend is running and GROQ_API_KEY is set in .env'
       }]);
     } finally {
       setIsLoading(false);
@@ -113,7 +193,11 @@ export default function ChatPage({ onLogout }) {
       const reader = new FileReader();
       reader.onload = async (ev) => {
         const base64 = ev.target.result.split(',')[1];
-        await sendMessage(input || 'Identify this hardware component and provide its full specifications.', base64);
+        await sendMessage(
+          input || 'Identify this hardware component and provide its full specifications.',
+          base64,
+          uploadedFile
+        );
       };
       reader.readAsDataURL(uploadedFile);
     } else {
@@ -125,16 +209,15 @@ export default function ChatPage({ onLogout }) {
     const file = e.target.files[0];
     if (!file) return;
     setUploadedFile(file);
-    const url = URL.createObjectURL(file);
-    setUploadedPreview(url);
+    setUploadedPreview(URL.createObjectURL(file));
   };
 
   return (
     <div className="page" style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
       <Navbar onLogout={onLogout} />
 
-      {/* Back button */}
-      <div style={{ padding: '12px 24px 0', maxWidth: '800px', margin: '0 auto', width: '100%' }}>
+      {/* Back button + model status */}
+      <div style={{ padding: '12px 24px 0', maxWidth: '800px', margin: '0 auto', width: '100%', display: 'flex', alignItems: 'center', gap: '12px' }}>
         <button
           onClick={() => navigate(-1)}
           className="btn btn-ghost"
@@ -145,6 +228,11 @@ export default function ChatPage({ onLogout }) {
           </svg>
           Back
         </button>
+        {modelStatus && (
+          <span style={{ fontSize: '12px', color: 'var(--text-3)', fontStyle: 'italic' }}>
+            {modelStatus}
+          </span>
+        )}
       </div>
 
       {/* Messages */}
@@ -185,7 +273,6 @@ export default function ChatPage({ onLogout }) {
               </div>
             </div>
           )}
-
           <div ref={messagesEndRef} />
         </div>
       </div>
@@ -193,15 +280,21 @@ export default function ChatPage({ onLogout }) {
       {/* Input area */}
       <div className="chat-wrapper">
         <div style={{ width: '100%', maxWidth: '760px' }}>
-          {/* Image preview */}
           {uploadedPreview && (
-            <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '10px 14px', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{
+              background: 'var(--bg-2)', border: '1px solid var(--border)',
+              borderRadius: 'var(--radius)', padding: '10px 14px',
+              marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '12px'
+            }}>
               <img src={uploadedPreview} alt="preview" style={{ width: '40px', height: '40px', objectFit: 'cover', borderRadius: '6px' }} />
               <div>
                 <div style={{ fontSize: '12px', fontWeight: '500', color: 'var(--text)' }}>{uploadedFile?.name}</div>
-                <div style={{ fontSize: '11px', color: 'var(--text-3)' }}>Ready to analyze</div>
+                <div style={{ fontSize: '11px', color: 'var(--text-3)' }}>Ready to analyze with TensorFlow.js</div>
               </div>
-              <button onClick={() => { setUploadedFile(null); setUploadedPreview(null); }} style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-3)' }}>
+              <button
+                onClick={() => { setUploadedFile(null); setUploadedPreview(null); }}
+                style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-3)' }}
+              >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
                 </svg>
@@ -211,14 +304,18 @@ export default function ChatPage({ onLogout }) {
 
           <form className="chat-bar" onSubmit={handleSubmit} style={{ borderRadius: 'var(--radius)' }}>
             <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleFileChange} />
-            <button type="button" className="upload-btn" onClick={() => fileRef.current.click()} title="Upload hardware image for AI identification">
+            <button type="button" className="upload-btn" onClick={() => fileRef.current.click()} title="Upload hardware image">
               {uploadedFile ? (
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2">
-                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                  <circle cx="8.5" cy="8.5" r="1.5"/>
+                  <polyline points="21 15 16 10 5 21"/>
                 </svg>
               ) : (
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                  <polyline points="17 8 12 3 7 8"/>
+                  <line x1="12" y1="3" x2="12" y2="15"/>
                 </svg>
               )}
             </button>

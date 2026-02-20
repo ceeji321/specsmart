@@ -1,19 +1,100 @@
+// src/services/aiService.js
 export async function askAI(messages) {
   try {
-    const response = await fetch('http://localhost:3000/api/chat', {
+    // Get auth token from localStorage
+    const token = localStorage.getItem('token');
+    
+    // Format messages for your backend
+    const formattedMessages = messages.map(msg => {
+      // Handle image messages
+      if (msg.role === 'user' && Array.isArray(msg.content)) {
+        return {
+          role: msg.role,
+          content: msg.content
+        };
+      }
+      // Handle text messages
+      return {
+        role: msg.role,
+        content: msg.content
+      };
+    });
+
+    console.log('🤖 Sending to AI API:', formattedMessages);
+
+    // Call your backend at /api/ai/chat
+    const response = await fetch('http://localhost:5000/api/ai/chat', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ messages })
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token && { 'Authorization': `Bearer ${token}` })
+      },
+      body: JSON.stringify({ 
+        messages: formattedMessages
+      })
     });
 
     if (!response.ok) {
-      throw new Error('API request failed');
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || `API request failed with status ${response.status}`);
     }
 
     const data = await response.json();
-    return data.response;
+    console.log('✅ AI Response received:', data);
+    
+    return data.content;
   } catch (error) {
-    console.error('AI Service Error:', error);
+    console.error('❌ AI Service Error:', error);
+    
+    // Handle specific error cases
+    if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+      throw new Error('Cannot connect to server. Make sure the backend is running on http://localhost:5000');
+    }
+    
+    if (error.message.includes('Rate limit exceeded')) {
+      throw new Error('Too many requests. Please wait a moment and try again.');
+    }
+    
     throw error;
   }
 }
+
+export async function analyzeImage(base64Image, mimeType = 'image/jpeg') {
+  try {
+    const token = localStorage.getItem('token');
+
+    console.log('📸 Sending image to AI for analysis...');
+
+    const response = await fetch('http://localhost:5000/api/ai/analyze-image', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token && { 'Authorization': `Bearer ${token}` })
+      },
+      body: JSON.stringify({ 
+        base64Image,
+        mimeType
+      })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || `Image analysis failed with status ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log('✅ Image analysis received:', data);
+    
+    return data.content;
+  } catch (error) {
+    console.error('❌ Image Analysis Error:', error);
+    
+    if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+      throw new Error('Cannot connect to server. Make sure the backend is running.');
+    }
+    
+    throw error;
+  }
+}
+
+export default { askAI, analyzeImage };

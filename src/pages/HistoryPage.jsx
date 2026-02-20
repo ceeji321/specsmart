@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
-import { historyData, getHistoryByDate } from '../data/history';
+import { historyData } from '../data/history';
 
-export default function HistoryPage({ onLogout }) {
+export default function HistoryPage() {
   const [items, setItems] = useState(historyData);
   const [selected, setSelected] = useState(new Set());
   const navigate = useNavigate();
@@ -74,7 +74,7 @@ export default function HistoryPage({ onLogout }) {
 
   return (
     <div className="page">
-      <Navbar onLogout={onLogout} />
+      <Navbar />
 
       <div className="page-content" style={{ maxWidth: '720px' }}>
         <div className="section-heading">

@@ -26,7 +26,7 @@
 html { scroll-behavior: smooth; }
 
 body {
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'DM Sans', "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", "Segoe UI Symbol", sans-serif;
   background: var(--bg);
   color: var(--text);
   min-height: 100vh;
@@ -41,7 +41,9 @@ h1, h2, h3, h4, h5 {
 ::-webkit-scrollbar-track { background: var(--bg-2); }
 ::-webkit-scrollbar-thumb { background: var(--border-light); border-radius: 3px; }
 
-/* Navbar */
+/* ========================================
+   NAVBAR WITH NAVIGATION LINKS
+   ======================================== */
 .navbar {
   position: sticky;
   top: 0;
@@ -63,6 +65,7 @@ h1, h2, h3, h4, h5 {
   color: var(--text);
   text-decoration: none;
   letter-spacing: -0.5px;
+  cursor: pointer;
 }
 
 .nav-logo span { color: var(--accent); }
@@ -101,6 +104,7 @@ h1, h2, h3, h4, h5 {
 /* Profile dropdown */
 .profile-wrapper {
   position: relative;
+  margin-left: 8px;
 }
 
 .profile-btn {
@@ -115,7 +119,10 @@ h1, h2, h3, h4, h5 {
   transition: all 0.2s;
 }
 
-.profile-btn:hover { border-color: var(--accent); }
+.profile-btn:hover { 
+  border-color: var(--accent); 
+  background: var(--bg-2);
+}
 
 .profile-avatar {
   width: 32px;
@@ -141,7 +148,7 @@ h1, h2, h3, h4, h5 {
   position: absolute;
   top: calc(100% + 8px);
   right: 0;
-  width: 220px;
+  min-width: 220px;
   background: var(--bg-2);
   border: 1px solid var(--border-light);
   border-radius: var(--radius);
@@ -151,12 +158,7 @@ h1, h2, h3, h4, h5 {
   pointer-events: none;
   transform: translateY(-8px);
   transition: all 0.2s;
-}
-
-.profile-wrapper:hover .profile-dropdown {
-  opacity: 1;
-  pointer-events: all;
-  transform: translateY(0);
+  z-index: 1000;
 }
 
 .profile-dropdown-header {
@@ -191,13 +193,68 @@ h1, h2, h3, h4, h5 {
   background: none;
   width: 100%;
   text-align: left;
+  font-family: 'DM Sans', sans-serif;
 }
 
-.dropdown-item:hover { background: var(--bg-3); color: var(--text); }
-.dropdown-item.danger:hover { color: var(--red); background: rgba(248,113,113,0.08); }
-.dropdown-divider { height: 1px; background: var(--border); margin: 4px 0; }
+.dropdown-item:hover { 
+  background: var(--bg-3); 
+  color: var(--text); 
+}
 
-/* Buttons */
+.dropdown-item.danger {
+  color: var(--red);
+}
+
+.dropdown-item.danger:hover { 
+  color: var(--red); 
+  background: rgba(248,113,113,0.08); 
+}
+
+.dropdown-divider { 
+  height: 1px; 
+  background: var(--border); 
+  margin: 4px 0; 
+}
+
+/* ========================================
+   EMOJI RENDERING FIX
+   ======================================== */
+.device-card-img {
+  font-family: "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", "Segoe UI Symbol", sans-serif !important;
+  font-size: 48px !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 120px;
+  width: 100%;
+  aspect-ratio: 4/3;
+  background: var(--bg-3);
+  border-bottom: 1px solid var(--border);
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Force emoji rendering for all common emoji elements */
+.hero-badge,
+.feature-icon,
+span[style*="fontSize: '20px'"],
+span[style*="fontSize: '52px'"],
+div[style*="fontSize: '36px'"],
+div[style*="fontSize: '48px'"] {
+  font-family: "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", "Segoe UI Symbol", sans-serif !important;
+}
+
+/* Windows emoji font support */
+@font-face {
+  font-family: 'Segoe UI Emoji';
+  src: local('Segoe UI Emoji');
+  unicode-range: U+1F300-1F5FF, U+1F600-1F64F, U+1F680-1F6FF, U+2600-26FF;
+}
+
+/* ========================================
+   BUTTONS
+   ======================================== */
 .btn {
   display: inline-flex;
   align-items: center;
@@ -217,23 +274,35 @@ h1, h2, h3, h4, h5 {
   background: var(--accent);
   color: white;
 }
-.btn-primary:hover { background: var(--accent-2); transform: translateY(-1px); box-shadow: 0 4px 20px rgba(91,138,240,0.3); }
+.btn-primary:hover { 
+  background: var(--accent-2); 
+  transform: translateY(-1px); 
+  box-shadow: 0 4px 20px rgba(91,138,240,0.3); 
+}
 
 .btn-ghost {
   background: transparent;
   color: var(--text-2);
   border: 1px solid var(--border-light);
 }
-.btn-ghost:hover { background: var(--bg-3); color: var(--text); border-color: var(--border-light); }
+.btn-ghost:hover { 
+  background: var(--bg-3); 
+  color: var(--text); 
+  border-color: var(--border-light); 
+}
 
 .btn-danger {
   background: rgba(248,113,113,0.1);
   color: var(--red);
   border: 1px solid rgba(248,113,113,0.2);
 }
-.btn-danger:hover { background: rgba(248,113,113,0.2); }
+.btn-danger:hover { 
+  background: rgba(248,113,113,0.2); 
+}
 
-/* Cards */
+/* ========================================
+   DEVICE CARDS
+   ======================================== */
 .device-card {
   background: var(--bg-2);
   border: 1px solid var(--border);
@@ -249,17 +318,6 @@ h1, h2, h3, h4, h5 {
   border-color: var(--accent);
   transform: translateY(-3px);
   box-shadow: 0 8px 32px rgba(91,138,240,0.15);
-}
-
-.device-card-img {
-  width: 100%;
-  aspect-ratio: 4/3;
-  background: var(--bg-3);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 48px;
-  border-bottom: 1px solid var(--border);
 }
 
 .device-card-body { padding: 14px 16px; }
@@ -294,7 +352,9 @@ h1, h2, h3, h4, h5 {
   color: var(--accent);
 }
 
-/* Search bar */
+/* ========================================
+   SEARCH BAR
+   ======================================== */
 .search-wrapper {
   position: relative;
   width: 100%;
@@ -320,6 +380,7 @@ h1, h2, h3, h4, h5 {
 }
 
 .search-input::placeholder { color: var(--text-3); }
+
 .search-icon {
   position: absolute;
   left: 16px;
@@ -329,7 +390,9 @@ h1, h2, h3, h4, h5 {
   pointer-events: none;
 }
 
-/* Page layout */
+/* ========================================
+   PAGE LAYOUT
+   ======================================== */
 .page { min-height: 100vh; background: var(--bg); }
 
 .page-content {
@@ -338,7 +401,9 @@ h1, h2, h3, h4, h5 {
   padding: 32px 24px;
 }
 
-/* AI Chat */
+/* ========================================
+   AI CHAT BAR
+   ======================================== */
 .chat-wrapper {
   position: fixed;
   bottom: 0;
@@ -392,9 +457,12 @@ h1, h2, h3, h4, h5 {
   flex-shrink: 0;
 }
 
-.chat-send:hover { background: var(--accent-2); transform: scale(1.05); }
+.chat-send:hover { 
+  background: var(--accent-2); 
+  transform: scale(1.05); 
+}
 
-/* Upload btn */
+/* Upload button */
 .upload-btn {
   width: 38px;
   height: 38px;
@@ -410,9 +478,14 @@ h1, h2, h3, h4, h5 {
   flex-shrink: 0;
 }
 
-.upload-btn:hover { border-color: var(--accent); color: var(--accent); }
+.upload-btn:hover { 
+  border-color: var(--accent); 
+  color: var(--accent); 
+}
 
-/* Tags/filters */
+/* ========================================
+   FILTERS / TAGS
+   ======================================== */
 .filter-row {
   display: flex;
   gap: 8px;
@@ -438,7 +511,9 @@ h1, h2, h3, h4, h5 {
   color: var(--accent);
 }
 
-/* Animations */
+/* ========================================
+   ANIMATIONS
+   ======================================== */
 @keyframes fadeUp {
   from { opacity: 0; transform: translateY(20px); }
   to { opacity: 1; transform: translateY(0); }
@@ -452,7 +527,9 @@ h1, h2, h3, h4, h5 {
 .fade-up { animation: fadeUp 0.5s ease forwards; }
 .fade-in { animation: fadeIn 0.3s ease forwards; }
 
-/* Modal */
+/* ========================================
+   MODAL
+   ======================================== */
 .modal-overlay {
   position: fixed;
   inset: 0;
@@ -475,6 +552,7 @@ h1, h2, h3, h4, h5 {
   padding: 32px;
   box-shadow: var(--shadow);
   animation: fadeUp 0.3s ease;
+  position: relative;
 }
 
 .modal-title {
@@ -484,10 +562,22 @@ h1, h2, h3, h4, h5 {
   margin-bottom: 6px;
 }
 
-.modal-sub { font-size: 14px; color: var(--text-2); margin-bottom: 24px; }
+.modal-sub { 
+  font-size: 14px; 
+  color: var(--text-2); 
+  margin-bottom: 24px; 
+}
 
 .form-group { margin-bottom: 16px; }
-.form-label { display: block; font-size: 13px; font-weight: 500; color: var(--text-2); margin-bottom: 6px; }
+
+.form-label { 
+  display: block; 
+  font-size: 13px; 
+  font-weight: 500; 
+  color: var(--text-2); 
+  margin-bottom: 6px; 
+}
+
 .form-input {
   width: 100%;
   padding: 10px 14px;
@@ -500,13 +590,30 @@ h1, h2, h3, h4, h5 {
   outline: none;
   transition: border-color 0.2s;
 }
+
 .form-input:focus { border-color: var(--accent); }
 .form-input::placeholder { color: var(--text-3); }
 
-.modal-footer { margin-top: 20px; text-align: center; font-size: 13px; color: var(--text-2); }
-.modal-footer a { color: var(--accent); cursor: pointer; }
+.modal-footer { 
+  margin-top: 20px; 
+  text-align: center; 
+  font-size: 13px; 
+  color: var(--text-2); 
+}
 
-/* Section heading */
+.modal-footer a { 
+  color: var(--accent); 
+  cursor: pointer; 
+  text-decoration: none;
+}
+
+.modal-footer a:hover {
+  text-decoration: underline;
+}
+
+/* ========================================
+   SECTION HEADING
+   ======================================== */
 .section-heading {
   font-family: 'Syne', sans-serif;
   font-size: 20px;
@@ -517,7 +624,9 @@ h1, h2, h3, h4, h5 {
   gap: 10px;
 }
 
-/* Grid */
+/* ========================================
+   GRID LAYOUTS
+   ======================================== */
 .devices-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
@@ -525,7 +634,9 @@ h1, h2, h3, h4, h5 {
   margin-bottom: 100px;
 }
 
-/* Compare page */
+/* ========================================
+   COMPARE PAGE
+   ======================================== */
 .compare-table {
   width: 100%;
   border-collapse: collapse;
@@ -551,6 +662,7 @@ h1, h2, h3, h4, h5 {
   justify-content: center;
   font-size: 36px;
   margin: 0 auto 12px;
+  font-family: "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", "Segoe UI Symbol", sans-serif !important;
 }
 
 .compare-row td {
@@ -560,7 +672,9 @@ h1, h2, h3, h4, h5 {
   vertical-align: top;
 }
 
-.compare-row:nth-child(even) td { background: rgba(255,255,255,0.01); }
+.compare-row:nth-child(even) td { 
+  background: rgba(255,255,255,0.01); 
+}
 
 .compare-label {
   color: var(--text-2);
@@ -571,10 +685,16 @@ h1, h2, h3, h4, h5 {
 
 .compare-value { color: var(--text); }
 
-.compare-better { color: var(--green); font-weight: 500; }
+.compare-better { 
+  color: var(--green); 
+  font-weight: 500; 
+}
 
-/* History */
+/* ========================================
+   HISTORY PAGE
+   ======================================== */
 .history-section { margin-bottom: 28px; }
+
 .history-section-label {
   font-size: 11px;
   font-weight: 600;
@@ -637,7 +757,9 @@ h1, h2, h3, h4, h5 {
   border: 1px solid var(--border);
 }
 
-/* Chat conversation */
+/* ========================================
+   CHAT CONVERSATION
+   ======================================== */
 .chat-messages {
   max-width: 760px;
   margin: 0 auto;
@@ -699,7 +821,9 @@ h1, h2, h3, h4, h5 {
   color: white;
 }
 
-/* Landing */
+/* ========================================
+   LANDING PAGE
+   ======================================== */
 .landing-hero {
   min-height: 100vh;
   display: flex;
@@ -754,7 +878,12 @@ h1, h2, h3, h4, h5 {
   margin-bottom: 40px;
 }
 
-.hero-cta { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+.hero-cta { 
+  display: flex; 
+  gap: 12px; 
+  flex-wrap: wrap; 
+  justify-content: center; 
+}
 
 .features-grid {
   display: grid;
@@ -791,9 +920,15 @@ h1, h2, h3, h4, h5 {
   margin-bottom: 6px;
 }
 
-.feature-desc { font-size: 13px; color: var(--text-2); line-height: 1.5; }
+.feature-desc { 
+  font-size: 13px; 
+  color: var(--text-2); 
+  line-height: 1.5; 
+}
 
-/* Typing indicator */
+/* ========================================
+   TYPING INDICATOR
+   ======================================== */
 @keyframes blink {
   0%, 80%, 100% { opacity: 0; }
   40% { opacity: 1; }
@@ -810,9 +945,18 @@ h1, h2, h3, h4, h5 {
 .typing-dot:nth-child(2) { animation-delay: 0.2s; }
 .typing-dot:nth-child(3) { animation-delay: 0.4s; }
 
-/* Responsive */
+/* ========================================
+   RESPONSIVE
+   ======================================== */
 @media (max-width: 640px) {
   .navbar { padding: 0 16px; }
   .page-content { padding: 20px 16px; }
-  .devices-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  .devices-grid { 
+    grid-template-columns: repeat(2, 1fr); 
+    gap: 12px; 
+  }
+  .hero-title { font-size: 42px; }
+  .features-grid {
+    grid-template-columns: 1fr;
+  }
 }

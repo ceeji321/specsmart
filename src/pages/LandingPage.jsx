@@ -1,33 +1,44 @@
-import { Link, useNavigate } from 'react-router-dom';
+// src/pages/LandingPage.jsx
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+import { useState, useEffect } from 'react';
+import Navbar from '../components/Navbar';
+import AuthModal from '../components/Auth/AuthModal';
 
-export default function LandingPage({ isLoggedIn, onSignIn }) {
+export default function LandingPage() {
   const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
+  const [showAuth, setShowAuth] = useState(false);
+  const [authMode, setAuthMode] = useState('login');
+
+  // Redirect to dashboard if already logged in
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/dashboard');
+    }
+  }, [isAuthenticated, navigate]);
+
+  const openAuth = (mode) => { setAuthMode(mode); setShowAuth(true); };
 
   const handleGetStarted = () => {
-    if (isLoggedIn) navigate('/dashboard');
-    else onSignIn();
+    if (isAuthenticated) navigate('/dashboard');
+    else openAuth('register');
+  };
+
+  const handleBrowse = () => {
+    if (isAuthenticated) navigate('/dashboard');
+    else openAuth('login');
+  };
+
+  const scrollTo = (id) => {
+    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
   };
 
   return (
     <div className="page">
-      {/* Navbar */}
-      <nav className="navbar">
-        <span className="nav-logo">Spec<span>Smart</span></span>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <Link to="/" style={{ fontSize: '14px', color: 'var(--text-2)', textDecoration: 'none' }}>About</Link>
-          <Link to="/" style={{ fontSize: '14px', color: 'var(--text-2)', textDecoration: 'none' }}>Contact</Link>
-          {isLoggedIn ? (
-            <Link to="/dashboard" className="btn btn-primary" style={{ padding: '8px 18px', fontSize: '13px' }}>Dashboard</Link>
-          ) : (
-            <button className="btn btn-primary" onClick={onSignIn} style={{ padding: '8px 18px', fontSize: '13px' }}>
-              Sign In
-            </button>
-          )}
-        </div>
-      </nav>
-
-      {/* Hero */}
-      <section className="landing-hero">
+      <Navbar />
+      
+      <section className="landing-hero" style={{ paddingTop: '80px' }}>
         <div className="hero-bg" />
 
         <div className="hero-badge" style={{ animationDelay: '0s' }}>
@@ -37,9 +48,7 @@ export default function LandingPage({ isLoggedIn, onSignIn }) {
           AI-Powered Tech Advisor
         </div>
 
-        <h1 className="hero-title fade-up">
-          Your Smartest<br />Tech Companion
-        </h1>
+        <h1 className="hero-title fade-up">Your Smartest<br />Tech Companion</h1>
 
         <p className="hero-sub fade-up" style={{ animationDelay: '0.1s' }}>
           Compare CPUs, GPUs, smartphones, keyboards, and mice. Ask anything about PC hardware — SpecSmart AI gives you expert answers in seconds.
@@ -52,12 +61,11 @@ export default function LandingPage({ isLoggedIn, onSignIn }) {
               <path d="M5 12h14M12 5l7 7-7 7"/>
             </svg>
           </button>
-          <button className="btn btn-ghost" onClick={handleGetStarted} style={{ padding: '14px 28px', fontSize: '15px' }}>
+          <button className="btn btn-ghost" onClick={handleBrowse} style={{ padding: '14px 28px', fontSize: '15px' }}>
             Browse Devices
           </button>
         </div>
 
-        {/* Features */}
         <div className="features-grid fade-up" style={{ animationDelay: '0.4s' }}>
           <div className="feature-card">
             <div className="feature-icon">🤖</div>
@@ -82,17 +90,50 @@ export default function LandingPage({ isLoggedIn, onSignIn }) {
         </div>
       </section>
 
+      {/* About Section */}
+      <section id="about" style={{ padding: '100px 24px', maxWidth: '800px', margin: '0 auto', textAlign: 'center' }}>
+        <div className="hero-badge" style={{ margin: '0 auto 20px' }}>About Us</div>
+        <h2 style={{ fontFamily: 'Syne, sans-serif', fontSize: '2.2rem', fontWeight: 800, marginBottom: '20px', color: 'var(--text)' }}>
+          Built for Tech Enthusiasts
+        </h2>
+        <p style={{ fontSize: '16px', color: 'var(--text-2)', lineHeight: 1.8, marginBottom: '16px' }}>
+          SpecSmart is an AI-powered tech companion built to help you make smarter hardware decisions. Whether you're building a PC, picking a new phone, or comparing peripherals, we give you instant, accurate, and easy-to-understand spec comparisons.
+        </p>
+        <p style={{ fontSize: '16px', color: 'var(--text-2)', lineHeight: 1.8 }}>
+          Our platform combines a comprehensive device database with cutting-edge AI to deliver expert-level advice to everyone — from first-time buyers to seasoned enthusiasts.
+        </p>
+      </section>
+
+      {/* Contact Section */}
+      <section id="contact" style={{ padding: '100px 24px', maxWidth: '600px', margin: '0 auto', textAlign: 'center', borderTop: '1px solid var(--border)' }}>
+        <div className="hero-badge" style={{ margin: '0 auto 20px' }}>Contact</div>
+        <h2 style={{ fontFamily: 'Syne, sans-serif', fontSize: '2.2rem', fontWeight: 800, marginBottom: '20px', color: 'var(--text)' }}>
+          Get In Touch
+        </h2>
+        <p style={{ fontSize: '16px', color: 'var(--text-2)', lineHeight: 1.8, marginBottom: '32px' }}>
+          Have questions, feedback, or want to partner with us? We'd love to hear from you.
+        </p>
+        <a href="mailto:support@specsmart.com" className="btn btn-primary" style={{ padding: '14px 32px', fontSize: '15px' }}>
+          support@specsmart.com
+        </a>
+      </section>
+
       {/* Footer */}
       <footer style={{ borderTop: '1px solid var(--border)', padding: '28px 24px', textAlign: 'center' }}>
-        <p style={{ fontSize: '13px', color: 'var(--text-3)', marginBottom: '12px' }}>
-          © 2026 SpecSmart. All rights reserved.
-        </p>
+        <p style={{ fontSize: '13px', color: 'var(--text-3)', marginBottom: '12px' }}>© 2026 SpecSmart. All rights reserved.</p>
         <div style={{ display: 'flex', gap: '20px', justifyContent: 'center' }}>
-          {['About', 'Contact', 'Privacy Policy', 'Terms of Service'].map(l => (
-            <a key={l} href="#" style={{ fontSize: '13px', color: 'var(--text-3)', textDecoration: 'none' }}>{l}</a>
+          {[['About', 'about'], ['Contact', 'contact']].map(([label, id]) => (
+            <button key={id} onClick={() => scrollTo(id)}
+              style={{ background: 'none', border: 'none', fontSize: '13px', color: 'var(--text-3)', cursor: 'pointer' }}>
+              {label}
+            </button>
           ))}
+          <a href="#" style={{ fontSize: '13px', color: 'var(--text-3)', textDecoration: 'none' }}>Privacy Policy</a>
+          <a href="#" style={{ fontSize: '13px', color: 'var(--text-3)', textDecoration: 'none' }}>Terms of Service</a>
         </div>
       </footer>
+
+      <AuthModal isOpen={showAuth} onClose={() => setShowAuth(false)} defaultMode={authMode} />
     </div>
   );
 }

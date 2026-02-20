@@ -2,9 +2,8 @@ import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import { devices, categories } from '../data/devices';
-import { historyData } from '../data/history';
 
-export default function Dashboard({ onLogout }) {
+export default function Dashboard() {
   const [search, setSearch] = useState('');
   const [activeCategory, setActiveCategory] = useState('All');
   const [chatInput, setChatInput] = useState('');
@@ -14,7 +13,8 @@ export default function Dashboard({ onLogout }) {
 
   const filtered = devices.filter(d => {
     const matchCat = activeCategory === 'All' || d.category === activeCategory;
-    const matchSearch = !search || d.name.toLowerCase().includes(search.toLowerCase()) ||
+    const matchSearch = !search || 
+      d.name.toLowerCase().includes(search.toLowerCase()) ||
       d.category.toLowerCase().includes(search.toLowerCase()) ||
       d.brand.toLowerCase().includes(search.toLowerCase()) ||
       d.specs.toLowerCase().includes(search.toLowerCase());
@@ -43,7 +43,7 @@ export default function Dashboard({ onLogout }) {
 
   return (
     <div className="page">
-      <Navbar onLogout={onLogout} />
+      <Navbar />
 
       <div className="page-content">
         {/* Search */}

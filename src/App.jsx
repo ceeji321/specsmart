@@ -1,65 +1,67 @@
-import { useState } from 'react';
+// src/App.jsx
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { useAuth } from './contexts/AuthContext';
 import LandingPage from './pages/LandingPage';
 import Dashboard from './pages/Dashboard';
 import ComparePage from './pages/ComparePage';
 import HistoryPage from './pages/HistoryPage';
 import ChatPage from './pages/ChatPage';
-import AuthModal from './components/Auth/AuthModal.jsx';
+import AdminPanel from './pages/AdminPanel';
+import ArchiveHistory from './pages/ArchiveHistory';
+import DeletedHistory from './pages/DeletedHistory';
 
+function PrivateRoute({ children }) {
+  const { isAuthenticated, isAdmin, loading } = useAuth();
+  if (loading) return <div style={{ background: '#0a0a0f', height: '100vh' }} />;
+  if (!isAuthenticated) return <Navigate to="/" />;
+  if (isAdmin) return <Navigate to="/admin" />;
+  return children;
+}
 
-// Mock auth context
-export const mockUser = {
-  name: 'Alex Mercer',
-  username: '@merceralex',
-  avatar: null,
-};
+function AdminRoute({ children }) {
+  const { isAuthenticated, isManager, loading } = useAuth();
+  if (loading) return <div style={{ background: '#0a0a0f', height: '100vh' }} />;
+  if (!isAuthenticated) return <Navigate to="/" />;
+  if (!isManager) return <Navigate to="/dashboard" />;
+  return children;
+}
+
+function PublicRoute({ children }) {
+  const { isAuthenticated, isAdmin, loading } = useAuth();
+  if (loading) return <div style={{ background: '#0a0a0f', height: '100vh' }} />;
+  if (!isAuthenticated) return children;
+  return isAdmin ? <Navigate to="/admin" /> : <Navigate to="/dashboard" />;
+}
 
 function App() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [showAuth, setShowAuth] = useState(false);
-  const [authMode, setAuthMode] = useState('login');
-
-  const handleLogin = () => { setIsLoggedIn(true); setShowAuth(false); };
-  const handleLogout = () => setIsLoggedIn(false);
-
   return (
     <Router>
-      {showAuth && (
-        <AuthModal
-          mode={authMode}
-          onClose={() => setShowAuth(false)}
-          onLogin={handleLogin}
-          onSwitchMode={() => setAuthMode(m => m === 'login' ? 'register' : 'login')}
-        />
-      )}
       <Routes>
         <Route path="/" element={
-          <LandingPage
-            isLoggedIn={isLoggedIn}
-            onSignIn={() => { setAuthMode('login'); setShowAuth(true); }}
-          />
+          <PublicRoute><LandingPage /></PublicRoute>
         } />
         <Route path="/dashboard" element={
-          isLoggedIn
-            ? <Dashboard onLogout={handleLogout} />
-            : <Navigate to="/" />
+          <PrivateRoute><Dashboard /></PrivateRoute>
         } />
         <Route path="/compare" element={
-          isLoggedIn
-            ? <ComparePage onLogout={handleLogout} />
-            : <Navigate to="/" />
+          <PrivateRoute><ComparePage /></PrivateRoute>
         } />
         <Route path="/history" element={
-          isLoggedIn
-            ? <HistoryPage onLogout={handleLogout} />
-            : <Navigate to="/" />
+          <PrivateRoute><HistoryPage /></PrivateRoute>
         } />
         <Route path="/chat/:id?" element={
-          isLoggedIn
-            ? <ChatPage onLogout={handleLogout} />
-            : <Navigate to="/" />
+          <PrivateRoute><ChatPage /></PrivateRoute>
         } />
+        <Route path="/admin" element={
+          <AdminRoute><AdminPanel /></AdminRoute>
+        } />
+        <Route path="/admin/archived" element={
+          <AdminRoute><ArchiveHistory /></AdminRoute>
+        } />
+        <Route path="/admin/deleted" element={
+          <AdminRoute><DeletedHistory /></AdminRoute>
+        } />
+        <Route path="*" element={<Navigate to="/" />} />
       </Routes>
     </Router>
   );

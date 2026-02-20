@@ -32,7 +32,7 @@ const LABELS = {
   memSlots: 'Memory Slots', pcie: 'PCIe', m2Slots: 'M.2 Slots', usbPorts: 'USB Ports'
 };
 
-export default function ComparePage({ onLogout }) {
+export default function ComparePage() {
   const [device1, setDevice1] = useState(null);
   const [device2, setDevice2] = useState(null);
   const [search1, setSearch1] = useState('');
@@ -59,7 +59,7 @@ export default function ComparePage({ onLogout }) {
 
   return (
     <div className="page">
-      <Navbar onLogout={onLogout} />
+      <Navbar />
 
       <div className="page-content">
         <h1 style={{ fontFamily: 'Syne', fontSize: '28px', fontWeight: '800', marginBottom: '32px', textAlign: 'center' }}>

@@ -2,66 +2,67 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 
-
 dotenv.config();
+
+import authRoutes from './routes/auth.js';
+import aiRoutes from './routes/ai.js';
+import managerRoutes from './routes/manager.js';
+import userRoutes from './routes/users.js';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Middleware
+console.log('\n🔧 Server Configuration:');
+console.log('📍 Port:', PORT);
+console.log('🌐 Frontend URL:', process.env.FRONTEND_URL || 'http://localhost:5173');
+console.log('⚡ Groq API Key:', process.env.GROQ_API_KEY ? '✅ Loaded' : '❌ NOT FOUND');
+console.log('🧠 Image AI: TensorFlow.js MobileNet (runs FREE in browser)');
+console.log('💾 Database:', process.env.DB_NAME || 'Not configured');
+console.log('🔐 JWT Secret:', process.env.JWT_SECRET ? '✅ Configured' : '❌ NOT FOUND');
+console.log('');
+
 app.use(cors({
   origin: process.env.FRONTEND_URL || 'http://localhost:5173',
   credentials: true
 }));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
 
-// Root route — serves a simple landing so localhost:5000 doesn't 404
-app.get('/', (req, res) => {
-  res.json({
-    status: 'ok',
-    message: 'SpecSmart API',
-    version: '1.0.0',
-    endpoints: [
-      'GET  /api/health',
-      'GET  /api/devices',
-      'POST /api/auth/login',
-    ]
-  });
-});
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
-// Health check
+app.use('/api/auth', authRoutes);
+app.use('/api/ai', aiRoutes);
+app.use('/api/manager', managerRoutes);
+app.use('/api/users', userRoutes);
+
 app.get('/api/health', (req, res) => {
   res.json({
-    status: 'ok',
-    message: 'SpecSmart API is running',
-    timestamp: new Date().toISOString()
+    status: 'OK',
+    timestamp: new Date().toISOString(),
+    groqApiKey: process.env.GROQ_API_KEY ? 'configured' : 'missing',
+    imageAI: 'TensorFlow.js MobileNet v2 (browser-side, free)'
   });
 });
 
-// Test routes
-app.get('/api/devices', (req, res) => {
-  res.json({ message: 'Devices endpoint', devices: [] });
-});
-
-app.post('/api/auth/login', (req, res) => {
-  res.json({ message: 'Login endpoint', body: req.body });
-});
-
-// 404 handler — Express 5 requires 4-param signature for next, but for
-// a catch-all without next we just use (req, res)
 app.use((req, res) => {
   res.status(404).json({ error: 'Route not found' });
 });
 
-// Error handler — Express 5 still needs the 4-param signature
-app.use((err, req, res, next) => {  // eslint-disable-line no-unused-vars
-  console.error(err.stack);
-  res.status(500).json({ error: 'Something went wrong!' });
+app.use((err, req, res, next) => {
+  console.error('Server error:', err);
+  res.status(500).json({
+    error: 'Internal server error',
+    message: process.env.NODE_ENV === 'development' ? err.message : undefined
+  });
 });
 
-// Start server
 app.listen(PORT, () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);
-  console.log(`📝 Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`📡 API endpoints:`);
+  console.log(`   - POST /api/auth/register`);
+  console.log(`   - POST /api/auth/login`);
+  console.log(`   - POST /api/ai/chat  (⚡ Groq LLaMA + 🧠 TF.js MobileNet)`);
+  console.log(`   - GET  /api/health`);
+  console.log('');
 });
+
+export default app;
