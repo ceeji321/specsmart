@@ -22,7 +22,11 @@ console.log('🔐 JWT Secret:', process.env.JWT_SECRET ? '✅ Configured' : '❌
 console.log('');
 
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  origin: [
+    process.env.FRONTEND_URL || 'http://localhost:5173',
+    'https://specsmart-anbk.vercel.app',
+    'http://localhost:5173'
+  ],
   credentials: true
 }));
 
