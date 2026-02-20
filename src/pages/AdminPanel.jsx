@@ -9,6 +9,8 @@ import {
   RefreshCw, UserPlus, Key, MoreVertical, Crown, User, Archive
 } from 'lucide-react';
 
+const API_URL = 'https://specsmart-production.up.railway.app';
+
 const roleColor = (role) => {
   if (role === 'admin') return { color: '#f87171', bg: 'rgba(248,113,113,0.1)', border: 'rgba(248,113,113,0.25)' };
   return { color: '#9aa0b0', bg: 'rgba(154,160,176,0.08)', border: 'rgba(154,160,176,0.2)' };
@@ -56,7 +58,7 @@ const EditModal = ({ user, onClose, onSave }) => {
   const [err, setErr] = useState('');
   const handleSave = async () => {
     setSaving(true); setErr('');
-    try { const res = await axios.put(`/api/manager/users/${user.id}`, { name, role }); onSave(res.data.data); onClose(); }
+    try { const res = await axios.put(`${API_URL}/api/manager/users/${user.id}`, { name, role }); onSave(res.data.data); onClose(); }
     catch (e) { setErr(e.response?.data?.message || 'Update failed'); }
     finally { setSaving(false); }
   };
@@ -88,7 +90,7 @@ const ResetPwModal = ({ user, onClose }) => {
   const handleReset = async () => {
     if (pw.length < 6) { setErr('Minimum 6 characters'); return; }
     setSaving(true); setErr('');
-    try { await axios.post(`/api/manager/users/${user.id}/reset-password`, { new_password: pw }); setDone(true); }
+    try { await axios.post(`${API_URL}/api/manager/users/${user.id}/reset-password`, { new_password: pw }); setDone(true); }
     catch (e) { setErr(e.response?.data?.message || 'Reset failed'); }
     finally { setSaving(false); }
   };
@@ -112,7 +114,7 @@ const DeleteModal = ({ user, onClose, onDeleted }) => {
   const [loading, setLoading] = useState(false); const [err, setErr] = useState('');
   const handleDelete = async () => {
     setLoading(true); setErr('');
-    try { await axios.delete(`/api/manager/users/${user.id}`); onDeleted(user.id); onClose(); }
+    try { await axios.delete(`${API_URL}/api/manager/users/${user.id}`); onDeleted(user.id); onClose(); }
     catch (e) { setErr(e.response?.data?.message || 'Delete failed'); setLoading(false); }
   };
   return (
@@ -135,7 +137,7 @@ const ArchiveModal = ({ user, onClose, onArchived }) => {
   const [reason, setReason] = useState(''); const [loading, setLoading] = useState(false); const [err, setErr] = useState('');
   const handleArchive = async () => {
     setLoading(true); setErr('');
-    try { await axios.post(`/api/manager/users/${user.id}/archive`, { reason }); onArchived(user.id); onClose(); }
+    try { await axios.post(`${API_URL}/api/manager/users/${user.id}/archive`, { reason }); onArchived(user.id); onClose(); }
     catch (e) { setErr(e.response?.data?.message || 'Archive failed'); setLoading(false); }
   };
   return (
@@ -155,7 +157,6 @@ const ArchiveModal = ({ user, onClose, onArchived }) => {
   );
 };
 
-// Create Modal — Admin role only, no dropdown
 const CreateModal = ({ onClose, onCreated }) => {
   const [form, setForm] = useState({ email: '', name: '', password: '', role: 'admin' });
   const [saving, setSaving] = useState(false); const [err, setErr] = useState('');
@@ -163,7 +164,7 @@ const CreateModal = ({ onClose, onCreated }) => {
   const handleCreate = async () => {
     if (!form.email || !form.name || !form.password) { setErr('All fields are required'); return; }
     setSaving(true); setErr('');
-    try { const res = await axios.post('/api/manager/users', form); onCreated(res.data.data); onClose(); }
+    try { const res = await axios.post(`${API_URL}/api/manager/users`, form); onCreated(res.data.data); onClose(); }
     catch (e) { setErr(e.response?.data?.message || 'Create failed'); }
     finally { setSaving(false); }
   };
@@ -254,7 +255,7 @@ export default function AdminPanel() {
     if (!isAdmin) return;
     const connect = () => {
       const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-      const es = new EventSource(`/api/manager/stream?token=${token}`);
+      const es = new EventSource(`${API_URL}/api/manager/stream?token=${token}`);
       sseRef.current = es;
       es.onopen = () => setSseConnected(true);
       es.onerror = () => { setSseConnected(false); es.close(); setTimeout(connect, 3000); };
@@ -278,8 +279,7 @@ export default function AdminPanel() {
     return () => { sseRef.current?.close(); setSseConnected(false); };
   }, [isAdmin]);
 
-  // SSE auth: middleware needs token from query — update auth middleware to support it
-  const fetchStats = () => axios.get('/api/manager/statistics').then(r => setStats(r.data.data)).catch(() => {});
+  const fetchStats = () => axios.get(`${API_URL}/api/manager/statistics`).then(r => setStats(r.data.data)).catch(() => {});
 
   useEffect(() => { fetchStats(); }, []);
 
@@ -289,7 +289,7 @@ export default function AdminPanel() {
       const params = { page, limit: LIMIT };
       if (search) params.search = search;
       if (roleFilter !== 'all') params.role = roleFilter;
-      const res = await axios.get('/api/manager/users', { params });
+      const res = await axios.get(`${API_URL}/api/manager/users`, { params });
       setUsers(res.data.data.users);
       setPagination(res.data.data.pagination);
     } catch (e) { console.error(e); }
