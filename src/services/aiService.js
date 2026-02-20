@@ -23,7 +23,7 @@ export async function askAI(messages) {
     console.log('🤖 Sending to AI API:', formattedMessages);
 
     // Call your backend at /api/ai/chat
-    const response = await fetch('http://localhost:5000/api/ai/chat', {
+    const response = await fetch('https://specsmart-production.up.railway.app', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -48,7 +48,7 @@ export async function askAI(messages) {
     
     // Handle specific error cases
     if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
-      throw new Error('Cannot connect to server. Make sure the backend is running on http://localhost:5000');
+      throw new Error('Cannot connect to server. Make sure the backend is running on https://specsmart-production.up.railway.app');
     }
     
     if (error.message.includes('Rate limit exceeded')) {
@@ -65,7 +65,7 @@ export async function analyzeImage(base64Image, mimeType = 'image/jpeg') {
 
     console.log('📸 Sending image to AI for analysis...');
 
-    const response = await fetch('http://localhost:5000/api/ai/analyze-image', {
+    const response = await fetch('https://specsmart-production.up.railway.app', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
