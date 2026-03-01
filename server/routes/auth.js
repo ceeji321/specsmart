@@ -3,24 +3,12 @@ import express from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
-import nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 import pool from '../config/database.js';
 import { authenticateToken } from '../middleware/auth.js';
 
 const router = express.Router();
-
-// ── Email transporter (Gmail) ─────────────────────────────────────────────────
-const createTransporter = () => {
-  return nodemailer.createTransport({
-    host: 'smtp.gmail.com',
-    port: 465,
-    secure: true, // use SSL
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS,
-    },
-  });
-};
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 // Register new user
 router.post('/register', async (req, res) => {
@@ -152,7 +140,6 @@ router.post('/forgot-password', async (req, res) => {
     if (!email)
       return res.status(400).json({ error: 'Email is required' });
 
-    // Always return success to prevent email enumeration
     const result = await pool.query('SELECT id, name FROM users WHERE email = $1', [email.toLowerCase()]);
     if (result.rows.length === 0) {
       return res.json({ message: 'If that email is registered, a reset link has been sent.' });
@@ -160,26 +147,21 @@ router.post('/forgot-password', async (req, res) => {
 
     const user = result.rows[0];
 
-    // Delete any existing tokens for this user
     await pool.query('DELETE FROM password_reset_tokens WHERE user_id = $1', [user.id]);
 
-    // Generate secure token (expires in 1 hour)
     const resetToken = crypto.randomBytes(32).toString('hex');
-    const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
 
     await pool.query(
       'INSERT INTO password_reset_tokens (user_id, token, expires_at) VALUES ($1, $2, $3)',
       [user.id, resetToken, expiresAt]
     );
 
-    // Build reset link
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
     const resetLink = `${frontendUrl}/reset-password?token=${resetToken}`;
 
-    // Send email
-    const transporter = createTransporter();
-    await transporter.sendMail({
-      from: `"SpecSmart" <${process.env.EMAIL_USER}>`,
+    await resend.emails.send({
+      from: 'SpecSmart <onboarding@resend.dev>',
       to: email,
       subject: 'Reset Your SpecSmart Password',
       html: `
@@ -216,7 +198,6 @@ router.post('/reset-password', async (req, res) => {
     if (newPassword.length < 6)
       return res.status(400).json({ error: 'Password must be at least 6 characters long' });
 
-    // Find valid, unused, non-expired token
     const result = await pool.query(
       `SELECT prt.*, u.email, u.name
        FROM password_reset_tokens prt
@@ -230,14 +211,12 @@ router.post('/reset-password', async (req, res) => {
 
     const resetRecord = result.rows[0];
 
-    // Hash and update password
     const hashedPassword = await bcrypt.hash(newPassword, 10);
     await pool.query(
       'UPDATE users SET password = $1, updated_at = NOW() WHERE id = $2',
       [hashedPassword, resetRecord.user_id]
     );
 
-    // Mark token as used
     await pool.query('UPDATE password_reset_tokens SET used = TRUE WHERE id = $1', [resetRecord.id]);
 
     console.log(`✅ Password reset successful for ${resetRecord.email}`);
