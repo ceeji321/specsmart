@@ -52,30 +52,31 @@ export default function Navbar() {
         </Link>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
-          {/* Hide Dashboard link when on dashboard */}
-          {!isActive('/dashboard') && (
-            <Link to="/dashboard" style={navLinkStyle('/dashboard')}
-              onMouseEnter={e => e.currentTarget.style.color = 'var(--text)'}
-              onMouseLeave={e => e.currentTarget.style.color = 'var(--text-2)'}
-            >Dashboard</Link>
+          {/* Regular user nav links */}
+          {!isAdmin && (
+            <>
+              {!isActive('/dashboard') && (
+                <Link to="/dashboard" style={navLinkStyle('/dashboard')}
+                  onMouseEnter={e => e.currentTarget.style.color = 'var(--text)'}
+                  onMouseLeave={e => e.currentTarget.style.color = 'var(--text-2)'}
+                >Dashboard</Link>
+              )}
+              {!isActive('/compare') && (
+                <Link to="/compare" style={navLinkStyle('/compare')}
+                  onMouseEnter={e => e.currentTarget.style.color = 'var(--text)'}
+                  onMouseLeave={e => e.currentTarget.style.color = 'var(--text-2)'}
+                >Compare</Link>
+              )}
+              {!isActive('/history') && (
+                <Link to="/history" style={navLinkStyle('/history')}
+                  onMouseEnter={e => e.currentTarget.style.color = 'var(--text)'}
+                  onMouseLeave={e => e.currentTarget.style.color = 'var(--text-2)'}
+                >History</Link>
+              )}
+            </>
           )}
 
-          {/* Hide Compare link when on compare */}
-          {!isActive('/compare') && (
-            <Link to="/compare" style={navLinkStyle('/compare')}
-              onMouseEnter={e => e.currentTarget.style.color = 'var(--text)'}
-              onMouseLeave={e => e.currentTarget.style.color = 'var(--text-2)'}
-            >Compare</Link>
-          )}
-
-          {/* Hide History link when on history */}
-          {!isActive('/history') && (
-            <Link to="/history" style={navLinkStyle('/history')}
-              onMouseEnter={e => e.currentTarget.style.color = 'var(--text)'}
-              onMouseLeave={e => e.currentTarget.style.color = 'var(--text-2)'}
-            >History</Link>
-          )}
-
+          {/* Admin nav link */}
           {isAdmin && !isActive('/admin') && (
             <Link to="/admin" style={navLinkStyle('/admin')}
               onMouseEnter={e => e.currentTarget.style.color = 'var(--text)'}
@@ -101,41 +102,26 @@ export default function Navbar() {
                   background: 'var(--bg-2)', border: '1px solid var(--border-light)',
                   borderRadius: 12, minWidth: 200, boxShadow: 'var(--shadow)', overflow: 'hidden',
                 }}>
-                  {/* User info */}
                   <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)' }}>
                     <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--text)' }}>{user?.name}</div>
                     <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>{user?.email}</div>
                   </div>
 
                   <div style={{ padding: '6px 0' }}>
-                    {/* Only show links to pages user is NOT currently on */}
-                    {!isActive('/dashboard') && (
-                      <button onClick={() => { navigate('/dashboard'); setDropdownOpen(false); }}
-                        className="dropdown-item" style={{ width: '100%', textAlign: 'left' }}>
-                        Dashboard
-                      </button>
-                    )}
-                    {!isActive('/compare') && (
-                      <button onClick={() => { navigate('/compare'); setDropdownOpen(false); }}
-                        className="dropdown-item" style={{ width: '100%', textAlign: 'left' }}>
-                        Compare
-                      </button>
-                    )}
-                    {!isActive('/history') && (
-                      <button onClick={() => { navigate('/history'); setDropdownOpen(false); }}
-                        className="dropdown-item" style={{ width: '100%', textAlign: 'left' }}>
-                        History
-                      </button>
-                    )}
-                    {isAdmin && !isActive('/admin') && (
-                      <button onClick={() => { navigate('/admin'); setDropdownOpen(false); }}
-                        className="dropdown-item" style={{ width: '100%', textAlign: 'left' }}>
-                        Admin Panel
-                      </button>
-                    )}
-
                     {!isAdmin && (
                       <>
+                        {!isActive('/dashboard') && (
+                          <button onClick={() => { navigate('/dashboard'); setDropdownOpen(false); }}
+                            className="dropdown-item" style={{ width: '100%', textAlign: 'left' }}>Dashboard</button>
+                        )}
+                        {!isActive('/compare') && (
+                          <button onClick={() => { navigate('/compare'); setDropdownOpen(false); }}
+                            className="dropdown-item" style={{ width: '100%', textAlign: 'left' }}>Compare</button>
+                        )}
+                        {!isActive('/history') && (
+                          <button onClick={() => { navigate('/history'); setDropdownOpen(false); }}
+                            className="dropdown-item" style={{ width: '100%', textAlign: 'left' }}>History</button>
+                        )}
                         <div className="dropdown-divider" />
                         <button className="dropdown-item"
                           onClick={() => { setShowEditProfile(true); setDropdownOpen(false); }}
@@ -143,6 +129,13 @@ export default function Navbar() {
                           ✏️ Edit Profile
                         </button>
                       </>
+                    )}
+
+                    {isAdmin && !isActive('/admin') && (
+                      <button onClick={() => { navigate('/admin'); setDropdownOpen(false); }}
+                        className="dropdown-item" style={{ width: '100%', textAlign: 'left' }}>
+                        Admin Panel
+                      </button>
                     )}
 
                     <div className="dropdown-divider" />

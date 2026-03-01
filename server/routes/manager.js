@@ -29,7 +29,7 @@ router.get('/stream', authenticateToken, isAdminRole, (req, res) => {
   req.on('close', () => sseClients.delete(res));
 });
 
-// ── Ensure audit tables exist ─────────────────────────────────────────────────
+// ── Ensure tables exist ───────────────────────────────────────────────────────
 async function ensureAuditTables() {
   const client = await pool.connect();
   try {
@@ -58,26 +58,26 @@ async function ensureAuditTables() {
         reason TEXT
       )
     `);
-    await client.query(`
-      ALTER TABLE users ADD COLUMN IF NOT EXISTS is_archived BOOLEAN DEFAULT FALSE
-    `);
-    await client.query(`
-      ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login TIMESTAMPTZ
-    `);
+    await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS is_archived BOOLEAN DEFAULT FALSE`);
+    await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS is_disabled BOOLEAN DEFAULT FALSE`);
+    await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login TIMESTAMPTZ`);
   } finally {
     client.release();
   }
 }
 ensureAuditTables().catch(console.error);
 
-// ── GET /users ────────────────────────────────────────────────────────────────
+// ── GET /users  (active users only) ──────────────────────────────────────────
 router.get('/users', authenticateToken, isManagerRole, async (req, res) => {
   const client = await pool.connect();
   try {
     const { page = 1, limit = 10, role, search } = req.query;
     const offset = (parseInt(page) - 1) * parseInt(limit);
 
-    const conditions = ['(is_archived = FALSE OR is_archived IS NULL)'];
+    const conditions = [
+      '(is_archived = FALSE OR is_archived IS NULL)',
+      '(is_disabled = FALSE OR is_disabled IS NULL)'
+    ];
     const params = [];
     let i = 1;
 
@@ -92,15 +92,14 @@ router.get('/users', authenticateToken, isManagerRole, async (req, res) => {
     }
 
     const where = 'WHERE ' + conditions.join(' AND ');
-
-    const countRes = await client.query(
-      `SELECT COUNT(*) FROM users ${where}`,
-      params
-    );
+    const countRes = await client.query(`SELECT COUNT(*) FROM users ${where}`, params);
     const total = parseInt(countRes.rows[0].count);
 
     const result = await client.query(
-      `SELECT id, email, name, role, created_at, last_login FROM users ${where} ORDER BY created_at DESC LIMIT $${i} OFFSET $${i + 1}`,
+      `SELECT id, email, name, role, created_at, last_login
+       FROM users ${where}
+       ORDER BY created_at DESC
+       LIMIT $${i} OFFSET $${i + 1}`,
       [...params, parseInt(limit), offset]
     );
 
@@ -119,6 +118,42 @@ router.get('/users', authenticateToken, isManagerRole, async (req, res) => {
   } catch (error) {
     console.error('Get users error:', error);
     res.status(500).json({ success: false, message: 'Failed to retrieve users.' });
+  } finally { client.release(); }
+});
+
+// ── GET /users/disabled  ⚠️ MUST be before /users/:id ─────────────────────────
+router.get('/users/disabled', authenticateToken, isAdminRole, async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const result = await client.query(
+      `SELECT id, email, name, role, created_at, last_login
+       FROM users
+       WHERE is_disabled = TRUE
+       ORDER BY name ASC`
+    );
+    res.json({ success: true, data: { users: result.rows } });
+  } catch (error) {
+    console.error('Get disabled users error:', error);
+    res.status(500).json({ success: false, message: 'Failed to retrieve disabled users.' });
+  } finally { client.release(); }
+});
+
+// ── GET /users/archived  ⚠️ MUST be before /users/:id ─────────────────────────
+router.get('/users/archived', authenticateToken, isAdminRole, async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const result = await client.query(
+      `SELECT u.id, u.email, u.name, u.role, u.created_at, u.last_login,
+              a.archived_at, a.reason AS archive_reason
+       FROM users u
+       LEFT JOIN archived_users a ON a.user_id = CAST(u.id AS TEXT)
+       WHERE u.is_archived = TRUE
+       ORDER BY u.name ASC`
+    );
+    res.json({ success: true, data: { users: result.rows } });
+  } catch (error) {
+    console.error('Get archived users error:', error);
+    res.status(500).json({ success: false, message: 'Failed to retrieve archived users.' });
   } finally { client.release(); }
 });
 
@@ -152,7 +187,9 @@ router.post('/users', authenticateToken, isManagerRole, async (req, res) => {
       return res.status(409).json({ success: false, message: 'Email already registered.' });
     const hashed = await bcrypt.hash(password, SALT_ROUNDS);
     const result = await client.query(
-      'INSERT INTO users (email, password, name, role, created_at) VALUES ($1,$2,$3,$4,NOW()) RETURNING id, email, name, role, created_at',
+      `INSERT INTO users (email, password, name, role, created_at)
+       VALUES ($1,$2,$3,$4,NOW())
+       RETURNING id, email, name, role, created_at`,
       [email.toLowerCase(), hashed, name, role]
     );
     const newUser = result.rows[0];
@@ -182,7 +219,8 @@ router.put('/users/:id', authenticateToken, isManagerRole, async (req, res) => {
       return res.status(400).json({ success: false, message: 'No valid fields to update.' });
     params.push(id);
     const result = await client.query(
-      `UPDATE users SET ${updates.join(', ')} WHERE id = $${i} RETURNING id, email, name, role, created_at, last_login`,
+      `UPDATE users SET ${updates.join(', ')} WHERE id = $${i}
+       RETURNING id, email, name, role, created_at, last_login`,
       params
     );
     const updated = result.rows[0];
@@ -207,7 +245,7 @@ router.delete('/users/:id', authenticateToken, isAdminRole, async (req, res) => 
     const u = userRes.rows[0];
     await client.query(
       `INSERT INTO deleted_users (user_id, email, name, role, deleted_by_id, deleted_by_email)
-       VALUES ($1, $2, $3, $4, $5, $6)`,
+       VALUES ($1,$2,$3,$4,$5,$6)`,
       [String(u.id), u.email, u.name, u.role, String(req.user.userId), req.user.email]
     );
     await client.query('DELETE FROM users WHERE id = $1', [id]);
@@ -216,6 +254,38 @@ router.delete('/users/:id', authenticateToken, isAdminRole, async (req, res) => 
   } catch (error) {
     console.error('Delete error:', error);
     res.status(500).json({ success: false, message: 'Failed to delete user.' });
+  } finally { client.release(); }
+});
+
+// ── POST /users/:id/disable ───────────────────────────────────────────────────
+router.post('/users/:id/disable', authenticateToken, isAdminRole, async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const { id } = req.params;
+    if (id === String(req.user.userId))
+      return res.status(400).json({ success: false, message: 'You cannot disable your own account.' });
+    const userRes = await client.query('SELECT id FROM users WHERE id = $1', [id]);
+    if (userRes.rows.length === 0)
+      return res.status(404).json({ success: false, message: 'User not found.' });
+    await client.query('UPDATE users SET is_disabled = TRUE WHERE id = $1', [id]);
+    broadcastUserEvent('user_disabled', { id });
+    res.json({ success: true, message: 'User disabled successfully.' });
+  } catch (error) {
+    console.error('Disable error:', error);
+    res.status(500).json({ success: false, message: 'Failed to disable user.' });
+  } finally { client.release(); }
+});
+
+// ── POST /users/:id/enable ────────────────────────────────────────────────────
+router.post('/users/:id/enable', authenticateToken, isAdminRole, async (req, res) => {
+  const client = await pool.connect();
+  try {
+    await client.query('UPDATE users SET is_disabled = FALSE WHERE id = $1', [req.params.id]);
+    broadcastUserEvent('user_enabled', { id: req.params.id });
+    res.json({ success: true, message: 'User enabled successfully.' });
+  } catch (error) {
+    console.error('Enable error:', error);
+    res.status(500).json({ success: false, message: 'Failed to enable user.' });
   } finally { client.release(); }
 });
 
@@ -233,7 +303,7 @@ router.post('/users/:id/archive', authenticateToken, isAdminRole, async (req, re
     const u = userRes.rows[0];
     await client.query(
       `INSERT INTO archived_users (user_id, email, name, role, archived_by_id, archived_by_email, reason)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+       VALUES ($1,$2,$3,$4,$5,$6,$7)`,
       [String(u.id), u.email, u.name, u.role, String(req.user.userId), req.user.email, reason || null]
     );
     await client.query('UPDATE users SET is_archived = TRUE WHERE id = $1', [id]);
@@ -245,37 +315,16 @@ router.post('/users/:id/archive', authenticateToken, isAdminRole, async (req, re
   } finally { client.release(); }
 });
 
-// ── POST /users/:id/unarchive ─────────────────────────────────────────────────
-router.post('/users/:id/unarchive', authenticateToken, isAdminRole, async (req, res) => {
+// ── POST /users/:id/restore ───────────────────────────────────────────────────
+router.post('/users/:id/restore', authenticateToken, isAdminRole, async (req, res) => {
   const client = await pool.connect();
   try {
     await client.query('UPDATE users SET is_archived = FALSE WHERE id = $1', [req.params.id]);
     broadcastUserEvent('user_unarchived', { id: req.params.id });
-    res.json({ success: true, message: 'User unarchived successfully.' });
+    res.json({ success: true, message: 'User restored successfully.' });
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Failed to unarchive user.' });
-  } finally { client.release(); }
-});
-
-// ── GET /deleted-users ────────────────────────────────────────────────────────
-router.get('/deleted-users', authenticateToken, isAdminRole, async (req, res) => {
-  const client = await pool.connect();
-  try {
-    const result = await client.query('SELECT * FROM deleted_users ORDER BY deleted_at DESC');
-    res.json({ success: true, data: result.rows });
-  } catch (error) {
-    res.status(500).json({ success: false, message: 'Failed to retrieve deleted users.' });
-  } finally { client.release(); }
-});
-
-// ── GET /archived-users ───────────────────────────────────────────────────────
-router.get('/archived-users', authenticateToken, isAdminRole, async (req, res) => {
-  const client = await pool.connect();
-  try {
-    const result = await client.query('SELECT * FROM archived_users ORDER BY archived_at DESC');
-    res.json({ success: true, data: result.rows });
-  } catch (error) {
-    res.status(500).json({ success: false, message: 'Failed to retrieve archived users.' });
+    console.error('Restore error:', error);
+    res.status(500).json({ success: false, message: 'Failed to restore user.' });
   } finally { client.release(); }
 });
 
@@ -285,10 +334,21 @@ router.get('/statistics', authenticateToken, isManagerRole, async (req, res) => 
   try {
     const stats = await client.query(`
       SELECT
-        (SELECT COUNT(*) FROM users WHERE is_archived = FALSE OR is_archived IS NULL) as total_users,
-        (SELECT COUNT(*) FROM users WHERE role = 'user' AND (is_archived = FALSE OR is_archived IS NULL)) as regular_users,
-        (SELECT COUNT(*) FROM users WHERE role = 'admin' AND (is_archived = FALSE OR is_archived IS NULL)) as admins,
-        (SELECT COUNT(*) FROM users WHERE created_at >= NOW() - INTERVAL '30 days') as new_users_30d
+        (SELECT COUNT(*) FROM users
+          WHERE (is_archived = FALSE OR is_archived IS NULL)
+            AND (is_disabled = FALSE OR is_disabled IS NULL)) AS total_users,
+        (SELECT COUNT(*) FROM users
+          WHERE role = 'user'
+            AND (is_archived = FALSE OR is_archived IS NULL)
+            AND (is_disabled = FALSE OR is_disabled IS NULL)) AS regular_users,
+        (SELECT COUNT(*) FROM users
+          WHERE role = 'admin'
+            AND (is_archived = FALSE OR is_archived IS NULL)
+            AND (is_disabled = FALSE OR is_disabled IS NULL)) AS admins,
+        (SELECT COUNT(*) FROM users
+          WHERE created_at >= NOW() - INTERVAL '30 days') AS new_users_30d,
+        (SELECT COUNT(*) FROM users WHERE is_disabled = TRUE) AS disabled_users,
+        (SELECT COUNT(*) FROM users WHERE is_archived = TRUE) AS archived_users
     `);
     res.json({ success: true, data: stats.rows[0] });
   } catch (error) {
