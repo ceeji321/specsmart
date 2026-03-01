@@ -265,10 +265,3 @@ router.post('/logout', authenticateToken, (req, res) => {
 });
 
 export default router;
-```
-
-Copy this, replace your file, then:
-```
-git add .
-git commit -m "fix: use Gmail SMTP port 587 with IPv4"
-git push
