@@ -9,19 +9,15 @@ import { authenticateToken } from '../middleware/auth.js';
 
 const router = express.Router();
 
-// ── Email transporter (Gmail) ─────────────────────────────────────────────────
+// ── Email transporter (Brevo SMTP) ───────────────────────────────────────────
 const createTransporter = () => {
   return nodemailer.createTransport({
-    service: 'gmail',
+    host: 'smtp-relay.brevo.com',
+    port: 587,
+    secure: false,
     auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS,
-    },
-    tls: {
-      rejectUnauthorized: false,
-    },
-    socketOptions: {
-      family: 4,
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASS,
     },
   });
 };
@@ -178,7 +174,7 @@ router.post('/forgot-password', async (req, res) => {
 
     const transporter = createTransporter();
     await transporter.sendMail({
-      from: `"SpecSmart" <${process.env.EMAIL_USER}>`,
+      from: `"SpecSmart" <${process.env.SMTP_USER}>`,
       to: email,
       subject: 'Reset Your SpecSmart Password',
       html: `
