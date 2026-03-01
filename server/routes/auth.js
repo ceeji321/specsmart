@@ -3,12 +3,25 @@ import express from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
-import { Resend } from 'resend';
+import nodemailer from 'nodemailer';
 import pool from '../config/database.js';
 import { authenticateToken } from '../middleware/auth.js';
 
 const router = express.Router();
-const resend = new Resend(process.env.RESEND_API_KEY);
+
+// ── Email transporter (Gmail) ─────────────────────────────────────────────────
+const createTransporter = () => {
+  return nodemailer.createTransport({
+    host: 'smtp.gmail.com',
+    port: 587,
+    secure: false, // TLS
+    family: 4, // Force IPv4
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS,
+    },
+  });
+};
 
 // Register new user
 router.post('/register', async (req, res) => {
@@ -160,8 +173,9 @@ router.post('/forgot-password', async (req, res) => {
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
     const resetLink = `${frontendUrl}/reset-password?token=${resetToken}`;
 
-    await resend.emails.send({
-      from: 'SpecSmart <onboarding@resend.dev>',
+    const transporter = createTransporter();
+    await transporter.sendMail({
+      from: `"SpecSmart" <${process.env.EMAIL_USER}>`,
       to: email,
       subject: 'Reset Your SpecSmart Password',
       html: `
@@ -251,3 +265,10 @@ router.post('/logout', authenticateToken, (req, res) => {
 });
 
 export default router;
+```
+
+Copy this, replace your file, then:
+```
+git add .
+git commit -m "fix: use Gmail SMTP port 587 with IPv4"
+git push
