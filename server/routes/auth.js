@@ -3,23 +3,33 @@ import express from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
-import nodemailer from 'nodemailer';
 import pool from '../config/database.js';
 import { authenticateToken } from '../middleware/auth.js';
 
 const router = express.Router();
 
-// ── Email transporter (Brevo SMTP) ───────────────────────────────────────────
-const createTransporter = () => {
-  return nodemailer.createTransport({
-    host: 'smtp-relay.brevo.com',
-    port: 587,
-    secure: false,
-    auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS,
+// ── Send email via Brevo HTTP API ────────────────────────────────────────────
+const sendBrevoEmail = async ({ to, toName, subject, html }) => {
+  const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'api-key': process.env.BREVO_API_KEY,
     },
+    body: JSON.stringify({
+      sender: { name: 'SpecSmart', email: process.env.BREVO_SENDER_EMAIL },
+      to: [{ email: to, name: toName || to }],
+      subject,
+      htmlContent: html,
+    }),
   });
+
+  if (!response.ok) {
+    const err = await response.text();
+    throw new Error(`Brevo API error: ${err}`);
+  }
+
+  return response.json();
 };
 
 // Register new user
@@ -172,10 +182,9 @@ router.post('/forgot-password', async (req, res) => {
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
     const resetLink = `${frontendUrl}/reset-password?token=${resetToken}`;
 
-    const transporter = createTransporter();
-    await transporter.sendMail({
-      from: `"SpecSmart" <${process.env.SMTP_USER}>`,
+    await sendBrevoEmail({
       to: email,
+      toName: user.name,
       subject: 'Reset Your SpecSmart Password',
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 480px; margin: 0 auto; background: #0f0f0f; color: #e0e0e0; padding: 32px; border-radius: 12px;">
