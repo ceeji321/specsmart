@@ -2,7 +2,6 @@
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useState, useEffect } from 'react';
-import Navbar from '../components/Navbar';
 import AuthModal from '../components/Auth/AuthModal';
 
 export default function LandingPage() {
@@ -11,12 +10,14 @@ export default function LandingPage() {
   const [showAuth, setShowAuth] = useState(false);
   const [authMode, setAuthMode] = useState('login');
 
-  // Redirect to dashboard if already logged in
   useEffect(() => {
     if (isAuthenticated) {
       navigate('/dashboard');
     }
   }, [isAuthenticated, navigate]);
+
+  // Don't render anything if logged in
+  if (isAuthenticated) return null;
 
   const openAuth = (mode) => { setAuthMode(mode); setShowAuth(true); };
 
@@ -36,8 +37,40 @@ export default function LandingPage() {
 
   return (
     <div className="page">
-      <Navbar />
-      
+      {/* Simple Landing Navbar (no auth dropdown) */}
+      <nav style={{
+        position: 'sticky', top: 0, zIndex: 50,
+        background: 'rgba(10,11,15,0.85)',
+        backdropFilter: 'blur(12px)',
+        borderBottom: '1px solid var(--border)',
+        padding: '0 24px',
+        height: 60,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+      }}>
+        <span style={{ fontFamily: 'Syne, sans-serif', fontWeight: 800, fontSize: 20, color: 'var(--text)' }}>
+          Spec<span style={{ color: 'var(--accent)' }}>Smart</span>
+        </span>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <button
+            className="btn btn-ghost"
+            onClick={() => openAuth('login')}
+            style={{ padding: '8px 18px', fontSize: 14 }}
+          >
+            Sign In
+          </button>
+          <button
+            className="btn btn-primary"
+            onClick={() => openAuth('register')}
+            style={{ padding: '8px 18px', fontSize: 14 }}
+          >
+            Get Started
+          </button>
+        </div>
+      </nav>
+
       <section className="landing-hero" style={{ paddingTop: '80px' }}>
         <div className="hero-bg" />
 

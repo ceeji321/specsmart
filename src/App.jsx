@@ -9,6 +9,7 @@ import ChatPage from './pages/ChatPage';
 import AdminPanel from './pages/AdminPanel';
 import ArchiveHistory from './pages/ArchiveHistory';
 import DeletedHistory from './pages/DeletedHistory';
+import ResetPasswordPage from './pages/ResetPasswordPage';
 
 function PrivateRoute({ children }) {
   const { isAuthenticated, isAdmin, loading } = useAuth();
@@ -40,6 +41,9 @@ function App() {
         <Route path="/" element={
           <PublicRoute><LandingPage /></PublicRoute>
         } />
+        {/* ── Public reset password route (no auth required) ── */}
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
+
         <Route path="/dashboard" element={
           <PrivateRoute><Dashboard /></PrivateRoute>
         } />

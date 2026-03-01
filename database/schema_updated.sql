@@ -34,7 +34,6 @@ FOR EACH ROW
 EXECUTE FUNCTION update_updated_at_column();
 
 -- Insert a default admin user (password: admin123)
--- Password hash for 'admin123'
 INSERT INTO users (email, password, name, role) 
 VALUES (
     'admin@specsmart.com', 
@@ -49,5 +48,5 @@ VALUES (
     'cjcendana@gmail.com', 
     'user123',
     'Cj User',
-    'Cj'
+    'user'
 ) ON CONFLICT (email) DO NOTHING;

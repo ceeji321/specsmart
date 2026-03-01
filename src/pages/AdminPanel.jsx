@@ -1,16 +1,18 @@
+// src/pages/AdminPanel.jsx
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import Navbar from '../components/Navbar';
 import axios from 'axios';
 import {
-  Users, Shield, Search, Trash2, Edit2,
+  Users, Shield, Search, Trash2,
   ChevronLeft, ChevronRight, X, Check, AlertTriangle,
-  RefreshCw, UserPlus, Key, MoreVertical, Crown, User, Archive
+  RefreshCw, UserPlus, Key, MoreVertical, Crown, User, Archive, Bell
 } from 'lucide-react';
 
 const API_URL = 'https://specsmart-production.up.railway.app';
 
+// ── Helpers ───────────────────────────────────────────────────────────────────
 const roleColor = (role) => {
   if (role === 'admin') return { color: '#f87171', bg: 'rgba(248,113,113,0.1)', border: 'rgba(248,113,113,0.25)' };
   return { color: '#9aa0b0', bg: 'rgba(154,160,176,0.08)', border: 'rgba(154,160,176,0.2)' };
@@ -36,7 +38,8 @@ const Avatar = ({ name, size = 36 }) => {
 };
 
 const StatCard = ({ icon, label, value, sub, accent }) => (
-  <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '22px 24px', display: 'flex', alignItems: 'center', gap: 18, transition: 'border-color 0.2s' }}
+  <div
+    style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '22px 24px', display: 'flex', alignItems: 'center', gap: 18, transition: 'border-color 0.2s' }}
     onMouseEnter={e => e.currentTarget.style.borderColor = accent || 'var(--accent)'}
     onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border)'}
   >
@@ -51,59 +54,50 @@ const StatCard = ({ icon, label, value, sub, accent }) => (
   </div>
 );
 
-const EditModal = ({ user, onClose, onSave }) => {
-  const [name, setName] = useState(user.name || '');
-  const [role, setRole] = useState(user.role || 'user');
+const LiveBadge = ({ connected }) => (
+  <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 10px', borderRadius: 20, background: connected ? 'rgba(74,222,128,0.08)' : 'rgba(154,160,176,0.08)', border: `1px solid ${connected ? 'rgba(74,222,128,0.25)' : 'rgba(154,160,176,0.2)'}`, fontSize: 11, fontWeight: 600, color: connected ? '#4ade80' : 'var(--text-3)' }}>
+    <div style={{ width: 6, height: 6, borderRadius: '50%', background: connected ? '#4ade80' : 'var(--text-3)', boxShadow: connected ? '0 0 6px #4ade80' : 'none', animation: connected ? 'livepulse 2s infinite' : 'none' }} />
+    {connected ? 'Live' : 'Offline'}
+  </div>
+);
+
+// ── Modals ────────────────────────────────────────────────────────────────────
+const ResetPwModal = ({ user, onClose }) => {
+  const [pw, setPw] = useState('');
+  const [done, setDone] = useState(false);
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState('');
-  const handleSave = async () => {
-    setSaving(true); setErr('');
-    try { const res = await axios.put(`${API_URL}/api/manager/users/${user.id}`, { name, role }); onSave(res.data.data); onClose(); }
-    catch (e) { setErr(e.response?.data?.message || 'Update failed'); }
-    finally { setSaving(false); }
-  };
-  return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal" onClick={e => e.stopPropagation()}>
-        <button onClick={onClose} style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer' }}><X size={18} /></button>
-        <div className="modal-title" style={{ fontSize: 18 }}>Edit User</div>
-        <p className="modal-sub">{user.email}</p>
-        <div className="form-group"><label className="form-label">Full Name</label><input className="form-input" value={name} onChange={e => setName(e.target.value)} /></div>
-        <div className="form-group">
-          <label className="form-label">Role</label>
-          <select className="form-input" value={role} onChange={e => setRole(e.target.value)} style={{ cursor: 'pointer' }}>
-            <option value="user">User</option><option value="admin">Admin</option>
-          </select>
-        </div>
-        {err && <div style={{ color: 'var(--red)', fontSize: 13, marginBottom: 12 }}>{err}</div>}
-        <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
-          <button className="btn btn-ghost" onClick={onClose} style={{ flex: 1 }}>Cancel</button>
-          <button className="btn btn-primary" onClick={handleSave} disabled={saving} style={{ flex: 1 }}>{saving ? 'Saving…' : <><Check size={14} /> Save</>}</button>
-        </div>
-      </div>
-    </div>
-  );
-};
 
-const ResetPwModal = ({ user, onClose }) => {
-  const [pw, setPw] = useState(''); const [done, setDone] = useState(false); const [saving, setSaving] = useState(false); const [err, setErr] = useState('');
   const handleReset = async () => {
     if (pw.length < 6) { setErr('Minimum 6 characters'); return; }
     setSaving(true); setErr('');
-    try { await axios.post(`${API_URL}/api/manager/users/${user.id}/reset-password`, { new_password: pw }); setDone(true); }
-    catch (e) { setErr(e.response?.data?.message || 'Reset failed'); }
+    try {
+      await axios.post(`${API_URL}/api/manager/users/${user.id}/reset-password`, { new_password: pw });
+      setDone(true);
+    } catch (e) { setErr(e.response?.data?.message || 'Reset failed'); }
     finally { setSaving(false); }
   };
+
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal" onClick={e => e.stopPropagation()}>
         <button onClick={onClose} style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer' }}><X size={18} /></button>
         <div className="modal-title" style={{ fontSize: 18 }}>Reset Password</div>
         <p className="modal-sub">{user.email}</p>
-        {done ? <div style={{ padding: 16, background: 'rgba(74,222,128,0.08)', border: '1px solid rgba(74,222,128,0.2)', borderRadius: 8, color: 'var(--green)', textAlign: 'center' }}>✓ Password reset successfully</div> : (
-          <><div className="form-group"><label className="form-label">New Password</label><input className="form-input" type="password" placeholder="Min. 6 characters" value={pw} onChange={e => setPw(e.target.value)} /></div>
-          {err && <div style={{ color: 'var(--red)', fontSize: 13, marginBottom: 12 }}>{err}</div>}
-          <div style={{ display: 'flex', gap: 10 }}><button className="btn btn-ghost" onClick={onClose} style={{ flex: 1 }}>Cancel</button><button className="btn btn-primary" onClick={handleReset} disabled={saving} style={{ flex: 1 }}>{saving ? 'Resetting…' : <><Key size={14} /> Reset</>}</button></div></>
+        {done ? (
+          <div style={{ padding: 16, background: 'rgba(74,222,128,0.08)', border: '1px solid rgba(74,222,128,0.2)', borderRadius: 8, color: '#4ade80', textAlign: 'center' }}>✓ Password reset successfully</div>
+        ) : (
+          <>
+            <div className="form-group">
+              <label className="form-label">New Password</label>
+              <input className="form-input" type="password" placeholder="Min. 6 characters" value={pw} onChange={e => setPw(e.target.value)} />
+            </div>
+            {err && <div style={{ color: 'var(--red)', fontSize: 13, marginBottom: 12 }}>{err}</div>}
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button className="btn btn-ghost" onClick={onClose} style={{ flex: 1 }}>Cancel</button>
+              <button className="btn btn-primary" onClick={handleReset} disabled={saving} style={{ flex: 1 }}>{saving ? 'Resetting…' : <><Key size={14} /> Reset</>}</button>
+            </div>
+          </>
         )}
       </div>
     </div>
@@ -111,12 +105,17 @@ const ResetPwModal = ({ user, onClose }) => {
 };
 
 const DeleteModal = ({ user, onClose, onDeleted }) => {
-  const [loading, setLoading] = useState(false); const [err, setErr] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState('');
+
   const handleDelete = async () => {
     setLoading(true); setErr('');
-    try { await axios.delete(`${API_URL}/api/manager/users/${user.id}`); onDeleted(user.id); onClose(); }
-    catch (e) { setErr(e.response?.data?.message || 'Delete failed'); setLoading(false); }
+    try {
+      await axios.delete(`${API_URL}/api/manager/users/${user.id}`);
+      onDeleted(user.id); onClose();
+    } catch (e) { setErr(e.response?.data?.message || 'Delete failed'); setLoading(false); }
   };
+
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 380 }}>
@@ -134,23 +133,34 @@ const DeleteModal = ({ user, onClose, onDeleted }) => {
 };
 
 const ArchiveModal = ({ user, onClose, onArchived }) => {
-  const [reason, setReason] = useState(''); const [loading, setLoading] = useState(false); const [err, setErr] = useState('');
+  const [reason, setReason] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState('');
+
   const handleArchive = async () => {
     setLoading(true); setErr('');
-    try { await axios.post(`${API_URL}/api/manager/users/${user.id}/archive`, { reason }); onArchived(user.id); onClose(); }
-    catch (e) { setErr(e.response?.data?.message || 'Archive failed'); setLoading(false); }
+    try {
+      await axios.post(`${API_URL}/api/manager/users/${user.id}/archive`, { reason });
+      onArchived(user.id); onClose();
+    } catch (e) { setErr(e.response?.data?.message || 'Archive failed'); setLoading(false); }
   };
+
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 380 }}>
         <div style={{ width: 48, height: 48, borderRadius: 12, background: 'rgba(251,191,36,0.1)', border: '1px solid rgba(251,191,36,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fbbf24', marginBottom: 16 }}><Archive size={22} /></div>
         <div className="modal-title" style={{ fontSize: 18 }}>Archive User?</div>
         <p className="modal-sub"><strong style={{ color: 'var(--text)' }}>{user.name}</strong> will be hidden from the active list but their record is kept.</p>
-        <div className="form-group"><label className="form-label">Reason (optional)</label><input className="form-input" placeholder="e.g. Inactive account" value={reason} onChange={e => setReason(e.target.value)} /></div>
+        <div className="form-group">
+          <label className="form-label">Reason (optional)</label>
+          <input className="form-input" placeholder="e.g. Inactive account" value={reason} onChange={e => setReason(e.target.value)} />
+        </div>
         {err && <div style={{ color: 'var(--red)', fontSize: 13, marginBottom: 12 }}>{err}</div>}
         <div style={{ display: 'flex', gap: 10 }}>
           <button className="btn btn-ghost" onClick={onClose} style={{ flex: 1 }}>Cancel</button>
-          <button onClick={handleArchive} disabled={loading} style={{ flex: 1, padding: '9px 16px', borderRadius: 8, background: 'rgba(251,191,36,0.15)', color: '#fbbf24', border: '1px solid rgba(251,191,36,0.3)', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>{loading ? 'Archiving…' : <><Archive size={14} /> Archive</>}</button>
+          <button onClick={handleArchive} disabled={loading} style={{ flex: 1, padding: '9px 16px', borderRadius: 8, background: 'rgba(251,191,36,0.15)', color: '#fbbf24', border: '1px solid rgba(251,191,36,0.3)', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+            {loading ? 'Archiving…' : <><Archive size={14} /> Archive</>}
+          </button>
         </div>
       </div>
     </div>
@@ -159,15 +169,20 @@ const ArchiveModal = ({ user, onClose, onArchived }) => {
 
 const CreateModal = ({ onClose, onCreated }) => {
   const [form, setForm] = useState({ email: '', name: '', password: '', role: 'admin' });
-  const [saving, setSaving] = useState(false); const [err, setErr] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState('');
   const update = (k, v) => setForm(f => ({ ...f, [k]: v }));
+
   const handleCreate = async () => {
     if (!form.email || !form.name || !form.password) { setErr('All fields are required'); return; }
     setSaving(true); setErr('');
-    try { const res = await axios.post(`${API_URL}/api/manager/users`, form); onCreated(res.data.data); onClose(); }
-    catch (e) { setErr(e.response?.data?.message || 'Create failed'); }
+    try {
+      const res = await axios.post(`${API_URL}/api/manager/users`, form);
+      onCreated(res.data.data); onClose();
+    } catch (e) { setErr(e.response?.data?.message || 'Create failed'); }
     finally { setSaving(false); }
   };
+
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal" onClick={e => e.stopPropagation()}>
@@ -194,42 +209,232 @@ const CreateModal = ({ onClose, onCreated }) => {
   );
 };
 
-const RowActions = ({ user, onEdit, onResetPw, onDelete, onArchive, currentId }) => {
-  const [open, setOpen] = useState(false);
-  const isSelf = String(user.id) === String(currentId);
+// Approve Password Reset Request Modal
+const ApproveResetModal = ({ request, onClose, onDone }) => {
+  const [pw, setPw] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState('');
+
+  const handleApprove = async () => {
+    if (pw.length < 6) { setErr('Minimum 6 characters'); return; }
+    setSaving(true); setErr('');
+    try {
+      await axios.post(`${API_URL}/api/manager/password-reset-requests/${request.id}/approve`, { new_password: pw });
+      onDone(request.id, 'approved');
+      onClose();
+    } catch (e) { setErr(e.response?.data?.error || 'Failed'); }
+    finally { setSaving(false); }
+  };
+
   return (
-    <div style={{ position: 'relative' }}>
-      <button onClick={() => setOpen(o => !o)} style={{ background: 'none', border: '1px solid transparent', color: 'var(--text-3)', cursor: 'pointer', padding: '5px 7px', borderRadius: 8, transition: 'all 0.15s', display: 'flex', alignItems: 'center' }}
-        onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text)'; }}
-        onMouseLeave={e => { if (!open) { e.currentTarget.style.borderColor = 'transparent'; e.currentTarget.style.color = 'var(--text-3)'; } }}
-      ><MoreVertical size={16} /></button>
-      {open && (<>
-        <div style={{ position: 'fixed', inset: 0, zIndex: 98 }} onClick={() => setOpen(false)} />
-        <div style={{ position: 'absolute', right: 0, top: 'calc(100% + 4px)', zIndex: 99, background: 'var(--bg-2)', border: '1px solid var(--border-light)', borderRadius: 10, minWidth: 160, boxShadow: 'var(--shadow)', overflow: 'hidden' }}>
-          <button className="dropdown-item" onClick={() => { onEdit(); setOpen(false); }}><Edit2 size={14} /> Edit</button>
-          <button className="dropdown-item" onClick={() => { onResetPw(); setOpen(false); }}><Key size={14} /> Reset Password</button>
-          {!isSelf && (<>
-            <div className="dropdown-divider" />
-            <button className="dropdown-item" style={{ color: '#fbbf24' }} onClick={() => { onArchive(); setOpen(false); }}><Archive size={14} /> Archive</button>
-            <button className="dropdown-item danger" onClick={() => { onDelete(); setOpen(false); }}><Trash2 size={14} /> Delete</button>
-          </>)}
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal" onClick={e => e.stopPropagation()}>
+        <button onClick={onClose} style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer' }}><X size={18} /></button>
+        <div className="modal-title" style={{ fontSize: 18 }}>Approve Password Reset</div>
+        <p className="modal-sub">{request.user_name} · {request.user_email}</p>
+        {request.reason && (
+          <div style={{ background: 'var(--bg-3)', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 14px', fontSize: 13, color: 'var(--text-2)', marginBottom: 16 }}>
+            <span style={{ fontWeight: 600, color: 'var(--text-3)', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Reason: </span>{request.reason}
+          </div>
+        )}
+        <div className="form-group">
+          <label className="form-label">Set New Password for User</label>
+          <input className="form-input" type="password" placeholder="Min. 6 characters" value={pw} onChange={e => setPw(e.target.value)} />
         </div>
-      </>)}
+        {err && <div style={{ color: 'var(--red)', fontSize: 13, marginBottom: 12 }}>{err}</div>}
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button className="btn btn-ghost" onClick={onClose} style={{ flex: 1 }}>Cancel</button>
+          <button className="btn btn-primary" onClick={handleApprove} disabled={saving} style={{ flex: 1 }}>{saving ? 'Applying…' : <><Check size={14} /> Approve & Set</>}</button>
+        </div>
+      </div>
     </div>
   );
 };
 
-const LiveBadge = ({ connected }) => (
-  <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 10px', borderRadius: 20, background: connected ? 'rgba(74,222,128,0.08)' : 'rgba(154,160,176,0.08)', border: `1px solid ${connected ? 'rgba(74,222,128,0.25)' : 'rgba(154,160,176,0.2)'}`, fontSize: 11, fontWeight: 600, color: connected ? '#4ade80' : 'var(--text-3)' }}>
-    <div style={{ width: 6, height: 6, borderRadius: '50%', background: connected ? '#4ade80' : 'var(--text-3)', boxShadow: connected ? '0 0 6px #4ade80' : 'none', animation: connected ? 'livepulse 2s infinite' : 'none' }} />
-    {connected ? 'Live' : 'Offline'}
-  </div>
-);
+// ── Row Actions — Edit removed ─────────────────────────────────────────────────
+const RowActions = ({ user, onResetPw, onDelete, onArchive, currentId }) => {
+  const [open, setOpen] = useState(false);
+  const isSelf = String(user.id) === String(currentId);
 
+  return (
+    <div style={{ position: 'relative' }}>
+      <button
+        onClick={() => setOpen(o => !o)}
+        style={{ background: 'none', border: '1px solid transparent', color: 'var(--text-3)', cursor: 'pointer', padding: '5px 7px', borderRadius: 8, transition: 'all 0.15s', display: 'flex', alignItems: 'center' }}
+        onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text)'; }}
+        onMouseLeave={e => { if (!open) { e.currentTarget.style.borderColor = 'transparent'; e.currentTarget.style.color = 'var(--text-3)'; } }}
+      ><MoreVertical size={16} /></button>
+      {open && (
+        <>
+          <div style={{ position: 'fixed', inset: 0, zIndex: 98 }} onClick={() => setOpen(false)} />
+          <div style={{ position: 'absolute', right: 0, top: 'calc(100% + 4px)', zIndex: 99, background: 'var(--bg-2)', border: '1px solid var(--border-light)', borderRadius: 10, minWidth: 160, boxShadow: 'var(--shadow)', overflow: 'hidden' }}>
+            <button className="dropdown-item" onClick={() => { onResetPw(); setOpen(false); }}><Key size={14} /> Reset Password</button>
+            {!isSelf && (
+              <>
+                <div className="dropdown-divider" />
+                <button className="dropdown-item" style={{ color: '#fbbf24' }} onClick={() => { onArchive(); setOpen(false); }}><Archive size={14} /> Archive</button>
+                <button className="dropdown-item danger" onClick={() => { onDelete(); setOpen(false); }}><Trash2 size={14} /> Delete</button>
+              </>
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  );
+};
+
+// ── Password Reset Requests Tab ───────────────────────────────────────────────
+const ResetRequestsTab = ({ onPendingCountChange }) => {
+  const [requests, setRequests] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [approveReq, setApproveReq] = useState(null);
+  const [denyingId, setDenyingId] = useState(null);
+
+  const load = async () => {
+    setLoading(true);
+    try {
+      const res = await axios.get(`${API_URL}/api/manager/password-reset-requests`);
+      setRequests(res.data.requests);
+      onPendingCountChange(res.data.requests.filter(r => r.status === 'pending').length);
+    } catch (e) { console.error(e); }
+    finally { setLoading(false); }
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const handleDone = (id, status) => {
+    setRequests(prev => {
+      const updated = prev.map(r => r.id === id ? { ...r, status } : r);
+      onPendingCountChange(updated.filter(r => r.status === 'pending').length);
+      return updated;
+    });
+  };
+
+  const handleDeny = async (id) => {
+    setDenyingId(id);
+    try {
+      await axios.post(`${API_URL}/api/manager/password-reset-requests/${id}/deny`);
+      handleDone(id, 'denied');
+    } catch (e) { console.error(e); }
+    finally { setDenyingId(null); }
+  };
+
+  const statusStyle = (status) => {
+    if (status === 'pending')  return { color: '#fbbf24', bg: 'rgba(251,191,36,0.1)',    border: 'rgba(251,191,36,0.3)' };
+    if (status === 'approved') return { color: '#4ade80', bg: 'rgba(74,222,128,0.08)',  border: 'rgba(74,222,128,0.25)' };
+    return { color: '#9aa0b0', bg: 'rgba(154,160,176,0.08)', border: 'rgba(154,160,176,0.2)' };
+  };
+
+  const pendingCount = requests.filter(r => r.status === 'pending').length;
+
+  return (
+    <div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <h2 style={{ fontFamily: 'Syne, sans-serif', fontSize: 18, fontWeight: 700, margin: 0 }}>Password Reset Requests</h2>
+          {pendingCount > 0 && (
+            <span style={{ background: '#f87171', color: 'white', borderRadius: 20, padding: '2px 8px', fontSize: 11, fontWeight: 700 }}>{pendingCount} pending</span>
+          )}
+        </div>
+        <button onClick={load} style={{ background: 'none', border: '1px solid var(--border)', color: 'var(--text-2)', cursor: 'pointer', padding: '7px 10px', borderRadius: 8, display: 'flex', alignItems: 'center' }}>
+          <RefreshCw size={15} />
+        </button>
+      </div>
+
+      {loading ? (
+        <div style={{ textAlign: 'center', padding: '48px 0', color: 'var(--text-3)' }}>Loading…</div>
+      ) : requests.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: '64px 0', color: 'var(--text-3)' }}>
+          <Bell size={32} style={{ marginBottom: 12, opacity: 0.4 }} />
+          <div style={{ fontFamily: 'Syne, sans-serif', fontWeight: 700, fontSize: 16, marginBottom: 6 }}>No requests yet</div>
+          <div style={{ fontSize: 13 }}>Password reset requests from users will appear here.</div>
+        </div>
+      ) : (
+        <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                  {['User', 'Email', 'Reason', 'Requested', 'Status', 'Actions'].map((h, i) => (
+                    <th key={i} style={{ padding: '10px 20px', textAlign: 'left', fontSize: 11, fontWeight: 600, letterSpacing: '0.7px', textTransform: 'uppercase', color: 'var(--text-3)', whiteSpace: 'nowrap' }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {requests.map((r, i) => {
+                  const s = statusStyle(r.status);
+                  return (
+                    <tr key={r.id} style={{ borderBottom: i < requests.length - 1 ? '1px solid var(--border)' : 'none' }}
+                      onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.02)'}
+                      onMouseLeave={e => e.currentTarget.style.background = 'none'}
+                    >
+                      <td style={{ padding: '14px 20px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                          <Avatar name={r.user_name} />
+                          <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--text)' }}>{r.user_name}</span>
+                        </div>
+                      </td>
+                      <td style={{ padding: '14px 20px', fontSize: 13, color: 'var(--text-2)' }}>{r.user_email}</td>
+                      <td style={{ padding: '14px 20px', fontSize: 13, color: 'var(--text-2)', maxWidth: 200 }}>
+                        {r.reason
+                          ? <span style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{r.reason}</span>
+                          : <span style={{ color: 'var(--text-3)', fontStyle: 'italic' }}>No reason given</span>}
+                      </td>
+                      <td style={{ padding: '14px 20px', fontSize: 12, color: 'var(--text-3)', whiteSpace: 'nowrap' }}>
+                        {new Date(r.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                      </td>
+                      <td style={{ padding: '14px 20px' }}>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600, textTransform: 'uppercase', color: s.color, background: s.bg, border: `1px solid ${s.border}` }}>
+                          {r.status}
+                        </span>
+                      </td>
+                      <td style={{ padding: '14px 20px' }}>
+                        {r.status === 'pending' ? (
+                          <div style={{ display: 'flex', gap: 8 }}>
+                            <button
+                              onClick={() => setApproveReq(r)}
+                              style={{ padding: '6px 14px', borderRadius: 8, background: 'rgba(74,222,128,0.1)', color: '#4ade80', border: '1px solid rgba(74,222,128,0.3)', cursor: 'pointer', fontSize: 12, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}
+                            ><Check size={12} /> Approve</button>
+                            <button
+                              onClick={() => handleDeny(r.id)}
+                              disabled={denyingId === r.id}
+                              style={{ padding: '6px 14px', borderRadius: 8, background: 'rgba(248,113,113,0.08)', color: 'var(--red)', border: '1px solid rgba(248,113,113,0.2)', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}
+                            >{denyingId === r.id ? '…' : 'Deny'}</button>
+                          </div>
+                        ) : (
+                          <span style={{ fontSize: 12, color: 'var(--text-3)', fontStyle: 'italic' }}>
+                            {r.resolved_at ? new Date(r.resolved_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) : '—'}
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {approveReq && (
+        <ApproveResetModal
+          request={approveReq}
+          onClose={() => setApproveReq(null)}
+          onDone={handleDone}
+        />
+      )}
+    </div>
+  );
+};
+
+// ── Main AdminPanel ────────────────────────────────────────────────────────────
 export default function AdminPanel() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const isAdmin = user?.role === 'admin';
+
+  const [activeTab, setActiveTab] = useState('users');
+  const [pendingResetCount, setPendingResetCount] = useState(0);
 
   const [users, setUsers] = useState([]);
   const [stats, setStats] = useState(null);
@@ -241,7 +446,6 @@ export default function AdminPanel() {
   const [sseConnected, setSseConnected] = useState(false);
   const LIMIT = 10;
 
-  const [editUser, setEditUser] = useState(null);
   const [resetUser, setResetUser] = useState(null);
   const [deleteUser, setDeleteUser] = useState(null);
   const [archiveUser, setArchiveUser] = useState(null);
@@ -250,7 +454,7 @@ export default function AdminPanel() {
 
   useEffect(() => { if (!isAdmin) navigate('/dashboard'); }, [isAdmin]);
 
-  // SSE realtime
+  // SSE
   useEffect(() => {
     if (!isAdmin) return;
     const connect = () => {
@@ -279,7 +483,8 @@ export default function AdminPanel() {
     return () => { sseRef.current?.close(); setSseConnected(false); };
   }, [isAdmin]);
 
-  const fetchStats = () => axios.get(`${API_URL}/api/manager/statistics`).then(r => setStats(r.data.data)).catch(() => {});
+  const fetchStats = () =>
+    axios.get(`${API_URL}/api/manager/statistics`).then(r => setStats(r.data.data)).catch(() => {});
 
   useEffect(() => { fetchStats(); }, []);
 
@@ -297,19 +502,44 @@ export default function AdminPanel() {
   };
 
   useEffect(() => { fetchUsers(); }, [page, roleFilter]);
-  useEffect(() => { const t = setTimeout(() => { setPage(1); fetchUsers(); }, 400); return () => clearTimeout(t); }, [search]);
+  useEffect(() => {
+    const t = setTimeout(() => { setPage(1); fetchUsers(); }, 400);
+    return () => clearTimeout(t);
+  }, [search]);
 
-  const handleUserSaved = (u) => setUsers(us => us.map(x => x.id === u.id ? u : x));
-  const handleUserDeleted = (id) => { setUsers(us => us.filter(u => u.id !== id)); setStats(s => s ? { ...s, total_users: Math.max(0, +s.total_users - 1) } : s); };
+  const handleUserDeleted  = (id) => { setUsers(us => us.filter(u => u.id !== id)); setStats(s => s ? { ...s, total_users: Math.max(0, +s.total_users - 1) } : s); };
   const handleUserArchived = (id) => { setUsers(us => us.filter(u => u.id !== id)); setStats(s => s ? { ...s, total_users: Math.max(0, +s.total_users - 1) } : s); };
-  const handleUserCreated = (u) => { setUsers(prev => prev.find(x => x.id === u.id) ? prev : [u, ...prev]); setStats(s => s ? { ...s, total_users: +s.total_users + 1 } : s); };
-  const fmt = (d) => d ? new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '–';
+  const handleUserCreated  = (u)  => { setUsers(prev => prev.find(x => x.id === u.id) ? prev : [u, ...prev]); setStats(s => s ? { ...s, total_users: +s.total_users + 1 } : s); };
+
+  const fmt = (d) => {
+    if (!d) return <span style={{ color: 'var(--text-3)', fontStyle: 'italic' }}>Never</span>;
+    const date = new Date(d);
+    return (
+      <div>
+        <div>{date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</div>
+        <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 1 }}>
+          {date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}
+        </div>
+      </div>
+    );
+  };
+
+  const tabStyle = (tab) => ({
+    padding: '8px 18px', borderRadius: 8, fontSize: 13, fontWeight: 600,
+    border: '1px solid', cursor: 'pointer', transition: 'all 0.15s',
+    fontFamily: 'DM Sans, sans-serif', display: 'flex', alignItems: 'center', gap: 6,
+    background: activeTab === tab ? 'var(--accent-glow)' : 'var(--bg-3)',
+    borderColor: activeTab === tab ? 'var(--accent)' : 'var(--border)',
+    color: activeTab === tab ? 'var(--accent)' : 'var(--text-2)',
+  });
 
   return (
     <div className="page">
       <style>{`@keyframes livepulse{0%,100%{opacity:1}50%{opacity:0.3}}`}</style>
       <Navbar />
       <div className="page-content" style={{ maxWidth: 1200 }}>
+
+        {/* Header */}
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 32, flexWrap: 'wrap', gap: 16 }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
@@ -323,90 +553,127 @@ export default function AdminPanel() {
           <button className="btn btn-primary" onClick={() => setShowCreate(true)}><UserPlus size={15} /> New Admin</button>
         </div>
 
+        {/* Stats */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16, marginBottom: 32 }}>
           <StatCard icon={<Users size={20} />} label="Total Users" value={stats?.total_users} sub={`+${stats?.new_users_30d ?? 0} this month`} />
           <StatCard icon={<User size={20} />} label="Regular Users" value={stats?.regular_users} accent="var(--text-2)" />
           <StatCard icon={<Crown size={20} />} label="Admins" value={stats?.admins} accent="var(--red)" />
         </div>
 
-        <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '16px 20px', borderBottom: '1px solid var(--border)', flexWrap: 'wrap' }}>
-            <div className="search-wrapper" style={{ maxWidth: 300, flex: 1 }}>
-              <Search size={15} className="search-icon" />
-              <input className="search-input" placeholder="Search name or email…" value={search} onChange={e => setSearch(e.target.value)} style={{ padding: '9px 16px 9px 38px', borderRadius: 10 }} />
-            </div>
-            <div style={{ display: 'flex', gap: 6 }}>
-              {['all', 'user', 'admin'].map(r => (
-                <button key={r} onClick={() => { setRoleFilter(r); setPage(1); }} style={{ padding: '7px 14px', borderRadius: 8, fontSize: 12, fontWeight: 500, border: '1px solid', cursor: 'pointer', transition: 'all 0.15s', background: roleFilter === r ? 'var(--accent-glow)' : 'var(--bg-3)', borderColor: roleFilter === r ? 'var(--accent)' : 'var(--border)', color: roleFilter === r ? 'var(--accent)' : 'var(--text-2)', fontFamily: 'DM Sans, sans-serif' }}>
-                  {r.charAt(0).toUpperCase() + r.slice(1)}
-                </button>
-              ))}
-            </div>
-            <button onClick={() => { fetchUsers(); fetchStats(); }} style={{ marginLeft: 'auto', background: 'none', border: '1px solid var(--border)', color: 'var(--text-2)', cursor: 'pointer', padding: '7px 10px', borderRadius: 8, display: 'flex', alignItems: 'center', transition: 'all 0.15s' }}
-              onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--accent)'; e.currentTarget.style.color = 'var(--accent)'; }}
-              onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-2)'; }}
-            ><RefreshCw size={15} /></button>
-          </div>
-
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead>
-                <tr style={{ borderBottom: '1px solid var(--border)' }}>
-                  {['User', 'Email', 'Role', 'Joined', 'Last Login', ''].map((h, i) => (
-                    <th key={i} style={{ padding: '10px 20px', textAlign: 'left', fontSize: 11, fontWeight: 600, letterSpacing: '0.7px', textTransform: 'uppercase', color: 'var(--text-3)', whiteSpace: 'nowrap' }}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {loading ? (
-                  <tr><td colSpan={6} style={{ padding: '48px 20px', textAlign: 'center', color: 'var(--text-3)' }}>Loading…</td></tr>
-                ) : users.length === 0 ? (
-                  <tr><td colSpan={6} style={{ padding: '48px 20px', textAlign: 'center', color: 'var(--text-3)' }}>No users found</td></tr>
-                ) : users.map((u, i) => (
-                  <tr key={u.id} style={{ borderBottom: i < users.length - 1 ? '1px solid var(--border)' : 'none', transition: 'background 0.1s' }}
-                    onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.02)'}
-                    onMouseLeave={e => e.currentTarget.style.background = 'none'}
-                  >
-                    <td style={{ padding: '14px 20px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <Avatar name={u.name} />
-                        <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--text)' }}>
-                          {u.name}
-                          {String(u.id) === String(user?.id) && <span style={{ marginLeft: 6, fontSize: 10, color: 'var(--accent)', background: 'var(--accent-glow)', padding: '1px 6px', borderRadius: 4 }}>You</span>}
-                        </div>
-                      </div>
-                    </td>
-                    <td style={{ padding: '14px 20px', fontSize: 13, color: 'var(--text-2)' }}>{u.email}</td>
-                    <td style={{ padding: '14px 20px' }}><RoleBadge role={u.role} /></td>
-                    <td style={{ padding: '14px 20px', fontSize: 13, color: 'var(--text-2)', whiteSpace: 'nowrap' }}>{fmt(u.created_at)}</td>
-                    <td style={{ padding: '14px 20px', fontSize: 13, color: 'var(--text-2)', whiteSpace: 'nowrap' }}>{fmt(u.last_login)}</td>
-                    <td style={{ padding: '14px 20px' }}>
-                      <RowActions user={u} currentId={user?.id} onEdit={() => setEditUser(u)} onResetPw={() => setResetUser(u)} onDelete={() => setDeleteUser(u)} onArchive={() => setArchiveUser(u)} />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {pagination.pages > 1 && (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 20px', borderTop: '1px solid var(--border)' }}>
-              <span style={{ fontSize: 13, color: 'var(--text-3)' }}>{pagination.total} users · Page {page} of {pagination.pages}</span>
-              <div style={{ display: 'flex', gap: 6 }}>
-                <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} style={{ padding: '6px 10px', background: 'var(--bg-3)', border: '1px solid var(--border)', borderRadius: 8, color: page === 1 ? 'var(--text-3)' : 'var(--text)', cursor: page === 1 ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center' }}><ChevronLeft size={15} /></button>
-                <button onClick={() => setPage(p => Math.min(pagination.pages, p + 1))} disabled={page === pagination.pages} style={{ padding: '6px 10px', background: 'var(--bg-3)', border: '1px solid var(--border)', borderRadius: 8, color: page === pagination.pages ? 'var(--text-3)' : 'var(--text)', cursor: page === pagination.pages ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center' }}><ChevronRight size={15} /></button>
-              </div>
-            </div>
-          )}
+        {/* Tabs */}
+        <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
+          <button style={tabStyle('users')} onClick={() => setActiveTab('users')}>
+            <Users size={14} /> Users
+          </button>
+          <button style={tabStyle('reset-requests')} onClick={() => setActiveTab('reset-requests')}>
+            <Key size={14} /> Password Requests
+            {pendingResetCount > 0 && (
+              <span style={{ background: '#f87171', color: 'white', borderRadius: 20, padding: '1px 7px', fontSize: 10, fontWeight: 700 }}>{pendingResetCount}</span>
+            )}
+          </button>
         </div>
+
+        {/* Users Tab */}
+        {activeTab === 'users' && (
+          <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '16px 20px', borderBottom: '1px solid var(--border)', flexWrap: 'wrap' }}>
+              <div className="search-wrapper" style={{ maxWidth: 300, flex: 1 }}>
+                <Search size={15} className="search-icon" />
+                <input className="search-input" placeholder="Search name or email…" value={search} onChange={e => setSearch(e.target.value)} style={{ padding: '9px 16px 9px 38px', borderRadius: 10 }} />
+              </div>
+              <div style={{ display: 'flex', gap: 6 }}>
+                {['all', 'user', 'admin'].map(r => (
+                  <button key={r} onClick={() => { setRoleFilter(r); setPage(1); }}
+                    style={{ padding: '7px 14px', borderRadius: 8, fontSize: 12, fontWeight: 500, border: '1px solid', cursor: 'pointer', transition: 'all 0.15s', background: roleFilter === r ? 'var(--accent-glow)' : 'var(--bg-3)', borderColor: roleFilter === r ? 'var(--accent)' : 'var(--border)', color: roleFilter === r ? 'var(--accent)' : 'var(--text-2)', fontFamily: 'DM Sans, sans-serif' }}>
+                    {r.charAt(0).toUpperCase() + r.slice(1)}
+                  </button>
+                ))}
+              </div>
+              <button onClick={() => { fetchUsers(); fetchStats(); }}
+                style={{ marginLeft: 'auto', background: 'none', border: '1px solid var(--border)', color: 'var(--text-2)', cursor: 'pointer', padding: '7px 10px', borderRadius: 8, display: 'flex', alignItems: 'center', transition: 'all 0.15s' }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--accent)'; e.currentTarget.style.color = 'var(--accent)'; }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-2)'; }}
+              ><RefreshCw size={15} /></button>
+            </div>
+
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                    {['User', 'Email', 'Role', 'Joined', 'Last Login', ''].map((h, i) => (
+                      <th key={i} style={{ padding: '10px 20px', textAlign: 'left', fontSize: 11, fontWeight: 600, letterSpacing: '0.7px', textTransform: 'uppercase', color: 'var(--text-3)', whiteSpace: 'nowrap' }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {loading ? (
+                    <tr><td colSpan={6} style={{ padding: '48px 20px', textAlign: 'center', color: 'var(--text-3)' }}>Loading…</td></tr>
+                  ) : users.length === 0 ? (
+                    <tr><td colSpan={6} style={{ padding: '48px 20px', textAlign: 'center', color: 'var(--text-3)' }}>No users found</td></tr>
+                  ) : users.map((u, i) => (
+                    <tr key={u.id}
+                      style={{ borderBottom: i < users.length - 1 ? '1px solid var(--border)' : 'none', transition: 'background 0.1s' }}
+                      onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.02)'}
+                      onMouseLeave={e => e.currentTarget.style.background = 'none'}
+                    >
+                      <td style={{ padding: '14px 20px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                          <Avatar name={u.name} />
+                          <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--text)' }}>
+                            {u.name}
+                            {String(u.id) === String(user?.id) && <span style={{ marginLeft: 6, fontSize: 10, color: 'var(--accent)', background: 'var(--accent-glow)', padding: '1px 6px', borderRadius: 4 }}>You</span>}
+                          </div>
+                        </div>
+                      </td>
+                      <td style={{ padding: '14px 20px', fontSize: 13, color: 'var(--text-2)' }}>{u.email}</td>
+                      <td style={{ padding: '14px 20px' }}><RoleBadge role={u.role} /></td>
+                      <td style={{ padding: '14px 20px', fontSize: 13, color: 'var(--text-2)', whiteSpace: 'nowrap' }}>{fmt(u.created_at)}</td>
+                      <td style={{ padding: '14px 20px', fontSize: 13, color: 'var(--text-2)', whiteSpace: 'nowrap' }}>{fmt(u.last_login)}</td>
+                      <td style={{ padding: '14px 20px' }}>
+                        <RowActions
+                          user={u}
+                          currentId={user?.id}
+                          onResetPw={() => setResetUser(u)}
+                          onDelete={() => setDeleteUser(u)}
+                          onArchive={() => setArchiveUser(u)}
+                        />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {pagination.pages > 1 && (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 20px', borderTop: '1px solid var(--border)' }}>
+                <span style={{ fontSize: 13, color: 'var(--text-3)' }}>{pagination.total} users · Page {page} of {pagination.pages}</span>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
+                    style={{ padding: '6px 10px', background: 'var(--bg-3)', border: '1px solid var(--border)', borderRadius: 8, color: page === 1 ? 'var(--text-3)' : 'var(--text)', cursor: page === 1 ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center' }}>
+                    <ChevronLeft size={15} />
+                  </button>
+                  <button onClick={() => setPage(p => Math.min(pagination.pages, p + 1))} disabled={page === pagination.pages}
+                    style={{ padding: '6px 10px', background: 'var(--bg-3)', border: '1px solid var(--border)', borderRadius: 8, color: page === pagination.pages ? 'var(--text-3)' : 'var(--text)', cursor: page === pagination.pages ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center' }}>
+                    <ChevronRight size={15} />
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Password Reset Requests Tab */}
+        {activeTab === 'reset-requests' && (
+          <ResetRequestsTab onPendingCountChange={setPendingResetCount} />
+        )}
+
         <div style={{ height: 48 }} />
       </div>
 
-      {editUser    && <EditModal    user={editUser}    onClose={() => setEditUser(null)}    onSave={handleUserSaved} />}
-      {resetUser   && <ResetPwModal user={resetUser}   onClose={() => setResetUser(null)} />}
-      {deleteUser  && <DeleteModal  user={deleteUser}  onClose={() => setDeleteUser(null)}  onDeleted={handleUserDeleted} />}
-      {archiveUser && <ArchiveModal user={archiveUser} onClose={() => setArchiveUser(null)} onArchived={handleUserArchived} />}
-      {showCreate  && <CreateModal  onClose={() => setShowCreate(false)} onCreated={handleUserCreated} />}
+      {resetUser   && <ResetPwModal  user={resetUser}   onClose={() => setResetUser(null)} />}
+      {deleteUser  && <DeleteModal   user={deleteUser}  onClose={() => setDeleteUser(null)}  onDeleted={handleUserDeleted} />}
+      {archiveUser && <ArchiveModal  user={archiveUser} onClose={() => setArchiveUser(null)} onArchived={handleUserArchived} />}
+      {showCreate  && <CreateModal   onClose={() => setShowCreate(false)} onCreated={handleUserCreated} />}
     </div>
   );
 }
