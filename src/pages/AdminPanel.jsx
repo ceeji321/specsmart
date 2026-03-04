@@ -10,7 +10,7 @@ import {
   RefreshCw, UserPlus, MoreVertical, Crown, User, Archive, Ban
 } from 'lucide-react';
 
-const API_URL = 'https://specsmart-production.up.railway.app';
+const API_URL = 'http://localhost:5000';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const roleColor = (role) => {
@@ -505,22 +505,13 @@ const ArchivedUsersTab = () => {
                     {u.archive_reason || 'No reason given'}
                   </td>
                   <td style={{ padding: '14px 20px' }}>
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      <button
-                        onClick={() => handleRestore(u.id)}
-                        disabled={restoringId === u.id}
-                        style={{ padding: '6px 14px', borderRadius: 8, background: 'rgba(74,222,128,0.1)', color: '#4ade80', border: '1px solid rgba(74,222,128,0.3)', cursor: 'pointer', fontSize: 12, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}
-                      >
-                        <Check size={12} /> {restoringId === u.id ? 'Restoring…' : 'Restore'}
-                      </button>
-                      <button
-                        onClick={() => handleDelete(u.id)}
-                        disabled={deletingId === u.id}
-                        style={{ padding: '6px 14px', borderRadius: 8, background: 'rgba(248,113,113,0.08)', color: 'var(--red)', border: '1px solid rgba(248,113,113,0.2)', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}
-                      >
-                        {deletingId === u.id ? '…' : 'Delete'}
-                      </button>
-                    </div>
+                    <button
+                      onClick={() => handleRestore(u.id)}
+                      disabled={restoringId === u.id}
+                      style={{ padding: '6px 14px', borderRadius: 8, background: 'rgba(74,222,128,0.1)', color: '#4ade80', border: '1px solid rgba(74,222,128,0.3)', cursor: 'pointer', fontSize: 12, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}
+                    >
+                      <Check size={12} /> {restoringId === u.id ? 'Restoring…' : 'Restore'}
+                    </button>
                   </td>
                 </tr>
               ))}

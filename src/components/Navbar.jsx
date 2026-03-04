@@ -102,12 +102,14 @@ export default function Navbar() {
                   background: 'var(--bg-2)', border: '1px solid var(--border-light)',
                   borderRadius: 12, minWidth: 200, boxShadow: 'var(--shadow)', overflow: 'hidden',
                 }}>
+                  {/* Profile info */}
                   <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)' }}>
                     <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--text)' }}>{user?.name}</div>
                     <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>{user?.email}</div>
                   </div>
 
                   <div style={{ padding: '6px 0' }}>
+                    {/* Regular user menu items */}
                     {!isAdmin && (
                       <>
                         {!isActive('/dashboard') && (
@@ -128,17 +130,21 @@ export default function Navbar() {
                           style={{ width: '100%', textAlign: 'left', color: 'var(--accent)' }}>
                           ✏️ Edit Profile
                         </button>
+                        <div className="dropdown-divider" />
                       </>
                     )}
 
+                    {/* Admin panel link */}
                     {isAdmin && !isActive('/admin') && (
-                      <button onClick={() => { navigate('/admin'); setDropdownOpen(false); }}
-                        className="dropdown-item" style={{ width: '100%', textAlign: 'left' }}>
-                        Admin Panel
-                      </button>
+                      <>
+                        <button onClick={() => { navigate('/admin'); setDropdownOpen(false); }}
+                          className="dropdown-item" style={{ width: '100%', textAlign: 'left' }}>
+                          Admin Panel
+                        </button>
+                        <div className="dropdown-divider" />
+                      </>
                     )}
 
-                    <div className="dropdown-divider" />
                     <button className="dropdown-item" onClick={handleLogout}
                       style={{ width: '100%', textAlign: 'left', color: 'var(--red)' }}>
                       Sign out

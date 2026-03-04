@@ -4,15 +4,140 @@ import Navbar from '../components/Navbar';
 import { devices, categories } from '../data/devices';
 import { X, Sparkles } from 'lucide-react';
 import { askAI } from '../services/aiService';
-import { getBrandLogoUrl } from '../utils/brandLogo';
 
-const BrandLogo = ({ brand, emoji, size = 40 }) => {
-  const [err, setErr] = useState(false);
-  const url = getBrandLogoUrl(brand);
-  if (!url || err) return <span style={{ fontSize: size * 0.7, lineHeight: 1 }}>{emoji || '💡'}</span>;
+// ─── Brand colors ─────────────────────────────────────────────────────────────
+const BRAND_COLORS = {
+  'NVIDIA':       '#76b900',
+  'AMD':          '#ed1c24',
+  'Intel':        '#0071c5',
+  'Apple':        '#555555',
+  'Samsung':      '#1428a0',
+  'Xiaomi':       '#ff6900',
+  'POCO':         '#c8a400',
+  'OPPO':         '#1d7aff',
+  'Realme':       '#e6ab00',
+  'Vivo':         '#415fff',
+  'Google':       '#4285f4',
+  'OnePlus':      '#f5010c',
+  'Nothing':      '#333333',
+  'Huawei':       '#cf0a2c',
+  'Sony':         '#00439c',
+  'Motorola':     '#5c88da',
+  'Nokia':        '#124191',
+  'Tecno':        '#1d49b8',
+  'Infinix':      '#ef4e23',
+  'Corsair':      '#c8a400',
+  'G.Skill':      '#cc0000',
+  'Kingston':     '#e30613',
+  'Crucial':      '#006400',
+  'TeamGroup':    '#1e90ff',
+  'Patriot':      '#0000cd',
+  'WD':           '#0066cc',
+  'Seagate':      '#00ae42',
+  'Sabrent':      '#ff6600',
+  'SK Hynix':     '#005baa',
+  'ASUS':         '#00539b',
+  'MSI':          '#e4002b',
+  'Gigabyte':     '#e31837',
+  'ASRock':       '#b31b1b',
+  'Seasonic':     '#d4890a',
+  'be quiet!':    '#333333',
+  'Thermaltake':  '#c0392b',
+  'EVGA':         '#0066cc',
+  'Fractal':      '#4a4a4a',
+  'Super Flower': '#ff8c00',
+  'Lenovo':       '#e2231a',
+  'HP':           '#0096d6',
+  'Dell':         '#007db8',
+  'Acer':         '#83b81a',
+  'Razer':        '#00d100',
+  'Logitech':     '#00b3e3',
+};
+
+// ─── BrandInitial — colored circle, always works, zero external requests ──────
+const BrandInitial = ({ brand, size = 40 }) => {
+  const color = BRAND_COLORS[brand] || '#6366f1';
+  const initial = (brand || '?')[0].toUpperCase();
   return (
-    <img src={url} alt={brand} onError={() => setErr(true)}
-      style={{ width: size, height: size, objectFit: 'contain' }} />
+    <div style={{
+      width: size, height: size,
+      borderRadius: '50%',
+      background: color,
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      color: 'white',
+      fontWeight: 800,
+      fontSize: size * 0.42,
+      fontFamily: 'Syne, sans-serif',
+      flexShrink: 0,
+      userSelect: 'none',
+    }}>
+      {initial}
+    </div>
+  );
+};
+
+// ─── DeviceCardImage ──────────────────────────────────────────────────────────
+// Shows device.img if it exists, falls back to brand initial circle.
+//
+// ════════════════════════════════════════════════════════════════
+//  HOW TO ADD AN IMAGE TO ANY DEVICE CARD
+// ════════════════════════════════════════════════════════════════
+//
+//  1. Open   src/data/devices.js
+//  2. Find the device you want, and add   img: 'YOUR_URL'
+//
+//  Example — before:
+//    { id: 1, name: 'Intel Core i9-14900K', brand: 'Intel', category: 'CPU', ... }
+//
+//  Example — after:
+//    { id: 1, name: 'Intel Core i9-14900K', brand: 'Intel', category: 'CPU',
+//      img: 'https://i.imgur.com/abc123.jpg',   ← just add this line
+//      ... }
+//
+//  WHERE TO GET FREE IMAGE URLS (no login needed):
+//  ┌─────────────────────────────────────────────────────────────┐
+//  │  Imgur (easiest)                                            │
+//  │  1. Go to imgur.com                                         │
+//  │  2. Click "New post" → upload the image                     │
+//  │  3. Right-click the image → "Copy image address"            │
+//  │  4. Paste that URL as the img value                         │
+//  │                                                             │
+//  │  Your own project folder (most reliable)                    │
+//  │  1. Put the image in   /public/images/i9-14900k.jpg         │
+//  │  2. Use   img: '/images/i9-14900k.jpg'                      │
+//  └─────────────────────────────────────────────────────────────┘
+//
+//  Devices WITHOUT an img field automatically show the brand
+//  colored circle — no extra work needed.
+// ════════════════════════════════════════════════════════════════
+const DeviceCardImage = ({ device }) => {
+  const [failed, setFailed] = useState(false);
+  useEffect(() => { setFailed(false); }, [device.img]);
+
+  if (device.img && !failed) {
+    return (
+      <img
+        src={device.img}
+        alt={device.name}
+        onError={() => setFailed(true)}
+        style={{
+          width: '100%', height: '100%',
+          objectFit: 'contain',
+          padding: '14px',
+          boxSizing: 'border-box',
+        }}
+      />
+    );
+  }
+  return (
+    <div style={{
+      width: 70, height: 70, borderRadius: 16, background: 'white',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      padding: 10, boxShadow: '0 4px 16px rgba(0,0,0,0.2)',
+      position: 'relative', zIndex: 1,
+    }}>
+      <BrandInitial brand={device.brand} size={50} />
+    </div>
   );
 };
 
@@ -63,8 +188,6 @@ export default function Dashboard() {
   const [selectedDevice, setSelectedDevice] = useState(null);
   const [aiSearchResult, setAiSearchResult] = useState(null);
   const [aiSearching, setAiSearching] = useState(false);
-
-  // Dropdown suggestion state
   const [showDropdown, setShowDropdown] = useState(false);
   const [aiSuggestions, setAiSuggestions] = useState([]);
   const [suggestionsLoading, setSuggestionsLoading] = useState(false);
@@ -74,7 +197,6 @@ export default function Dashboard() {
   const debounceRef = useRef(null);
   const navigate = useNavigate();
 
-  // Close dropdown on outside click
   useEffect(() => {
     const handle = (e) => {
       if (searchRef.current && !searchRef.current.contains(e.target)) setShowDropdown(false);
@@ -83,7 +205,6 @@ export default function Dashboard() {
     return () => document.removeEventListener('mousedown', handle);
   }, []);
 
-  // Debounced AI suggestions as user types
   useEffect(() => {
     if (!search.trim() || search.length < 2) { setAiSuggestions([]); return; }
     clearTimeout(debounceRef.current);
@@ -158,7 +279,7 @@ export default function Dashboard() {
       <Navbar />
       <div className="page-content">
 
-        {/* Search with live dropdown */}
+        {/* Search */}
         <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 28 }}>
           <div ref={searchRef} style={{ position: 'relative', width: '100%', maxWidth: 600 }}>
             <div className="search-wrapper" style={{ position: 'relative' }}>
@@ -179,7 +300,6 @@ export default function Dashboard() {
               )}
             </div>
 
-            {/* Live suggestions dropdown */}
             {showDropdown && search.trim() && (
               <div style={{
                 position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0, zIndex: 200,
@@ -187,7 +307,6 @@ export default function Dashboard() {
                 borderRadius: 'var(--radius-sm)', boxShadow: 'var(--shadow)',
                 overflow: 'hidden', maxHeight: 400, overflowY: 'auto',
               }}>
-                {/* Local results */}
                 {dropdownLocal.length > 0 && (
                   <>
                     <div style={{ padding: '5px 14px', fontSize: 10, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.8px', background: 'var(--bg-3)' }}>
@@ -199,7 +318,7 @@ export default function Dashboard() {
                         onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-3)'}
                         onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
                         <div style={{ width: 34, height: 34, borderRadius: 9, background: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 4, flexShrink: 0 }}>
-                          <BrandLogo brand={d.brand} emoji={d.emoji} size={26} />
+                          <BrandInitial brand={d.brand} size={26} />
                         </div>
                         <div>
                           <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)' }}>{d.name}</div>
@@ -209,12 +328,9 @@ export default function Dashboard() {
                     ))}
                   </>
                 )}
-
-                {/* AI suggestions */}
                 <div style={{ padding: '5px 14px', fontSize: 10, fontWeight: 700, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.8px', background: 'var(--bg-3)', display: 'flex', alignItems: 'center', gap: 5 }}>
                   <Sparkles size={10} /> AI Suggestions
                 </div>
-
                 {suggestionsLoading ? (
                   <div style={{ padding: '12px 14px', fontSize: 12, color: 'var(--text-3)', display: 'flex', alignItems: 'center', gap: 8 }}>
                     <Sparkles size={12} style={{ color: 'var(--accent)' }} /> Finding suggestions...
@@ -226,7 +342,7 @@ export default function Dashboard() {
                       onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-3)'}
                       onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
                       <div style={{ width: 34, height: 34, borderRadius: 9, background: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 4, flexShrink: 0 }}>
-                        <BrandLogo brand={s.brand} emoji={s.emoji} size={26} />
+                        <BrandInitial brand={s.brand} size={26} />
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)' }}>{s.name}</div>
@@ -259,7 +375,6 @@ export default function Dashboard() {
           <span style={{ fontSize: 13, fontWeight: 400, color: 'var(--text-3)', fontFamily: 'DM Sans' }}>{localFiltered.length} items</span>
         </div>
 
-        {/* AI loading */}
         {aiSearching && (
           <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-3)' }}>
             <div style={{ fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
@@ -268,14 +383,13 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* AI full result card */}
         {aiSearchResult && !aiSearching && (
           <div style={{ marginBottom: 24 }}>
             {aiSearchResult.found ? (
               <div style={{ background: 'var(--bg-2)', border: '1px solid var(--accent)', borderRadius: 'var(--radius)', overflow: 'hidden', boxShadow: '0 0 20px rgba(99,102,241,0.1)' }}>
                 <div style={{ background: 'linear-gradient(135deg, rgba(99,102,241,0.15), rgba(99,102,241,0.03))', padding: '20px', borderBottom: '1px solid var(--border)', display: 'flex', gap: 16, alignItems: 'center' }}>
                   <div style={{ width: 60, height: 60, borderRadius: 14, background: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 8, flexShrink: 0, boxShadow: '0 4px 16px rgba(0,0,0,0.2)' }}>
-                    <BrandLogo brand={aiSearchResult.brand} emoji={aiSearchResult.emoji || '💡'} size={44} />
+                    <BrandInitial brand={aiSearchResult.brand} size={44} />
                   </div>
                   <div style={{ flex: 1 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
@@ -289,7 +403,6 @@ export default function Dashboard() {
                   </div>
                   <div style={{ fontFamily: 'Syne, sans-serif', fontWeight: 800, fontSize: 20, color: 'var(--accent)', flexShrink: 0 }}>{aiSearchResult.price}</div>
                 </div>
-
                 <div style={{ padding: '16px 20px' }}>
                   <div style={{ fontSize: 13, color: 'var(--text-2)', lineHeight: 1.7, marginBottom: 14, background: 'var(--bg-3)', borderRadius: 8, padding: '10px 14px' }}>
                     {aiSearchResult.summary}
@@ -338,12 +451,21 @@ export default function Dashboard() {
                 <div key={device.id} className="device-card fade-up"
                   style={{ animationDelay: `${i * 0.04}s`, cursor: 'pointer' }}
                   onClick={() => setSelectedDevice(device)}>
-                  <div className="device-card-img" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, var(--bg-3) 0%, var(--bg-2) 100%)', position: 'relative', overflow: 'hidden' }}>
-                    <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(circle at 50% 40%, rgba(99,102,241,0.08), transparent 70%)' }} />
-                    <div style={{ width: 70, height: 70, borderRadius: 16, background: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 10, boxShadow: '0 4px 16px rgba(0,0,0,0.2)', position: 'relative', zIndex: 1 }}>
-                      <BrandLogo brand={device.brand} emoji={device.emoji} size={50} />
-                    </div>
+
+                  <div className="device-card-img" style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    background: device.img
+                      ? 'var(--bg-3)'
+                      : `linear-gradient(135deg, ${BRAND_COLORS[device.brand] || '#6366f1'}22, ${BRAND_COLORS[device.brand] || '#6366f1'}08)`,
+                    position: 'relative', overflow: 'hidden',
+                  }}>
+                    {/* Brand color stripe */}
+                    <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: BRAND_COLORS[device.brand] || 'var(--accent)', zIndex: 2 }} />
+                    {/* Subtle glow for non-image cards */}
+                    {!device.img && <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(circle at 50% 40%, rgba(99,102,241,0.06), transparent 70%)' }} />}
+                    <DeviceCardImage device={device} />
                   </div>
+
                   <div className="device-card-body">
                     <div className="device-card-category">{device.category}</div>
                     <div className="device-card-name">{device.name}</div>
@@ -379,14 +501,21 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Device popup */}
+      {/* Device popup modal */}
       {selectedDevice && (
         <div className="modal-overlay" onClick={() => setSelectedDevice(null)}>
           <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 480, width: '100%' }}>
             <button onClick={() => setSelectedDevice(null)} style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer' }}><X size={18} /></button>
             <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 20 }}>
-              <div style={{ width: 52, height: 52, borderRadius: 14, background: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 8, boxShadow: '0 4px 16px rgba(0,0,0,0.2)', flexShrink: 0 }}>
-                <BrandLogo brand={selectedDevice.brand} emoji={selectedDevice.emoji} size={36} />
+              <div style={{ width: 56, height: 56, borderRadius: 14, background: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 6, boxShadow: '0 4px 16px rgba(0,0,0,0.2)', flexShrink: 0, overflow: 'hidden' }}>
+                {selectedDevice.img ? (
+                  <img src={selectedDevice.img} alt={selectedDevice.name}
+                    style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                    onError={e => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }} />
+                ) : null}
+                <div style={{ display: selectedDevice.img ? 'none' : 'flex', width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center' }}>
+                  <BrandInitial brand={selectedDevice.brand} size={40} />
+                </div>
               </div>
               <div>
                 <div style={{ fontSize: 11, color: 'var(--accent)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 }}>{selectedDevice.category}</div>
