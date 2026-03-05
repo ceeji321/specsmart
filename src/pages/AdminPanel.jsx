@@ -10,7 +10,9 @@ import {
   RefreshCw, UserPlus, MoreVertical, Crown, User, Archive, Ban
 } from 'lucide-react';
 
-const API_URL = 'http://localhost:5000';
+const API_URL = import.meta.env.DEV
+  ? 'http://localhost:5000'
+  : 'https://specsmart-production.up.railway.app';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const roleColor = (role) => {
