@@ -54,7 +54,7 @@ const BRAND_COLORS = {
   'Logitech':     '#00b3e3',
 };
 
-// ─── BrandInitial — colored circle, always works, zero external requests ──────
+// ─── BrandInitial ─────────────────────────────────────────────────────────────
 const BrandInitial = ({ brand, size = 40 }) => {
   const color = BRAND_COLORS[brand] || '#6366f1';
   const initial = (brand || '?')[0].toUpperCase();
@@ -76,59 +76,55 @@ const BrandInitial = ({ brand, size = 40 }) => {
   );
 };
 
-// ─── DeviceCardImage ──────────────────────────────────────────────────────────
-// Shows device.img if it exists, falls back to brand initial circle.
-//
-// ════════════════════════════════════════════════════════════════
-//  HOW TO ADD AN IMAGE TO ANY DEVICE CARD
-// ════════════════════════════════════════════════════════════════
-//
-//  1. Open   src/data/devices.js
-//  2. Find the device you want, and add   img: 'YOUR_URL'
-//
-//  Example — before:
-//    { id: 1, name: 'Intel Core i9-14900K', brand: 'Intel', category: 'CPU', ... }
-//
-//  Example — after:
-//    { id: 1, name: 'Intel Core i9-14900K', brand: 'Intel', category: 'CPU',
-//      img: 'https://i.imgur.com/abc123.jpg',   ← just add this line
-//      ... }
-//
-//  WHERE TO GET FREE IMAGE URLS (no login needed):
-//  ┌─────────────────────────────────────────────────────────────┐
-//  │  Imgur (easiest)                                            │
-//  │  1. Go to imgur.com                                         │
-//  │  2. Click "New post" → upload the image                     │
-//  │  3. Right-click the image → "Copy image address"            │
-//  │  4. Paste that URL as the img value                         │
-//  │                                                             │
-//  │  Your own project folder (most reliable)                    │
-//  │  1. Put the image in   /public/images/i9-14900k.jpg         │
-//  │  2. Use   img: '/images/i9-14900k.jpg'                      │
-//  └─────────────────────────────────────────────────────────────┘
-//
-//  Devices WITHOUT an img field automatically show the brand
-//  colored circle — no extra work needed.
-// ════════════════════════════════════════════════════════════════
+// ─── DeviceCardImage — URL first → localImg fallback → brand initial ──────────
 const DeviceCardImage = ({ device }) => {
-  const [failed, setFailed] = useState(false);
-  useEffect(() => { setFailed(false); }, [device.img]);
+  const [urlFailed, setUrlFailed] = useState(false);
+  const [localFailed, setLocalFailed] = useState(false);
 
-  if (device.img && !failed) {
+  // Support both `img` and `image` field names
+  const urlSrc = device.img || device.image || null;
+  // Local image stored in /public/images/ — set via `localImg` field in devices.js
+  const localSrc = device.localImg || null;
+
+  // Reset on device change
+  useEffect(() => {
+    setUrlFailed(false);
+    setLocalFailed(false);
+  }, [device.id]);
+
+  const imgStyle = {
+    width: '100%',
+    height: '100%',
+    objectFit: 'contain',
+    padding: '14px',
+    boxSizing: 'border-box',
+  };
+
+  // 1️⃣ Try remote URL first
+  if (urlSrc && !urlFailed) {
     return (
       <img
-        src={device.img}
+        src={urlSrc}
         alt={device.name}
-        onError={() => setFailed(true)}
-        style={{
-          width: '100%', height: '100%',
-          objectFit: 'contain',
-          padding: '14px',
-          boxSizing: 'border-box',
-        }}
+        onError={() => setUrlFailed(true)}
+        style={imgStyle}
       />
     );
   }
+
+  // 2️⃣ URL failed — try local image from /public/images/
+  if (localSrc && !localFailed) {
+    return (
+      <img
+        src={localSrc}
+        alt={device.name}
+        onError={() => setLocalFailed(true)}
+        style={imgStyle}
+      />
+    );
+  }
+
+  // 3️⃣ Both failed — show brand initial circle
   return (
     <div style={{
       width: 70, height: 70, borderRadius: 16, background: 'white',
@@ -261,9 +257,25 @@ export default function Dashboard() {
   const handleChatSubmit = (e) => {
     e.preventDefault();
     if (!chatInput.trim() && !uploadedFile) return;
-    sessionStorage.setItem('pendingMessage', JSON.stringify({ content: chatInput, file: uploadedFile ? uploadedFile.name : null }));
-    setChatInput(''); setUploadedFile(null);
-    navigate(`/chat/${Date.now()}`);
+    if (uploadedFile) {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const base64 = ev.target.result.split(',')[1];
+        const mime = uploadedFile.type || 'image/jpeg';
+        sessionStorage.setItem('pendingMessage', JSON.stringify({
+          content: chatInput,
+          imageData: base64,
+          imageMime: mime,
+        }));
+        setChatInput(''); setUploadedFile(null);
+        navigate(`/chat/${Date.now()}`);
+      };
+      reader.readAsDataURL(uploadedFile);
+    } else {
+      sessionStorage.setItem('pendingMessage', JSON.stringify({ content: chatInput }));
+      setChatInput(''); setUploadedFile(null);
+      navigate(`/chat/${Date.now()}`);
+    }
   };
 
   const askAIDevice = (device) => {
@@ -454,15 +466,13 @@ export default function Dashboard() {
 
                   <div className="device-card-img" style={{
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    background: device.img
+                    background: (device.img || device.image || device.localImg)
                       ? 'var(--bg-3)'
                       : `linear-gradient(135deg, ${BRAND_COLORS[device.brand] || '#6366f1'}22, ${BRAND_COLORS[device.brand] || '#6366f1'}08)`,
                     position: 'relative', overflow: 'hidden',
                   }}>
-                    {/* Brand color stripe */}
                     <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: BRAND_COLORS[device.brand] || 'var(--accent)', zIndex: 2 }} />
-                    {/* Subtle glow for non-image cards */}
-                    {!device.img && <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(circle at 50% 40%, rgba(99,102,241,0.06), transparent 70%)' }} />}
+                    {!(device.img || device.image || device.localImg) && <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(circle at 50% 40%, rgba(99,102,241,0.06), transparent 70%)' }} />}
                     <DeviceCardImage device={device} />
                   </div>
 
@@ -507,15 +517,9 @@ export default function Dashboard() {
           <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 480, width: '100%' }}>
             <button onClick={() => setSelectedDevice(null)} style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer' }}><X size={18} /></button>
             <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 20 }}>
+              {/* Modal image also uses the same fallback logic */}
               <div style={{ width: 56, height: 56, borderRadius: 14, background: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 6, boxShadow: '0 4px 16px rgba(0,0,0,0.2)', flexShrink: 0, overflow: 'hidden' }}>
-                {selectedDevice.img ? (
-                  <img src={selectedDevice.img} alt={selectedDevice.name}
-                    style={{ width: '100%', height: '100%', objectFit: 'contain' }}
-                    onError={e => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }} />
-                ) : null}
-                <div style={{ display: selectedDevice.img ? 'none' : 'flex', width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center' }}>
-                  <BrandInitial brand={selectedDevice.brand} size={40} />
-                </div>
+                <ModalDeviceImage device={selectedDevice} />
               </div>
               <div>
                 <div style={{ fontSize: 11, color: 'var(--accent)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 }}>{selectedDevice.category}</div>
@@ -542,6 +546,34 @@ export default function Dashboard() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// ─── ModalDeviceImage — same fallback logic, used inside the popup modal ──────
+function ModalDeviceImage({ device }) {
+  const [urlFailed, setUrlFailed] = useState(false);
+  const [localFailed, setLocalFailed] = useState(false);
+
+  const urlSrc = device.img || device.image || null;
+  const localSrc = device.localImg || null;
+
+  useEffect(() => {
+    setUrlFailed(false);
+    setLocalFailed(false);
+  }, [device.id]);
+
+  const imgStyle = { width: '100%', height: '100%', objectFit: 'contain' };
+
+  if (urlSrc && !urlFailed) {
+    return <img src={urlSrc} alt={device.name} onError={() => setUrlFailed(true)} style={imgStyle} />;
+  }
+  if (localSrc && !localFailed) {
+    return <img src={localSrc} alt={device.name} onError={() => setLocalFailed(true)} style={imgStyle} />;
+  }
+  return (
+    <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <BrandInitial brand={device.brand} size={40} />
     </div>
   );
 }

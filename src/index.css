@@ -960,3 +960,45 @@ div[style*="fontSize: '48px'"] {
     grid-template-columns: 1fr;
   }
 }
+/* ── Admin row action buttons ── */
+button.action-btn-disable {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 16px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: 'DM Sans', sans-serif;
+  color: #fbbf24;
+  transition: background 0.15s, color 0.15s;
+  text-align: left;
+}
+button.action-btn-disable:hover {
+  background: rgba(251,191,36,0.14);
+  color: #fde68a;
+}
+
+button.action-btn-archive {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 16px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: 'DM Sans', sans-serif;
+  color: #9aa0b0;
+  transition: background 0.15s, color 0.15s;
+  text-align: left;
+}
+button.action-btn-archive:hover {
+  background: rgba(154,160,176,0.14);
+  color: #e8eaf0;
+}

@@ -10,7 +10,7 @@ const API_BASE = import.meta.env.DEV
 
 const AuthModal = ({ isOpen, onClose, defaultMode = 'login' }) => {
   const [mode, setMode] = useState(defaultMode); // 'login' | 'register' | 'forgot'
-  const [formData, setFormData] = useState({ email: '', password: '', name: '', confirmPassword: '' });
+  const [formData, setFormData] = useState({ email: '', password: '', firstName: '', lastName: '', confirmPassword: '' });
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -23,7 +23,7 @@ const AuthModal = ({ isOpen, onClose, defaultMode = 'login' }) => {
     if (isOpen) {
       setError('');
       setSuccess('');
-      setFormData({ email: '', password: '', name: '', confirmPassword: '' });
+      setFormData({ email: '', password: '', firstName: '', lastName: '', confirmPassword: '' });
     }
   }, [isOpen]);
 
@@ -32,6 +32,16 @@ const AuthModal = ({ isOpen, onClose, defaultMode = 'login' }) => {
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
     setError('');
+  };
+
+  const handleNameChange = (field) => (e) => {
+    const value = e.target.value.replace(/[^a-zA-Z\s]/g, '');
+    setFormData({ ...formData, [field]: value });
+    setError('');
+  };
+
+  const handleNameKeyDown = (e) => {
+    if (/[^a-zA-Z\s]/.test(e.key) && e.key.length === 1) e.preventDefault();
   };
 
   const handleSubmit = async (e) => {
@@ -47,12 +57,11 @@ const AuthModal = ({ isOpen, onClose, defaultMode = 'login' }) => {
         if (formData.password.length < 6) {
           setError('Password must be at least 6 characters'); setLoading(false); return;
         }
-        const result = await register({ email: formData.email, password: formData.password, name: formData.name });
+        const result = await register({ email: formData.email, password: formData.password, name: `${formData.firstName} ${formData.lastName}`.trim() });
         if (result.success) { onClose(); navigate('/dashboard'); }
         else setError(result.error || 'Registration failed');
 
       } else if (mode === 'forgot') {
-        // ── Real email-based password reset ──────────────────────────────────
         const res = await fetch(`${API_BASE}/api/auth/forgot-password`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -77,7 +86,7 @@ const AuthModal = ({ isOpen, onClose, defaultMode = 'login' }) => {
   const switchMode = () => {
     setMode(mode === 'login' ? 'register' : 'login');
     setError(''); setSuccess('');
-    setFormData({ email: '', password: '', name: '', confirmPassword: '' });
+    setFormData({ email: '', password: '', firstName: '', lastName: '', confirmPassword: '' });
   };
 
   const titles = { login: 'Welcome Back', register: 'Create Account', forgot: 'Forgot Password' };
@@ -113,9 +122,33 @@ const AuthModal = ({ isOpen, onClose, defaultMode = 'login' }) => {
         {!success && (
           <form onSubmit={handleSubmit}>
             {mode === 'register' && (
-              <div className="form-group">
-                <label className="form-label">Full Name</label>
-                <input type="text" name="name" value={formData.name} onChange={handleChange} className="form-input" placeholder="John Doe" required />
+              <div style={{ display: 'flex', gap: 12 }}>
+                <div className="form-group" style={{ flex: 1 }}>
+                  <label className="form-label">First Name</label>
+                  <input
+                    type="text"
+                    name="firstName"
+                    value={formData.firstName}
+                    onChange={handleNameChange('firstName')}
+                    onKeyDown={handleNameKeyDown}
+                    className="form-input"
+                    placeholder="John"
+                    required
+                  />
+                </div>
+                <div className="form-group" style={{ flex: 1 }}>
+                  <label className="form-label">Last Name</label>
+                  <input
+                    type="text"
+                    name="lastName"
+                    value={formData.lastName}
+                    onChange={handleNameChange('lastName')}
+                    onKeyDown={handleNameKeyDown}
+                    className="form-input"
+                    placeholder="Doe"
+                    required
+                  />
+                </div>
               </div>
             )}
 

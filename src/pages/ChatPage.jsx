@@ -213,52 +213,61 @@ const CategoryThumbnail = ({ category, brand, name }) => {
   );
 };
 
-// ─── Device image card — shows real image if provided, falls back to SVG ──────
+// ─── DeviceImage — URL first → localImg fallback → SVG thumbnail ──────────────
 function DeviceImage({ device, category }) {
-  const [imgFailed, setImgFailed] = useState(false);
+  const [urlFailed, setUrlFailed] = useState(false);
+  const [localFailed, setLocalFailed] = useState(false);
 
-  // Reset if device changes
-  useEffect(() => { setImgFailed(false); }, [device.img]);
+  // Support both `img` and `image` field names for the remote URL
+  const urlSrc = device.img || device.image || null;
+  // Local image stored in /public/images/ — set via `localImg` field in devices.js
+  const localSrc = device.localImg || null;
 
-  if (device.img && !imgFailed) {
+  // Reset on device change
+  useEffect(() => {
+    setUrlFailed(false);
+    setLocalFailed(false);
+  }, [device.name]);
+
+  const imgStyle = {
+    width: '100%',
+    height: '100%',
+    objectFit: 'contain',
+    padding: '10px',
+    boxSizing: 'border-box',
+    background: '#f8f9ff',
+  };
+
+  // 1️⃣ Try remote URL first
+  if (urlSrc && !urlFailed) {
     return (
       <img
-        src={device.img}
+        src={urlSrc}
         alt={device.name}
-        onError={() => setImgFailed(true)}
-        style={{
-          width: '100%',
-          height: '100%',
-          objectFit: 'contain',
-          padding: '10px',
-          boxSizing: 'border-box',
-          background: '#f8f9ff',
-        }}
+        onError={() => setUrlFailed(true)}
+        style={imgStyle}
       />
     );
   }
 
+  // 2️⃣ URL failed — try local image from /public/images/
+  if (localSrc && !localFailed) {
+    return (
+      <img
+        src={localSrc}
+        alt={device.name}
+        onError={() => setLocalFailed(true)}
+        style={imgStyle}
+      />
+    );
+  }
+
+  // 3️⃣ Both failed — show inline SVG category thumbnail
   return <CategoryThumbnail category={category} brand={device.brand} name={device.name} />;
 }
 
-// ─── Device catalog ───────────────────────────────────────────────────────────
-// HOW TO ADD AN IMAGE TO ANY DEVICE:
-//   1. Find the device entry below
-//   2. Add:  img: 'YOUR_IMAGE_URL_HERE'
-//   Example:
-//     { name: 'Apple iPhone 16 Pro Max', brand: 'Apple', img: 'https://i.imgur.com/abc123.jpg' },
-//
-// WHERE TO GET FREE IMAGE URLS:
-//   • Imgur (imgur.com) — upload any photo, right-click image → Copy image address
-//   • GSMArena phones  — https://fdn2.gsmarena.com/vv/bigpic/apple-iphone-16-pro-max.jpg
-//   • Your own /public/images/ folder — use '/images/iphone16.jpg'
-//
-// Devices WITHOUT an img field will automatically show the SVG illustration fallback.
-
 const DEVICE_CATALOG = {
   SMARTPHONE: [
-    // ── Apple ──────────────────────────────────────────────────────────────────
-    // Add img: 'URL' to any entry to show a real photo. Examples shown below:
     { name: 'Apple iPhone 16 Pro Max', brand: 'Apple', img: 'https://fdn2.gsmarena.com/vv/bigpic/apple-iphone-16-pro-max.jpg' },
     { name: 'Apple iPhone 16 Pro', brand: 'Apple', img: 'https://fdn2.gsmarena.com/vv/bigpic/apple-iphone-16-pro.jpg' },
     { name: 'Apple iPhone 16 Plus', brand: 'Apple', img: 'https://fdn2.gsmarena.com/vv/bigpic/apple-iphone-16-plus.jpg' },
@@ -288,7 +297,6 @@ const DEVICE_CATALOG = {
     { name: 'Apple iPhone X', brand: 'Apple', img: 'https://fdn2.gsmarena.com/vv/bigpic/apple-iphone-x.jpg' },
     { name: 'Apple iPhone SE (2022)', brand: 'Apple', img: 'https://fdn2.gsmarena.com/vv/bigpic/apple-iphone-se-2022.jpg' },
     { name: 'Apple iPhone SE (2020)', brand: 'Apple', img: 'https://fdn2.gsmarena.com/vv/bigpic/apple-iphone-se-2020-.jpg' },
-    // ── Samsung ────────────────────────────────────────────────────────────────
     { name: 'Samsung Galaxy S24 Ultra', brand: 'Samsung', img: 'https://fdn2.gsmarena.com/vv/bigpic/samsung-galaxy-s24-ultra-5g.jpg' },
     { name: 'Samsung Galaxy S24+', brand: 'Samsung', img: 'https://fdn2.gsmarena.com/vv/bigpic/samsung-galaxy-s24plus-5g.jpg' },
     { name: 'Samsung Galaxy S24', brand: 'Samsung', img: 'https://fdn2.gsmarena.com/vv/bigpic/samsung-galaxy-s24-5g.jpg' },
@@ -299,424 +307,172 @@ const DEVICE_CATALOG = {
     { name: 'Samsung Galaxy S22 Ultra', brand: 'Samsung', img: 'https://fdn2.gsmarena.com/vv/bigpic/samsung-galaxy-s22-ultra-5g.jpg' },
     { name: 'Samsung Galaxy S22+', brand: 'Samsung', img: 'https://fdn2.gsmarena.com/vv/bigpic/samsung-galaxy-s22-plus-5g.jpg' },
     { name: 'Samsung Galaxy S22', brand: 'Samsung', img: 'https://fdn2.gsmarena.com/vv/bigpic/samsung-galaxy-s22-5g.jpg' },
-    { name: 'Samsung Galaxy S21 Ultra', brand: 'Samsung', img: 'https://fdn2.gsmarena.com/vv/bigpic/samsung-galaxy-s21-ultra-5g.jpg' },
-    { name: 'Samsung Galaxy S21+', brand: 'Samsung', img: 'https://fdn2.gsmarena.com/vv/bigpic/samsung-galaxy-s21-plus-5g.jpg' },
-    { name: 'Samsung Galaxy S21', brand: 'Samsung', img: 'https://fdn2.gsmarena.com/vv/bigpic/samsung-galaxy-s21-5g.jpg' },
     { name: 'Samsung Galaxy Z Fold 5', brand: 'Samsung', img: 'https://fdn2.gsmarena.com/vv/bigpic/samsung-galaxy-z-fold5.jpg' },
-    { name: 'Samsung Galaxy Z Fold 4', brand: 'Samsung', img: 'https://fdn2.gsmarena.com/vv/bigpic/samsung-galaxy-z-fold4.jpg' },
-    { name: 'Samsung Galaxy Z Fold 3', brand: 'Samsung', img: 'https://fdn2.gsmarena.com/vv/bigpic/samsung-galaxy-z-fold3-5g.jpg' },
     { name: 'Samsung Galaxy Z Flip 5', brand: 'Samsung', img: 'https://fdn2.gsmarena.com/vv/bigpic/samsung-galaxy-z-flip5.jpg' },
-    { name: 'Samsung Galaxy Z Flip 4', brand: 'Samsung', img: 'https://fdn2.gsmarena.com/vv/bigpic/samsung-galaxy-z-flip4.jpg' },
-    { name: 'Samsung Galaxy Z Flip 3', brand: 'Samsung', img: 'https://fdn2.gsmarena.com/vv/bigpic/samsung-galaxy-z-flip3-5g.jpg' },
     { name: 'Samsung Galaxy A55', brand: 'Samsung', img: 'https://fdn2.gsmarena.com/vv/bigpic/samsung-galaxy-a55.jpg' },
     { name: 'Samsung Galaxy A54', brand: 'Samsung', img: 'https://fdn2.gsmarena.com/vv/bigpic/samsung-galaxy-a54.jpg' },
-    { name: 'Samsung Galaxy A53', brand: 'Samsung', img: 'https://fdn2.gsmarena.com/vv/bigpic/samsung-galaxy-a53-5g.jpg' },
-    { name: 'Samsung Galaxy A52s', brand: 'Samsung', img: 'https://fdn2.gsmarena.com/vv/bigpic/samsung-galaxy-a52s-5g.jpg' },
     { name: 'Samsung Galaxy A35', brand: 'Samsung', img: 'https://fdn2.gsmarena.com/vv/bigpic/samsung-galaxy-a35.jpg' },
-    { name: 'Samsung Galaxy A34', brand: 'Samsung', img: 'https://fdn2.gsmarena.com/vv/bigpic/samsung-galaxy-a34.jpg' },
-    { name: 'Samsung Galaxy A25', brand: 'Samsung', img: 'https://fdn2.gsmarena.com/vv/bigpic/samsung-galaxy-a25.jpg' },
-    { name: 'Samsung Galaxy A24', brand: 'Samsung', img: 'https://fdn2.gsmarena.com/vv/bigpic/samsung-galaxy-a24-4g.jpg' },
     { name: 'Samsung Galaxy A15', brand: 'Samsung', img: 'https://fdn2.gsmarena.com/vv/bigpic/samsung-galaxy-a15.jpg' },
-    { name: 'Samsung Galaxy A14', brand: 'Samsung', img: 'https://fdn2.gsmarena.com/vv/bigpic/samsung-galaxy-a14-4g.jpg' },
-    { name: 'Samsung Galaxy A05s', brand: 'Samsung', img: 'https://fdn2.gsmarena.com/vv/bigpic/samsung-galaxy-a05s.jpg' },
-    { name: 'Samsung Galaxy M54', brand: 'Samsung', img: 'https://fdn2.gsmarena.com/vv/bigpic/samsung-galaxy-m54.jpg' },
-    { name: 'Samsung Galaxy M34', brand: 'Samsung', img: 'https://fdn2.gsmarena.com/vv/bigpic/samsung-galaxy-m34.jpg' },
-    { name: 'Samsung Galaxy M14', brand: 'Samsung', img: 'https://fdn2.gsmarena.com/vv/bigpic/samsung-galaxy-m14-5g.jpg' },
-    // ── Xiaomi ─────────────────────────────────────────────────────────────────
     { name: 'Xiaomi 14 Ultra', brand: 'Xiaomi', img: 'https://fdn2.gsmarena.com/vv/bigpic/xiaomi-14-ultra.jpg' },
     { name: 'Xiaomi 14 Pro', brand: 'Xiaomi', img: 'https://fdn2.gsmarena.com/vv/bigpic/xiaomi-14-pro.jpg' },
     { name: 'Xiaomi 14', brand: 'Xiaomi', img: 'https://fdn2.gsmarena.com/vv/bigpic/xiaomi-14.jpg' },
-    { name: 'Xiaomi 13 Ultra', brand: 'Xiaomi', img: 'https://fdn2.gsmarena.com/vv/bigpic/xiaomi-13-ultra.jpg' },
-    { name: 'Xiaomi 13 Pro', brand: 'Xiaomi', img: 'https://fdn2.gsmarena.com/vv/bigpic/xiaomi-13-pro.jpg' },
-    { name: 'Xiaomi 13', brand: 'Xiaomi', img: 'https://fdn2.gsmarena.com/vv/bigpic/xiaomi-13.jpg' },
-    { name: 'Xiaomi 13T Pro', brand: 'Xiaomi', img: 'https://fdn2.gsmarena.com/vv/bigpic/xiaomi-13t-pro.jpg' },
-    { name: 'Xiaomi 13T', brand: 'Xiaomi', img: 'https://fdn2.gsmarena.com/vv/bigpic/xiaomi-13t.jpg' },
-    { name: 'Xiaomi 12 Pro', brand: 'Xiaomi', img: 'https://fdn2.gsmarena.com/vv/bigpic/xiaomi-12-pro.jpg' },
-    { name: 'Xiaomi 12', brand: 'Xiaomi', img: 'https://fdn2.gsmarena.com/vv/bigpic/xiaomi-12.jpg' },
     { name: 'Xiaomi Redmi Note 13 Pro+', brand: 'Xiaomi', img: 'https://fdn2.gsmarena.com/vv/bigpic/xiaomi-redmi-note-13-pro-plus.jpg' },
     { name: 'Xiaomi Redmi Note 13 Pro', brand: 'Xiaomi', img: 'https://fdn2.gsmarena.com/vv/bigpic/xiaomi-redmi-note-13-pro.jpg' },
     { name: 'Xiaomi Redmi Note 13', brand: 'Xiaomi', img: 'https://fdn2.gsmarena.com/vv/bigpic/xiaomi-redmi-note-13.jpg' },
-    { name: 'Xiaomi Redmi Note 12 Pro+', brand: 'Xiaomi', img: 'https://fdn2.gsmarena.com/vv/bigpic/xiaomi-redmi-note-12-pro-plus.jpg' },
-    { name: 'Xiaomi Redmi Note 12 Pro', brand: 'Xiaomi', img: 'https://fdn2.gsmarena.com/vv/bigpic/xiaomi-redmi-note-12-pro.jpg' },
-    { name: 'Xiaomi Redmi Note 12', brand: 'Xiaomi', img: 'https://fdn2.gsmarena.com/vv/bigpic/xiaomi-redmi-note-12.jpg' },
-    { name: 'Xiaomi Redmi 13C', brand: 'Xiaomi', img: 'https://fdn2.gsmarena.com/vv/bigpic/xiaomi-redmi-13c.jpg' },
-    { name: 'Xiaomi Redmi 12', brand: 'Xiaomi', img: 'https://fdn2.gsmarena.com/vv/bigpic/xiaomi-redmi-12.jpg' },
-    { name: 'Xiaomi Redmi 12C', brand: 'Xiaomi', img: 'https://fdn2.gsmarena.com/vv/bigpic/xiaomi-redmi-12c.jpg' },
-    { name: 'Xiaomi Redmi A3', brand: 'Xiaomi', img: 'https://fdn2.gsmarena.com/vv/bigpic/xiaomi-redmi-a3.jpg' },
-    // ── POCO ───────────────────────────────────────────────────────────────────
     { name: 'POCO F6 Pro', brand: 'POCO', img: 'https://fdn2.gsmarena.com/vv/bigpic/poco-f6-pro.jpg' },
     { name: 'POCO F6', brand: 'POCO', img: 'https://fdn2.gsmarena.com/vv/bigpic/poco-f6.jpg' },
-    { name: 'POCO F5 Pro', brand: 'POCO', img: 'https://fdn2.gsmarena.com/vv/bigpic/poco-f5-pro.jpg' },
-    { name: 'POCO F5', brand: 'POCO', img: 'https://fdn2.gsmarena.com/vv/bigpic/poco-f5.jpg' },
     { name: 'POCO X6 Pro', brand: 'POCO', img: 'https://fdn2.gsmarena.com/vv/bigpic/poco-x6-pro.jpg' },
-    { name: 'POCO X6', brand: 'POCO', img: 'https://fdn2.gsmarena.com/vv/bigpic/poco-x6.jpg' },
-    { name: 'POCO X5 Pro', brand: 'POCO', img: 'https://fdn2.gsmarena.com/vv/bigpic/poco-x5-pro.jpg' },
-    { name: 'POCO X5', brand: 'POCO', img: 'https://fdn2.gsmarena.com/vv/bigpic/poco-x5.jpg' },
-    { name: 'POCO M6 Pro', brand: 'POCO', img: 'https://fdn2.gsmarena.com/vv/bigpic/poco-m6-pro.jpg' },
-    { name: 'POCO M5s', brand: 'POCO', img: 'https://fdn2.gsmarena.com/vv/bigpic/poco-m5s.jpg' },
-    { name: 'POCO C65', brand: 'POCO', img: 'https://fdn2.gsmarena.com/vv/bigpic/poco-c65.jpg' },
-    { name: 'POCO C55', brand: 'POCO', img: 'https://fdn2.gsmarena.com/vv/bigpic/poco-c55.jpg' },
-    // ── OPPO ───────────────────────────────────────────────────────────────────
     { name: 'OPPO Find X7 Ultra', brand: 'OPPO', img: 'https://fdn2.gsmarena.com/vv/bigpic/oppo-find-x7-ultra.jpg' },
-    { name: 'OPPO Find X7', brand: 'OPPO', img: 'https://fdn2.gsmarena.com/vv/bigpic/oppo-find-x7.jpg' },
-    { name: 'OPPO Find X6 Pro', brand: 'OPPO', img: 'https://fdn2.gsmarena.com/vv/bigpic/oppo-find-x6-pro.jpg' },
     { name: 'OPPO Reno 12 Pro', brand: 'OPPO', img: 'https://fdn2.gsmarena.com/vv/bigpic/oppo-reno12-pro.jpg' },
-    { name: 'OPPO Reno 12', brand: 'OPPO', img: 'https://fdn2.gsmarena.com/vv/bigpic/oppo-reno12.jpg' },
     { name: 'OPPO Reno 11 Pro', brand: 'OPPO', img: 'https://fdn2.gsmarena.com/vv/bigpic/oppo-reno11-pro.jpg' },
-    { name: 'OPPO Reno 11', brand: 'OPPO', img: 'https://fdn2.gsmarena.com/vv/bigpic/oppo-reno11.jpg' },
-    { name: 'OPPO Reno 10 Pro+', brand: 'OPPO', img: 'https://fdn2.gsmarena.com/vv/bigpic/oppo-reno10-pro-plus.jpg' },
-    { name: 'OPPO Reno 10 Pro', brand: 'OPPO', img: 'https://fdn2.gsmarena.com/vv/bigpic/oppo-reno10-pro.jpg' },
-    { name: 'OPPO Reno 10', brand: 'OPPO', img: 'https://fdn2.gsmarena.com/vv/bigpic/oppo-reno10.jpg' },
-    { name: 'OPPO A98', brand: 'OPPO', img: 'https://fdn2.gsmarena.com/vv/bigpic/oppo-a98.jpg' },
-    { name: 'OPPO A78', brand: 'OPPO', img: 'https://fdn2.gsmarena.com/vv/bigpic/oppo-a78.jpg' },
-    { name: 'OPPO A58', brand: 'OPPO', img: 'https://fdn2.gsmarena.com/vv/bigpic/oppo-a58.jpg' },
-    { name: 'OPPO A38', brand: 'OPPO', img: 'https://fdn2.gsmarena.com/vv/bigpic/oppo-a38.jpg' },
-    { name: 'OPPO A18', brand: 'OPPO', img: 'https://fdn2.gsmarena.com/vv/bigpic/oppo-a18.jpg' },
-    // ── Realme ─────────────────────────────────────────────────────────────────
     { name: 'Realme GT 5 Pro', brand: 'Realme', img: 'https://fdn2.gsmarena.com/vv/bigpic/realme-gt-5-pro.jpg' },
-    { name: 'Realme GT 5', brand: 'Realme', img: 'https://fdn2.gsmarena.com/vv/bigpic/realme-gt5.jpg' },
-    { name: 'Realme GT 3', brand: 'Realme', img: 'https://fdn2.gsmarena.com/vv/bigpic/realme-gt3.jpg' },
     { name: 'Realme 12 Pro+', brand: 'Realme', img: 'https://fdn2.gsmarena.com/vv/bigpic/realme-12-pro-plus.jpg' },
-    { name: 'Realme 12 Pro', brand: 'Realme', img: 'https://fdn2.gsmarena.com/vv/bigpic/realme-12-pro.jpg' },
-    { name: 'Realme 12', brand: 'Realme', img: 'https://fdn2.gsmarena.com/vv/bigpic/realme-12.jpg' },
-    { name: 'Realme 11 Pro+', brand: 'Realme', img: 'https://fdn2.gsmarena.com/vv/bigpic/realme-11-pro-plus.jpg' },
-    { name: 'Realme 11 Pro', brand: 'Realme', img: 'https://fdn2.gsmarena.com/vv/bigpic/realme-11-pro.jpg' },
-    { name: 'Realme 11', brand: 'Realme', img: 'https://fdn2.gsmarena.com/vv/bigpic/realme-11.jpg' },
-    { name: 'Realme C67', brand: 'Realme', img: 'https://fdn2.gsmarena.com/vv/bigpic/realme-c67.jpg' },
-    { name: 'Realme C55', brand: 'Realme', img: 'https://fdn2.gsmarena.com/vv/bigpic/realme-c55.jpg' },
-    { name: 'Realme C53', brand: 'Realme', img: 'https://fdn2.gsmarena.com/vv/bigpic/realme-c53.jpg' },
-    { name: 'Realme C35', brand: 'Realme', img: 'https://fdn2.gsmarena.com/vv/bigpic/realme-c35.jpg' },
-    // ── Vivo ───────────────────────────────────────────────────────────────────
     { name: 'Vivo X100 Pro', brand: 'Vivo', img: 'https://fdn2.gsmarena.com/vv/bigpic/vivo-x100-pro.jpg' },
-    { name: 'Vivo X100', brand: 'Vivo', img: 'https://fdn2.gsmarena.com/vv/bigpic/vivo-x100.jpg' },
-    { name: 'Vivo X90 Pro', brand: 'Vivo', img: 'https://fdn2.gsmarena.com/vv/bigpic/vivo-x90-pro.jpg' },
     { name: 'Vivo V30 Pro', brand: 'Vivo', img: 'https://fdn2.gsmarena.com/vv/bigpic/vivo-v30-pro.jpg' },
-    { name: 'Vivo V30', brand: 'Vivo', img: 'https://fdn2.gsmarena.com/vv/bigpic/vivo-v30.jpg' },
-    { name: 'Vivo V29 Pro', brand: 'Vivo', img: 'https://fdn2.gsmarena.com/vv/bigpic/vivo-v29-pro.jpg' },
-    { name: 'Vivo V29', brand: 'Vivo', img: 'https://fdn2.gsmarena.com/vv/bigpic/vivo-v29.jpg' },
-    { name: 'Vivo V27 Pro', brand: 'Vivo', img: 'https://fdn2.gsmarena.com/vv/bigpic/vivo-v27-pro.jpg' },
-    { name: 'Vivo V27', brand: 'Vivo', img: 'https://fdn2.gsmarena.com/vv/bigpic/vivo-v27.jpg' },
-    { name: 'Vivo Y100', brand: 'Vivo', img: 'https://fdn2.gsmarena.com/vv/bigpic/vivo-y100.jpg' },
-    { name: 'Vivo Y36', brand: 'Vivo', img: 'https://fdn2.gsmarena.com/vv/bigpic/vivo-y36.jpg' },
-    { name: 'Vivo Y27', brand: 'Vivo', img: 'https://fdn2.gsmarena.com/vv/bigpic/vivo-y27.jpg' },
-    { name: 'Vivo Y16', brand: 'Vivo', img: 'https://fdn2.gsmarena.com/vv/bigpic/vivo-y16.jpg' },
-    // ── Google ─────────────────────────────────────────────────────────────────
     { name: 'Google Pixel 9 Pro XL', brand: 'Google', img: 'https://fdn2.gsmarena.com/vv/bigpic/google-pixel-9-pro-xl.jpg' },
     { name: 'Google Pixel 9 Pro', brand: 'Google', img: 'https://fdn2.gsmarena.com/vv/bigpic/google-pixel-9-pro.jpg' },
     { name: 'Google Pixel 9', brand: 'Google', img: 'https://fdn2.gsmarena.com/vv/bigpic/google-pixel-9.jpg' },
-    { name: 'Google Pixel 8 Pro', brand: 'Google', img: 'https://fdn2.gsmarena.com/vv/bigpic/google-pixel-8-pro.jpg' },
-    { name: 'Google Pixel 8', brand: 'Google', img: 'https://fdn2.gsmarena.com/vv/bigpic/google-pixel-8.jpg' },
-    { name: 'Google Pixel 8a', brand: 'Google', img: 'https://fdn2.gsmarena.com/vv/bigpic/google-pixel-8a.jpg' },
-    { name: 'Google Pixel 7 Pro', brand: 'Google', img: 'https://fdn2.gsmarena.com/vv/bigpic/google-pixel-7-pro.jpg' },
-    { name: 'Google Pixel 7', brand: 'Google', img: 'https://fdn2.gsmarena.com/vv/bigpic/google-pixel-7.jpg' },
-    { name: 'Google Pixel 7a', brand: 'Google', img: 'https://fdn2.gsmarena.com/vv/bigpic/google-pixel-7a.jpg' },
-    { name: 'Google Pixel 6 Pro', brand: 'Google', img: 'https://fdn2.gsmarena.com/vv/bigpic/google-pixel-6-pro.jpg' },
-    { name: 'Google Pixel 6a', brand: 'Google', img: 'https://fdn2.gsmarena.com/vv/bigpic/google-pixel-6a.jpg' },
-    // ── OnePlus ────────────────────────────────────────────────────────────────
-    { name: 'OnePlus 12 Pro', brand: 'OnePlus', img: 'https://fdn2.gsmarena.com/vv/bigpic/oneplus-12r.jpg' },
     { name: 'OnePlus 12', brand: 'OnePlus', img: 'https://fdn2.gsmarena.com/vv/bigpic/oneplus-12.jpg' },
     { name: 'OnePlus 11', brand: 'OnePlus', img: 'https://fdn2.gsmarena.com/vv/bigpic/oneplus-11.jpg' },
-    { name: 'OnePlus Nord 4', brand: 'OnePlus', img: 'https://fdn2.gsmarena.com/vv/bigpic/oneplus-nord-4.jpg' },
-    { name: 'OnePlus Nord CE 4', brand: 'OnePlus', img: 'https://fdn2.gsmarena.com/vv/bigpic/oneplus-nord-ce4.jpg' },
-    { name: 'OnePlus Nord CE 3 Lite', brand: 'OnePlus', img: 'https://fdn2.gsmarena.com/vv/bigpic/oneplus-nord-ce-3-lite.jpg' },
-    { name: 'OnePlus Nord CE 3', brand: 'OnePlus', img: 'https://fdn2.gsmarena.com/vv/bigpic/oneplus-nord-ce3.jpg' },
-    { name: 'OnePlus Nord 3', brand: 'OnePlus', img: 'https://fdn2.gsmarena.com/vv/bigpic/oneplus-nord-3.jpg' },
-    // ── Nothing ────────────────────────────────────────────────────────────────
-    { name: 'Nothing Phone (2a) Plus', brand: 'Nothing', img: 'https://fdn2.gsmarena.com/vv/bigpic/nothing-phone-2a-plus.jpg' },
     { name: 'Nothing Phone (2a)', brand: 'Nothing', img: 'https://fdn2.gsmarena.com/vv/bigpic/nothing-phone-2a-.jpg' },
     { name: 'Nothing Phone (2)', brand: 'Nothing', img: 'https://fdn2.gsmarena.com/vv/bigpic/nothing-phone-2-.jpg' },
-    { name: 'Nothing Phone (1)', brand: 'Nothing', img: 'https://fdn2.gsmarena.com/vv/bigpic/nothing-phone-1-.jpg' },
-    // ── Huawei ─────────────────────────────────────────────────────────────────
-    { name: 'Huawei Pura 70 Ultra', brand: 'Huawei', img: 'https://fdn2.gsmarena.com/vv/bigpic/huawei-pura-70-ultra.jpg' },
-    { name: 'Huawei Pura 70 Pro', brand: 'Huawei', img: 'https://fdn2.gsmarena.com/vv/bigpic/huawei-pura-70-pro.jpg' },
-    { name: 'Huawei Mate 60 Pro', brand: 'Huawei', img: 'https://fdn2.gsmarena.com/vv/bigpic/huawei-mate-60-pro.jpg' },
-    { name: 'Huawei Nova 12 Pro', brand: 'Huawei', img: 'https://fdn2.gsmarena.com/vv/bigpic/huawei-nova-12-pro.jpg' },
-    { name: 'Huawei Nova 12', brand: 'Huawei', img: 'https://fdn2.gsmarena.com/vv/bigpic/huawei-nova-12.jpg' },
-    { name: 'Huawei Nova 11 Pro', brand: 'Huawei', img: 'https://fdn2.gsmarena.com/vv/bigpic/huawei-nova-11-pro.jpg' },
-    // ── Sony ───────────────────────────────────────────────────────────────────
     { name: 'Sony Xperia 1 VI', brand: 'Sony', img: 'https://fdn2.gsmarena.com/vv/bigpic/sony-xperia-1-vi.jpg' },
-    { name: 'Sony Xperia 1 V', brand: 'Sony', img: 'https://fdn2.gsmarena.com/vv/bigpic/sony-xperia-1-v.jpg' },
-    { name: 'Sony Xperia 5 V', brand: 'Sony', img: 'https://fdn2.gsmarena.com/vv/bigpic/sony-xperia-5-v.jpg' },
-    { name: 'Sony Xperia 10 VI', brand: 'Sony', img: 'https://fdn2.gsmarena.com/vv/bigpic/sony-xperia-10-vi.jpg' },
-    { name: 'Sony Xperia 10 V', brand: 'Sony', img: 'https://fdn2.gsmarena.com/vv/bigpic/sony-xperia-10-v.jpg' },
-    // ── Motorola ───────────────────────────────────────────────────────────────
     { name: 'Motorola Edge 50 Ultra', brand: 'Motorola', img: 'https://fdn2.gsmarena.com/vv/bigpic/motorola-edge-50-ultra.jpg' },
-    { name: 'Motorola Edge 50 Pro', brand: 'Motorola', img: 'https://fdn2.gsmarena.com/vv/bigpic/motorola-edge-50-pro.jpg' },
-    { name: 'Motorola Edge 50 Fusion', brand: 'Motorola', img: 'https://fdn2.gsmarena.com/vv/bigpic/motorola-edge-50-fusion.jpg' },
-    { name: 'Motorola Edge 40 Pro', brand: 'Motorola', img: 'https://fdn2.gsmarena.com/vv/bigpic/motorola-edge-40-pro.jpg' },
-    { name: 'Motorola Edge 40', brand: 'Motorola', img: 'https://fdn2.gsmarena.com/vv/bigpic/motorola-edge-40.jpg' },
-    { name: 'Motorola Moto G85', brand: 'Motorola', img: 'https://fdn2.gsmarena.com/vv/bigpic/motorola-moto-g85.jpg' },
-    { name: 'Motorola Moto G84', brand: 'Motorola', img: 'https://fdn2.gsmarena.com/vv/bigpic/motorola-moto-g84.jpg' },
-    { name: 'Motorola Moto G54', brand: 'Motorola', img: 'https://fdn2.gsmarena.com/vv/bigpic/motorola-moto-g54.jpg' },
-    { name: 'Motorola Moto G34', brand: 'Motorola', img: 'https://fdn2.gsmarena.com/vv/bigpic/motorola-moto-g34.jpg' },
-    // ── Nokia, Tecno, Infinix ──────────────────────────────────────────────────
-    { name: 'Nokia G42', brand: 'Nokia', img: 'https://fdn2.gsmarena.com/vv/bigpic/nokia-g42.jpg' },
-    { name: 'Nokia G22', brand: 'Nokia', img: 'https://fdn2.gsmarena.com/vv/bigpic/nokia-g22.jpg' },
-    { name: 'Nokia C32', brand: 'Nokia', img: 'https://fdn2.gsmarena.com/vv/bigpic/nokia-c32.jpg' },
-    { name: 'Nokia XR21', brand: 'Nokia', img: 'https://fdn2.gsmarena.com/vv/bigpic/nokia-xr21.jpg' },
     { name: 'Tecno Phantom X2 Pro', brand: 'Tecno' },
-    { name: 'Tecno Phantom V Fold', brand: 'Tecno' },
-    { name: 'Tecno Camon 30 Pro', brand: 'Tecno' },
-    { name: 'Tecno Camon 20 Pro', brand: 'Tecno' },
-    { name: 'Tecno Spark 20 Pro', brand: 'Tecno' },
-    { name: 'Tecno Spark 20', brand: 'Tecno' },
     { name: 'Infinix Zero 30', brand: 'Infinix' },
-    { name: 'Infinix Note 40 Pro', brand: 'Infinix' },
-    { name: 'Infinix Note 40', brand: 'Infinix' },
-    { name: 'Infinix Hot 40 Pro', brand: 'Infinix' },
-    { name: 'Infinix Hot 40', brand: 'Infinix' },
-    { name: 'Infinix Smart 8 Plus', brand: 'Infinix' },
   ],
   GPU: [
-    // PC parts — add img: 'YOUR_URL' to any entry to show a real photo
     { name: 'NVIDIA GeForce RTX 4090', brand: 'NVIDIA' },
     { name: 'NVIDIA GeForce RTX 4080 Super', brand: 'NVIDIA' },
     { name: 'NVIDIA GeForce RTX 4080', brand: 'NVIDIA' },
     { name: 'NVIDIA GeForce RTX 4070 Ti Super', brand: 'NVIDIA' },
-    { name: 'NVIDIA GeForce RTX 4070 Ti', brand: 'NVIDIA' },
     { name: 'NVIDIA GeForce RTX 4070 Super', brand: 'NVIDIA' },
     { name: 'NVIDIA GeForce RTX 4070', brand: 'NVIDIA' },
-    { name: 'NVIDIA GeForce RTX 4060 Ti 16GB', brand: 'NVIDIA' },
     { name: 'NVIDIA GeForce RTX 4060 Ti', brand: 'NVIDIA' },
     { name: 'NVIDIA GeForce RTX 4060', brand: 'NVIDIA' },
-    { name: 'NVIDIA GeForce RTX 4050', brand: 'NVIDIA' },
     { name: 'NVIDIA GeForce RTX 3090 Ti', brand: 'NVIDIA' },
-    { name: 'NVIDIA GeForce RTX 3090', brand: 'NVIDIA' },
     { name: 'NVIDIA GeForce RTX 3080 Ti', brand: 'NVIDIA' },
     { name: 'NVIDIA GeForce RTX 3080', brand: 'NVIDIA' },
     { name: 'NVIDIA GeForce RTX 3070 Ti', brand: 'NVIDIA' },
     { name: 'NVIDIA GeForce RTX 3070', brand: 'NVIDIA' },
     { name: 'NVIDIA GeForce RTX 3060 Ti', brand: 'NVIDIA' },
     { name: 'NVIDIA GeForce RTX 3060 12GB', brand: 'NVIDIA' },
-    { name: 'NVIDIA GeForce RTX 3050', brand: 'NVIDIA' },
     { name: 'NVIDIA GeForce GTX 1660 Super', brand: 'NVIDIA' },
-    { name: 'NVIDIA GeForce GTX 1660 Ti', brand: 'NVIDIA' },
-    { name: 'NVIDIA GeForce GTX 1660', brand: 'NVIDIA' },
-    { name: 'NVIDIA GeForce GTX 1650 Super', brand: 'NVIDIA' },
     { name: 'NVIDIA GeForce GTX 1650', brand: 'NVIDIA' },
     { name: 'AMD Radeon RX 7900 XTX', brand: 'AMD' },
     { name: 'AMD Radeon RX 7900 XT', brand: 'AMD' },
-    { name: 'AMD Radeon RX 7900 GRE', brand: 'AMD' },
     { name: 'AMD Radeon RX 7800 XT', brand: 'AMD' },
     { name: 'AMD Radeon RX 7700 XT', brand: 'AMD' },
-    { name: 'AMD Radeon RX 7600 XT', brand: 'AMD' },
     { name: 'AMD Radeon RX 7600', brand: 'AMD' },
     { name: 'AMD Radeon RX 6950 XT', brand: 'AMD' },
-    { name: 'AMD Radeon RX 6900 XT', brand: 'AMD' },
     { name: 'AMD Radeon RX 6800 XT', brand: 'AMD' },
-    { name: 'AMD Radeon RX 6800', brand: 'AMD' },
     { name: 'AMD Radeon RX 6700 XT', brand: 'AMD' },
-    { name: 'AMD Radeon RX 6700', brand: 'AMD' },
-    { name: 'AMD Radeon RX 6650 XT', brand: 'AMD' },
     { name: 'AMD Radeon RX 6600 XT', brand: 'AMD' },
-    { name: 'AMD Radeon RX 6600', brand: 'AMD' },
-    { name: 'AMD Radeon RX 6500 XT', brand: 'AMD' },
     { name: 'Intel Arc A770 16GB', brand: 'Intel' },
     { name: 'Intel Arc A750', brand: 'Intel' },
-    { name: 'Intel Arc A580', brand: 'Intel' },
-    { name: 'Intel Arc A380', brand: 'Intel' },
   ],
   CPU: [
     { name: 'Intel Core i9-14900KS', brand: 'Intel' },
     { name: 'Intel Core i9-14900K', brand: 'Intel' },
-    { name: 'Intel Core i9-14900F', brand: 'Intel' },
     { name: 'Intel Core i7-14700K', brand: 'Intel' },
-    { name: 'Intel Core i7-14700F', brand: 'Intel' },
-    { name: 'Intel Core i7-14700', brand: 'Intel' },
     { name: 'Intel Core i5-14600K', brand: 'Intel' },
-    { name: 'Intel Core i5-14600KF', brand: 'Intel' },
-    { name: 'Intel Core i5-14500', brand: 'Intel' },
     { name: 'Intel Core i5-14400F', brand: 'Intel' },
-    { name: 'Intel Core i5-14400', brand: 'Intel' },
     { name: 'Intel Core i3-14100F', brand: 'Intel' },
-    { name: 'Intel Core i3-14100', brand: 'Intel' },
-    { name: 'Intel Core i9-13900KS', brand: 'Intel' },
     { name: 'Intel Core i9-13900K', brand: 'Intel' },
     { name: 'Intel Core i7-13700K', brand: 'Intel' },
-    { name: 'Intel Core i7-13700F', brand: 'Intel' },
     { name: 'Intel Core i5-13600K', brand: 'Intel' },
-    { name: 'Intel Core i5-13600KF', brand: 'Intel' },
-    { name: 'Intel Core i5-13500', brand: 'Intel' },
     { name: 'Intel Core i5-13400F', brand: 'Intel' },
-    { name: 'Intel Core i3-13100F', brand: 'Intel' },
     { name: 'Intel Core i9-12900K', brand: 'Intel' },
     { name: 'Intel Core i7-12700K', brand: 'Intel' },
     { name: 'Intel Core i5-12600K', brand: 'Intel' },
     { name: 'Intel Core i5-12400F', brand: 'Intel' },
-    { name: 'Intel Core i3-12100F', brand: 'Intel' },
     { name: 'AMD Ryzen 9 9950X', brand: 'AMD' },
     { name: 'AMD Ryzen 9 9900X', brand: 'AMD' },
     { name: 'AMD Ryzen 7 9700X', brand: 'AMD' },
     { name: 'AMD Ryzen 5 9600X', brand: 'AMD' },
     { name: 'AMD Ryzen 9 7950X3D', brand: 'AMD' },
     { name: 'AMD Ryzen 9 7950X', brand: 'AMD' },
-    { name: 'AMD Ryzen 9 7900X3D', brand: 'AMD' },
-    { name: 'AMD Ryzen 9 7900X', brand: 'AMD' },
     { name: 'AMD Ryzen 7 7800X3D', brand: 'AMD' },
     { name: 'AMD Ryzen 7 7700X', brand: 'AMD' },
-    { name: 'AMD Ryzen 7 7700', brand: 'AMD' },
     { name: 'AMD Ryzen 5 7600X', brand: 'AMD' },
     { name: 'AMD Ryzen 5 7600', brand: 'AMD' },
-    { name: 'AMD Ryzen 5 7500F', brand: 'AMD' },
     { name: 'AMD Ryzen 9 5950X', brand: 'AMD' },
     { name: 'AMD Ryzen 9 5900X', brand: 'AMD' },
     { name: 'AMD Ryzen 7 5800X3D', brand: 'AMD' },
-    { name: 'AMD Ryzen 7 5800X', brand: 'AMD' },
     { name: 'AMD Ryzen 5 5600X', brand: 'AMD' },
-    { name: 'AMD Ryzen 5 5600G', brand: 'AMD' },
     { name: 'AMD Ryzen 5 5600', brand: 'AMD' },
-    { name: 'AMD Ryzen 5 5500', brand: 'AMD' },
-    { name: 'AMD Ryzen 3 5300G', brand: 'AMD' },
   ],
   RAM: [
     { name: 'Corsair Dominator Titanium DDR5', brand: 'Corsair' },
-    { name: 'Corsair Dominator Platinum RGB DDR5', brand: 'Corsair' },
     { name: 'Corsair Vengeance DDR5 6000MHz', brand: 'Corsair' },
-    { name: 'Corsair Vengeance DDR5 5600MHz', brand: 'Corsair' },
     { name: 'Corsair Vengeance RGB Pro DDR4 3600', brand: 'Corsair' },
-    { name: 'Corsair Vengeance RGB Pro DDR4 3200', brand: 'Corsair' },
     { name: 'Corsair Vengeance LPX DDR4 3200', brand: 'Corsair' },
-    { name: 'Corsair Vengeance LPX DDR4 2666', brand: 'Corsair' },
     { name: 'G.Skill Trident Z5 RGB DDR5 6400', brand: 'G.Skill' },
     { name: 'G.Skill Trident Z5 RGB DDR5 6000', brand: 'G.Skill' },
-    { name: 'G.Skill Trident Z5 Neo DDR5', brand: 'G.Skill' },
     { name: 'G.Skill Trident Z Neo DDR4 3600', brand: 'G.Skill' },
     { name: 'G.Skill Ripjaws V DDR4 3600', brand: 'G.Skill' },
-    { name: 'G.Skill Ripjaws V DDR4 3200', brand: 'G.Skill' },
-    { name: 'G.Skill Flare X5 DDR5 6000', brand: 'G.Skill' },
     { name: 'Kingston Fury Beast DDR5 6000', brand: 'Kingston' },
-    { name: 'Kingston Fury Beast DDR5 5600', brand: 'Kingston' },
     { name: 'Kingston Fury Beast DDR4 3600', brand: 'Kingston' },
-    { name: 'Kingston Fury Beast DDR4 3200', brand: 'Kingston' },
     { name: 'Kingston Fury Renegade DDR5 6400', brand: 'Kingston' },
-    { name: 'Kingston Fury Renegade DDR4 3600', brand: 'Kingston' },
-    { name: 'Kingston ValueRAM DDR4 3200', brand: 'Kingston' },
     { name: 'Crucial Pro DDR5 6000', brand: 'Crucial' },
-    { name: 'Crucial Pro DDR5 5600', brand: 'Crucial' },
     { name: 'Crucial Pro DDR4 3200', brand: 'Crucial' },
-    { name: 'Crucial Ballistix DDR4 3600', brand: 'Crucial' },
-    { name: 'Crucial Ballistix DDR4 3200', brand: 'Crucial' },
     { name: 'TeamGroup T-Force Delta RGB DDR5', brand: 'TeamGroup' },
-    { name: 'TeamGroup T-Force Delta RGB DDR4', brand: 'TeamGroup' },
-    { name: 'TeamGroup T-Force Vulcan DDR5', brand: 'TeamGroup' },
-    { name: 'TeamGroup T-Force Xtreem DDR5', brand: 'TeamGroup' },
     { name: 'Patriot Viper Venom DDR5 6200', brand: 'Patriot' },
-    { name: 'Patriot Viper Steel DDR4 4400', brand: 'Patriot' },
-    { name: 'Patriot Viper Elite II DDR4 3200', brand: 'Patriot' },
   ],
   SSD: [
     { name: 'Samsung 990 Pro 2TB NVMe', brand: 'Samsung' },
     { name: 'Samsung 990 Pro 1TB NVMe', brand: 'Samsung' },
     { name: 'Samsung 980 Pro 2TB NVMe', brand: 'Samsung' },
-    { name: 'Samsung 980 Pro 1TB NVMe', brand: 'Samsung' },
-    { name: 'Samsung 970 EVO Plus NVMe', brand: 'Samsung' },
     { name: 'Samsung 870 EVO 2TB SATA', brand: 'Samsung' },
-    { name: 'Samsung 870 EVO 1TB SATA', brand: 'Samsung' },
-    { name: 'Samsung 870 QVO 2TB SATA', brand: 'Samsung' },
     { name: 'WD Black SN850X 2TB NVMe', brand: 'WD' },
     { name: 'WD Black SN850X 1TB NVMe', brand: 'WD' },
     { name: 'WD Black SN770 1TB NVMe', brand: 'WD' },
     { name: 'WD Blue SN580 1TB NVMe', brand: 'WD' },
-    { name: 'WD Blue SA510 1TB SATA', brand: 'WD' },
-    { name: 'WD Green 1TB SATA', brand: 'WD' },
     { name: 'Seagate FireCuda 530 2TB NVMe', brand: 'Seagate' },
     { name: 'Seagate FireCuda 530 1TB NVMe', brand: 'Seagate' },
-    { name: 'Seagate FireCuda 520 NVMe', brand: 'Seagate' },
-    { name: 'Seagate BarraCuda 510 NVMe', brand: 'Seagate' },
     { name: 'Kingston KC3000 NVMe 2TB', brand: 'Kingston' },
-    { name: 'Kingston KC3000 NVMe 1TB', brand: 'Kingston' },
     { name: 'Kingston NV2 NVMe 1TB', brand: 'Kingston' },
-    { name: 'Kingston NV2 NVMe 500GB', brand: 'Kingston' },
-    { name: 'Kingston A400 SATA 480GB', brand: 'Kingston' },
     { name: 'Crucial T700 NVMe 2TB', brand: 'Crucial' },
     { name: 'Crucial T700 NVMe 1TB', brand: 'Crucial' },
-    { name: 'Crucial P5 Plus NVMe 1TB', brand: 'Crucial' },
-    { name: 'Crucial P3 Plus NVMe 1TB', brand: 'Crucial' },
     { name: 'Crucial MX500 1TB SATA', brand: 'Crucial' },
-    { name: 'Crucial BX500 960GB SATA', brand: 'Crucial' },
     { name: 'SK Hynix Platinum P41 1TB NVMe', brand: 'SK Hynix' },
-    { name: 'SK Hynix Gold P31 1TB NVMe', brand: 'SK Hynix' },
     { name: 'Sabrent Rocket 4 Plus 2TB NVMe', brand: 'Sabrent' },
-    { name: 'Sabrent Rocket 4 Plus 1TB NVMe', brand: 'Sabrent' },
   ],
   MOTHERBOARD: [
     { name: 'ASUS ROG Maximus Z790 Hero', brand: 'ASUS' },
-    { name: 'ASUS ROG Maximus Z790 Apex', brand: 'ASUS' },
     { name: 'ASUS ROG Strix Z790-E Gaming', brand: 'ASUS' },
-    { name: 'ASUS ROG Strix Z790-F Gaming', brand: 'ASUS' },
-    { name: 'ASUS ProArt Z790-Creator', brand: 'ASUS' },
     { name: 'ASUS TUF Gaming Z790-Plus', brand: 'ASUS' },
-    { name: 'ASUS Prime Z790-P', brand: 'ASUS' },
     { name: 'ASUS ROG Crosshair X670E Hero', brand: 'ASUS' },
-    { name: 'ASUS ROG Strix B650E-F Gaming', brand: 'ASUS' },
     { name: 'ASUS TUF Gaming B650-Plus', brand: 'ASUS' },
-    { name: 'ASUS Prime B650M-A', brand: 'ASUS' },
     { name: 'MSI MEG Z790 Ace', brand: 'MSI' },
     { name: 'MSI MPG Z790 Carbon', brand: 'MSI' },
     { name: 'MSI MAG Z790 Tomahawk', brand: 'MSI' },
-    { name: 'MSI Pro Z790-P', brand: 'MSI' },
     { name: 'MSI MEG X670E Ace', brand: 'MSI' },
-    { name: 'MSI MPG B650I Edge', brand: 'MSI' },
     { name: 'MSI MAG B650 Tomahawk', brand: 'MSI' },
-    { name: 'MSI Pro B650-P', brand: 'MSI' },
-    { name: 'Gigabyte Z790 Aorus Xtreme', brand: 'Gigabyte' },
     { name: 'Gigabyte Z790 Aorus Master', brand: 'Gigabyte' },
     { name: 'Gigabyte Z790 Aorus Elite AX', brand: 'Gigabyte' },
-    { name: 'Gigabyte Z790 Gaming X AX', brand: 'Gigabyte' },
-    { name: 'Gigabyte X670E Aorus Master', brand: 'Gigabyte' },
     { name: 'Gigabyte B650 Aorus Elite AX', brand: 'Gigabyte' },
-    { name: 'Gigabyte B650M DS3H', brand: 'Gigabyte' },
     { name: 'ASRock Z790 Taichi', brand: 'ASRock' },
-    { name: 'ASRock Z790 Steel Legend WiFi', brand: 'ASRock' },
-    { name: 'ASRock Z790 Pro RS', brand: 'ASRock' },
     { name: 'ASRock B650 Steel Legend', brand: 'ASRock' },
-    { name: 'ASRock B650M Pro RS', brand: 'ASRock' },
-    { name: 'ASRock X670E Taichi', brand: 'ASRock' },
   ],
   PSU: [
-    { name: 'Corsair HX1500i 1500W Platinum', brand: 'Corsair' },
     { name: 'Corsair HX1200i 1200W Platinum', brand: 'Corsair' },
-    { name: 'Corsair RM1200x 1200W Gold', brand: 'Corsair' },
     { name: 'Corsair RM1000x 1000W Gold', brand: 'Corsair' },
     { name: 'Corsair RM850x 850W Gold', brand: 'Corsair' },
     { name: 'Corsair RM750x 750W Gold', brand: 'Corsair' },
-    { name: 'Corsair RM650x 650W Gold', brand: 'Corsair' },
-    { name: 'Corsair CV550 550W Bronze', brand: 'Corsair' },
     { name: 'Seasonic Prime TX-1000 1000W Titanium', brand: 'Seasonic' },
-    { name: 'Seasonic Prime TX-850 850W Titanium', brand: 'Seasonic' },
-    { name: 'Seasonic Prime GX-1000 1000W Gold', brand: 'Seasonic' },
-    { name: 'Seasonic Focus GX-1000 1000W Gold', brand: 'Seasonic' },
     { name: 'Seasonic Focus GX-850 850W Gold', brand: 'Seasonic' },
     { name: 'Seasonic Focus GX-750 750W Gold', brand: 'Seasonic' },
-    { name: 'Seasonic Focus GX-650 650W Gold', brand: 'Seasonic' },
-    { name: 'be quiet! Dark Power Pro 13 1300W Titanium', brand: 'be quiet!' },
     { name: 'be quiet! Dark Power 13 1000W Titanium', brand: 'be quiet!' },
-    { name: 'be quiet! Dark Power 13 850W Titanium', brand: 'be quiet!' },
-    { name: 'be quiet! Straight Power 12 1000W Platinum', brand: 'be quiet!' },
     { name: 'be quiet! Pure Power 12 M 750W Gold', brand: 'be quiet!' },
-    { name: 'be quiet! Pure Power 12 M 650W Gold', brand: 'be quiet!' },
-    { name: 'MSI MEG Ai1300P PCIE5 1300W Platinum', brand: 'MSI' },
     { name: 'MSI MAG A1000GL PCIE5 1000W Gold', brand: 'MSI' },
     { name: 'MSI MAG A850GL PCIE5 850W Gold', brand: 'MSI' },
-    { name: 'MSI MAG A750GL PCIE5 750W Gold', brand: 'MSI' },
-    { name: 'Thermaltake Toughpower GF3 1350W Gold', brand: 'Thermaltake' },
-    { name: 'Thermaltake Toughpower GF3 1050W Gold', brand: 'Thermaltake' },
     { name: 'Thermaltake Toughpower GF3 850W Gold', brand: 'Thermaltake' },
-    { name: 'Thermaltake Toughpower GF3 750W Gold', brand: 'Thermaltake' },
-    { name: 'EVGA SuperNOVA 1000 G6 1000W Gold', brand: 'EVGA' },
     { name: 'EVGA SuperNOVA 850 G6 850W Gold', brand: 'EVGA' },
-    { name: 'EVGA SuperNOVA 750 G6 750W Gold', brand: 'EVGA' },
-    { name: 'EVGA SuperNOVA 650 G6 650W Gold', brand: 'EVGA' },
     { name: 'Fractal Design Ion+ 2 Platinum 860W', brand: 'Fractal' },
-    { name: 'Fractal Design Ion+ 2 Platinum 760W', brand: 'Fractal' },
-    { name: 'Fractal Design Ion Gold 750W', brand: 'Fractal' },
-    { name: 'Super Flower Leadex VII 1000W Gold', brand: 'Super Flower' },
-    { name: 'Super Flower Leadex VII 850W Gold', brand: 'Super Flower' },
-    { name: 'Super Flower Leadex Platinum 1600W', brand: 'Super Flower' },
   ],
 };
 
-// ─── Quick actions ────────────────────────────────────────────────────────────
 const QUICK_ACTIONS = {
   SMARTPHONE: [
     { id: 'full_specs', label: '📋 Full Specs & Price' },
@@ -784,12 +540,12 @@ function getQuickActionQuery(questionId, deviceName) {
     gaming_1440p: `How does the ${deviceName} perform at 1440p gaming? Include average FPS on popular games.`,
     gaming_4k: `How does the ${deviceName} perform at 4K gaming?`,
     productivity: `How does the ${deviceName} perform for productivity tasks like video editing, rendering, and multitasking?`,
-    compatible_mb: `Which motherboards are compatible with the ${deviceName}? What socket/chipset should I look for?`,
+    compatible_mb: `Which motherboards are compatible with the ${deviceName}?`,
     compatible_cpu: `Which CPUs are compatible with the ${deviceName} motherboard?`,
     compatible_ram: `What RAM type, speed, and capacity does the ${deviceName} support?`,
     compatible: `What systems or components is the ${deviceName} compatible with?`,
     overclock: `Can the ${deviceName} be overclocked? What speeds can it reach?`,
-    read_write: `What are the read and write speeds of the ${deviceName}? How does it compare to NVMe standards?`,
+    read_write: `What are the read and write speeds of the ${deviceName}?`,
     features: `What are the key features and connectivity options of the ${deviceName}?`,
     efficiency: `What is the efficiency rating and 80 PLUS certification of the ${deviceName}?`,
     vs_competitor: `Compare the ${deviceName} against its main competitors in the same price range.`,
@@ -876,16 +632,12 @@ const TAB_LABELS = { SMARTPHONE: '📱 Phones', GPU: '🎮 GPU', CPU: '🧠 CPU'
 function CatalogModal({ initialCategory, onSelect, onClose }) {
   const [activeTab, setActiveTab] = useState(initialCategory || 'SMARTPHONE');
   const [search, setSearch] = useState('');
-
   const items = (DEVICE_CATALOG[activeTab] || []).filter(d =>
     !search || d.name.toLowerCase().includes(search.toLowerCase()) || d.brand.toLowerCase().includes(search.toLowerCase())
   );
-
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}
-      onClick={onClose}>
-      <div style={{ background: 'var(--bg-1)', borderRadius: '20px 20px 0 0', width: '100%', maxWidth: '820px', maxHeight: '88vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
-        onClick={e => e.stopPropagation()}>
+    <div style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }} onClick={onClose}>
+      <div style={{ background: 'var(--bg-1)', borderRadius: '20px 20px 0 0', width: '100%', maxWidth: '820px', maxHeight: '88vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }} onClick={e => e.stopPropagation()}>
         <div style={{ padding: '16px 20px 0', borderBottom: '1px solid var(--border)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
             <div style={{ fontFamily: 'Syne, sans-serif', fontWeight: 800, fontSize: '16px', color: 'var(--text)' }}>📦 Device Catalog</div>
@@ -894,8 +646,7 @@ function CatalogModal({ initialCategory, onSelect, onClose }) {
           <div style={{ position: 'relative', marginBottom: '12px' }}>
             <svg style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-3)' }} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
             <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search models..."
-              style={{ width: '100%', background: 'var(--bg-3)', border: '1px solid var(--border)', borderRadius: '10px', padding: '8px 12px 8px 30px', fontSize: '13px', color: 'var(--text)', fontFamily: 'inherit', boxSizing: 'border-box', outline: 'none' }}
-              autoFocus />
+              style={{ width: '100%', background: 'var(--bg-3)', border: '1px solid var(--border)', borderRadius: '10px', padding: '8px 12px 8px 30px', fontSize: '13px', color: 'var(--text)', fontFamily: 'inherit', boxSizing: 'border-box', outline: 'none' }} autoFocus />
           </div>
           <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '12px' }}>
             {CATALOG_TABS.map(tab => (
@@ -906,7 +657,6 @@ function CatalogModal({ initialCategory, onSelect, onClose }) {
             ))}
           </div>
         </div>
-
         <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px' }}>
           {items.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-3)', fontSize: '14px' }}>No results found</div>
@@ -917,12 +667,9 @@ function CatalogModal({ initialCategory, onSelect, onClose }) {
                   style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: '12px', padding: 0, cursor: 'pointer', overflow: 'hidden', transition: 'all 0.15s', textAlign: 'left' }}
                   onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--accent)'; e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 16px rgba(99,102,241,0.2)'; }}
                   onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = 'none'; }}>
-
-                  {/* ── Image area: real photo if img exists, SVG fallback if not ── */}
                   <div style={{ width: '100%', aspectRatio: '1', overflow: 'hidden', position: 'relative' }}>
                     <DeviceImage device={device} category={activeTab} />
                   </div>
-
                   <div style={{ padding: '8px 10px 10px' }}>
                     <div style={{ fontSize: '10px', color: 'var(--accent)', fontWeight: 600, marginBottom: '2px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{device.brand}</div>
                     <div style={{ fontSize: '12px', color: 'var(--text)', fontWeight: 600, lineHeight: 1.3 }}>{device.name.replace(device.brand + ' ', '')}</div>
@@ -932,11 +679,8 @@ function CatalogModal({ initialCategory, onSelect, onClose }) {
             </div>
           )}
         </div>
-
         <div style={{ padding: '12px 20px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'center' }}>
-          <button onClick={onClose} style={{ background: 'var(--bg-3)', border: '1px solid var(--border)', borderRadius: '10px', padding: '10px 32px', fontSize: '13px', color: 'var(--text)', cursor: 'pointer', fontFamily: 'inherit' }}>
-            Cancel
-          </button>
+          <button onClick={onClose} style={{ background: 'var(--bg-3)', border: '1px solid var(--border)', borderRadius: '10px', padding: '10px 32px', fontSize: '13px', color: 'var(--text)', cursor: 'pointer', fontFamily: 'inherit' }}>Cancel</button>
         </div>
       </div>
     </div>
@@ -1078,20 +822,36 @@ export default function ChatPage({ onLogout }) {
           }
         } catch (err) { console.warn('Could not load history:', err); }
       }
+
       const pending = sessionStorage.getItem('pendingMessage');
       if (pending) {
         sessionStorage.removeItem('pendingMessage');
-        const { content } = JSON.parse(pending);
-        if (content) {
-          setMessages([{ id: 0, role: 'assistant', content: "👋 Hi! I'm SpecSmart AI, your specialized tech advisor for:\n• PC Components (CPU, GPU, RAM, Storage, Motherboards)\n• Smartphones\n• Keyboards & Mice\n\nAsk me anything, or upload a hardware image for AI identification!" }]);
+        const { content, imageData, imageMime } = JSON.parse(pending);
+        setMessages([{
+          id: 0, role: 'assistant',
+          content: "👋 Hi! I'm SpecSmart AI, your specialized tech advisor for:\n• PC Components (CPU, GPU, RAM, Storage, Motherboards)\n• Smartphones\n• Keyboards & Mice\n\nAsk me anything, or upload a hardware image for AI identification!"
+        }]);
+        if (imageData) {
+          setTimeout(() => {
+            sendMessage(
+              content || 'What is this hardware? Identify it and give full specs.',
+              imageData,
+              imageMime || 'image/jpeg'
+            );
+          }, 300);
+        } else if (content) {
           setPendingAutoSend(content);
-          return;
         }
+        return;
       }
-      setMessages([{ id: 0, role: 'assistant', content: "👋 Hi! I'm SpecSmart AI, your specialized tech advisor for:\n• PC Components (CPU, GPU, RAM, Storage, Motherboards)\n• Smartphones\n• Keyboards & Mice\n\nAsk me anything, or upload a hardware image for AI identification!" }]);
+
+      setMessages([{
+        id: 0, role: 'assistant',
+        content: "👋 Hi! I'm SpecSmart AI, your specialized tech advisor for:\n• PC Components (CPU, GPU, RAM, Storage, Motherboards)\n• Smartphones\n• Keyboards & Mice\n\nAsk me anything, or upload a hardware image for AI identification!"
+      }]);
     };
     loadHistory();
-  }, [id]);
+  }, [id]); // eslint-disable-line
 
   useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages, wizardState]);
   useEffect(() => { return () => { if (cancelStreamRef.current) cancelStreamRef.current(); }; }, []);
@@ -1173,7 +933,15 @@ export default function ChatPage({ onLogout }) {
     const textContent = messageContent || input;
     if (!textContent && !imageData) return;
     setWizardState(null); setCatalogOpen(false);
-    const userMessage = { id: Date.now(), role: 'user', content: textContent, image: imageData };
+
+    const userMessage = {
+      id: Date.now(),
+      role: 'user',
+      content: textContent,
+      image: imageData,
+      imageMime: imageMime || 'image/jpeg',
+    };
+
     setMessages(prev => [...prev, userMessage]);
     setInput(''); setUploadedFile(null); setUploadedPreview(null);
     if (fileRef.current) fileRef.current.value = '';
@@ -1239,9 +1007,15 @@ export default function ChatPage({ onLogout }) {
     if (isLoading || isStreaming) return;
     if (uploadedFile) {
       const reader = new FileReader();
-      reader.onload = async ev => { await sendMessage(input || 'What is this hardware? Identify it and give full specs.', ev.target.result.split(',')[1], uploadedFile.type || 'image/jpeg'); };
+      reader.onload = async ev => {
+        const base64 = ev.target.result.split(',')[1];
+        const mime = uploadedFile.type || 'image/jpeg';
+        await sendMessage(input || 'What is this hardware? Identify it and give full specs.', base64, mime);
+      };
       reader.readAsDataURL(uploadedFile);
-    } else { await sendMessage(input); }
+    } else {
+      await sendMessage(input);
+    }
   };
 
   const handleFileChange = e => {
@@ -1310,7 +1084,11 @@ export default function ChatPage({ onLogout }) {
                 {msg.image && (
                   <div style={{ marginBottom: '10px' }}>
                     <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.6)', marginBottom: '6px' }}>📎 Hardware Image</div>
-                    <img src={`data:image/jpeg;base64,${msg.image}`} alt="Uploaded hardware" style={{ maxWidth: '200px', borderRadius: '8px', display: 'block' }} />
+                    <img
+                      src={`data:${msg.imageMime || 'image/jpeg'};base64,${msg.image}`}
+                      alt="Uploaded hardware"
+                      style={{ maxWidth: '200px', borderRadius: '8px', display: 'block' }}
+                    />
                   </div>
                 )}
                 <div style={{ lineHeight: '1.6', fontSize: '14px' }}>

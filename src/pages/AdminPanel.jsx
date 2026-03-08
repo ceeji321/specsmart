@@ -63,6 +63,54 @@ const LiveBadge = ({ connected }) => (
   </div>
 );
 
+// ── HoverButton ───────────────────────────────────────────────────────────────
+const HoverButton = ({ onClick, hoverBg, hoverColor, defaultColor, children }) => {
+  const ref = useRef(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const enter = () => {
+      el.style.setProperty('background', hoverBg, 'important');
+      el.style.setProperty('color', hoverColor, 'important');
+    };
+    const leave = () => {
+      el.style.setProperty('background', 'rgba(0,0,0,0)', 'important');
+      el.style.setProperty('color', defaultColor, 'important');
+    };
+    el.addEventListener('mouseenter', enter);
+    el.addEventListener('mouseleave', leave);
+    return () => {
+      el.removeEventListener('mouseenter', enter);
+      el.removeEventListener('mouseleave', leave);
+    };
+  }, [hoverBg, hoverColor, defaultColor]);
+  return (
+    <button
+      ref={ref}
+      onClick={onClick}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 8,
+        width: '100%',
+        padding: '10px 16px',
+        background: 'rgba(0,0,0,0)',
+        border: 'none',
+        cursor: 'pointer',
+        fontSize: 13,
+        fontWeight: 500,
+        fontFamily: "'DM Sans', sans-serif",
+        color: defaultColor,
+        transition: 'background 0.15s, color 0.15s',
+        textAlign: 'left',
+        lineHeight: 1.4,
+      }}
+    >
+      {children}
+    </button>
+  );
+};
+
 // ── Modals ────────────────────────────────────────────────────────────────────
 const DisableModal = ({ user, onClose, onDisabled }) => {
   const [loading, setLoading] = useState(false);
@@ -91,11 +139,7 @@ const DisableModal = ({ user, onClose, onDisabled }) => {
         {err && <div style={{ color: 'var(--red)', fontSize: 13, marginBottom: 12 }}>{err}</div>}
         <div style={{ display: 'flex', gap: 10 }}>
           <button className="btn btn-ghost" onClick={onClose} style={{ flex: 1 }}>Cancel</button>
-          <button
-            onClick={handleDisable}
-            disabled={loading}
-            style={{ flex: 1, padding: '9px 16px', borderRadius: 8, background: 'rgba(251,191,36,0.15)', color: '#fbbf24', border: '1px solid rgba(251,191,36,0.3)', cursor: loading ? 'not-allowed' : 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, opacity: loading ? 0.7 : 1 }}
-          >
+          <button onClick={handleDisable} disabled={loading} style={{ flex: 1, padding: '9px 16px', borderRadius: 8, background: 'rgba(251,191,36,0.15)', color: '#fbbf24', border: '1px solid rgba(251,191,36,0.3)', cursor: loading ? 'not-allowed' : 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, opacity: loading ? 0.7 : 1 }}>
             {loading ? 'Disabling…' : <><Ban size={14} /> Disable</>}
           </button>
         </div>
@@ -141,6 +185,13 @@ const DeleteModal = ({ user, onClose, onDeleted }) => {
 };
 
 const ArchiveModal = ({ user, onClose, onArchived }) => {
+  const PRESET_REASONS = [
+    'Inactive account',
+    'Duplicate account',
+    'User requested removal',
+    'Violation of terms',
+  ];
+
   const [reason, setReason] = useState('');
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState('');
@@ -167,16 +218,31 @@ const ArchiveModal = ({ user, onClose, onArchived }) => {
         <p className="modal-sub"><strong style={{ color: 'var(--text)' }}>{user.name}</strong> will be hidden from the active list. Their record is kept and can be restored.</p>
         <div className="form-group">
           <label className="form-label">Reason (optional)</label>
-          <input className="form-input" placeholder="e.g. Inactive account" value={reason} onChange={e => setReason(e.target.value)} />
+          <select
+            value={reason}
+            onChange={e => setReason(e.target.value)}
+            style={{
+              width: '100%', padding: '9px 12px', borderRadius: 8, fontSize: 13,
+              fontFamily: "'DM Sans', sans-serif", fontWeight: 500,
+              background: 'var(--bg-3)', border: '1px solid var(--border)',
+              color: reason ? 'var(--text)' : 'var(--text-3)',
+              cursor: 'pointer', outline: 'none', appearance: 'none',
+              backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239aa0b0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E")`,
+              backgroundRepeat: 'no-repeat',
+              backgroundPosition: 'right 12px center',
+              paddingRight: 36,
+            }}
+          >
+            <option value="">Select a reason…</option>
+            {PRESET_REASONS.map(r => (
+              <option key={r} value={r}>{r}</option>
+            ))}
+          </select>
         </div>
         {err && <div style={{ color: 'var(--red)', fontSize: 13, marginBottom: 12 }}>{err}</div>}
         <div style={{ display: 'flex', gap: 10 }}>
           <button className="btn btn-ghost" onClick={onClose} style={{ flex: 1 }}>Cancel</button>
-          <button
-            onClick={handleArchive}
-            disabled={loading}
-            style={{ flex: 1, padding: '9px 16px', borderRadius: 8, background: 'rgba(154,160,176,0.1)', color: 'var(--text-2)', border: '1px solid rgba(154,160,176,0.25)', cursor: loading ? 'not-allowed' : 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, opacity: loading ? 0.7 : 1 }}
-          >
+          <button onClick={handleArchive} disabled={loading} style={{ flex: 1, padding: '9px 16px', borderRadius: 8, background: 'rgba(154,160,176,0.1)', color: 'var(--text-2)', border: '1px solid rgba(154,160,176,0.25)', cursor: loading ? 'not-allowed' : 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, opacity: loading ? 0.7 : 1 }}>
             {loading ? 'Archiving…' : <><Archive size={14} /> Archive</>}
           </button>
         </div>
@@ -214,13 +280,7 @@ const CreateModal = ({ onClose, onCreated }) => {
         {['name', 'email', 'password'].map(k => (
           <div className="form-group" key={k}>
             <label className="form-label">{k.charAt(0).toUpperCase() + k.slice(1)}</label>
-            <input
-              className="form-input"
-              type={k === 'password' ? 'password' : 'text'}
-              placeholder={k === 'password' ? 'Min. 6 characters' : ''}
-              value={form[k]}
-              onChange={e => update(k, e.target.value)}
-            />
+            <input className="form-input" type={k === 'password' ? 'password' : 'text'} placeholder={k === 'password' ? 'Min. 6 characters' : ''} value={form[k]} onChange={e => update(k, e.target.value)} />
           </div>
         ))}
         <div className="form-group">
@@ -243,42 +303,31 @@ const CreateModal = ({ onClose, onCreated }) => {
 
 // ── Row Actions ───────────────────────────────────────────────────────────────
 const RowActions = ({ user, onDisable, onArchive, currentId }) => {
-  const [open, setOpen] = useState(false);
+  const [disableHover, setDisableHover] = useState(false);
+  const [archiveHover, setArchiveHover] = useState(false);
   const isSelf = String(user.id) === String(currentId);
   if (isSelf) return null;
 
+  const btnBase = { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, width: 90, padding: '4px 0', borderRadius: 6, cursor: 'pointer', fontSize: 11, fontWeight: 600, fontFamily: "'DM Sans', sans-serif", transition: 'background 0.15s, color 0.15s', userSelect: 'none' };
+
   return (
-    <div style={{ position: 'relative' }}>
-      <button
-        onClick={() => setOpen(o => !o)}
-        style={{ background: 'none', border: '1px solid transparent', color: 'var(--text-3)', cursor: 'pointer', padding: '5px 7px', borderRadius: 8, transition: 'all 0.15s', display: 'flex', alignItems: 'center' }}
-        onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text)'; }}
-        onMouseLeave={e => { if (!open) { e.currentTarget.style.borderColor = 'transparent'; e.currentTarget.style.color = 'var(--text-3)'; } }}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-end', width: 'fit-content', marginLeft: 'auto' }}>
+      <div
+        onMouseEnter={() => setDisableHover(true)}
+        onMouseLeave={() => setDisableHover(false)}
+        onClick={onDisable}
+        style={{ ...btnBase, color: disableHover ? '#fde68a' : '#fbbf24', background: disableHover ? 'rgba(251,191,36,0.18)' : 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.25)' }}
       >
-        <MoreVertical size={16} />
-      </button>
-      {open && (
-        <>
-          <div style={{ position: 'fixed', inset: 0, zIndex: 98 }} onClick={() => setOpen(false)} />
-          <div style={{ position: 'absolute', right: 0, top: 'calc(100% + 4px)', zIndex: 99, background: 'var(--bg-2)', border: '1px solid var(--border-light)', borderRadius: 10, minWidth: 160, boxShadow: 'var(--shadow)', overflow: 'hidden' }}>
-            <button
-              className="dropdown-item"
-              style={{ color: '#fbbf24' }}
-              onClick={() => { onDisable(); setOpen(false); }}
-            >
-              <Ban size={14} /> Disable
-            </button>
-            <div className="dropdown-divider" />
-            <button
-              className="dropdown-item"
-              style={{ color: 'var(--text-2)' }}
-              onClick={() => { onArchive(); setOpen(false); }}
-            >
-              <Archive size={14} /> Archive
-            </button>
-          </div>
-        </>
-      )}
+        <Ban size={11} /> Disable
+      </div>
+      <div
+        onMouseEnter={() => setArchiveHover(true)}
+        onMouseLeave={() => setArchiveHover(false)}
+        onClick={onArchive}
+        style={{ ...btnBase, color: archiveHover ? '#fff' : '#a78bfa', background: archiveHover ? 'rgba(167,139,250,0.25)' : 'rgba(167,139,250,0.12)', border: '1px solid rgba(167,139,250,0.35)' }}
+      >
+        <Archive size={11} /> Archive
+      </div>
     </div>
   );
 };
@@ -295,12 +344,7 @@ const DisabledUsersTab = () => {
     try {
       const res = await axios.get(`${API_URL}/api/manager/users/disabled`);
       setUsers(res.data.data?.users || []);
-    } catch (e) {
-      setErr('Failed to load disabled users.');
-      console.error(e);
-    } finally {
-      setLoading(false);
-    }
+    } catch (e) { setErr('Failed to load disabled users.'); } finally { setLoading(false); }
   };
 
   useEffect(() => { load(); }, []);
@@ -310,11 +354,7 @@ const DisabledUsersTab = () => {
     try {
       await axios.post(`${API_URL}/api/manager/users/${id}/enable`);
       setUsers(prev => prev.filter(u => u.id !== id));
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setEnablingId(null);
-    }
+    } catch (e) { console.error(e); } finally { setEnablingId(null); }
   };
 
   const fmt = (d) => {
@@ -327,21 +367,11 @@ const DisabledUsersTab = () => {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <h2 style={{ fontFamily: 'Syne, sans-serif', fontSize: 18, fontWeight: 700, margin: 0 }}>Disabled Users</h2>
-          <span style={{ background: 'rgba(251,191,36,0.15)', color: '#fbbf24', borderRadius: 20, padding: '2px 10px', fontSize: 11, fontWeight: 700, border: '1px solid rgba(251,191,36,0.3)' }}>
-            {users.length}
-          </span>
+          <span style={{ background: 'rgba(251,191,36,0.15)', color: '#fbbf24', borderRadius: 20, padding: '2px 10px', fontSize: 11, fontWeight: 700, border: '1px solid rgba(251,191,36,0.3)' }}>{users.length}</span>
         </div>
-        <button onClick={load} style={{ background: 'none', border: '1px solid var(--border)', color: 'var(--text-2)', cursor: 'pointer', padding: '7px 10px', borderRadius: 8, display: 'flex', alignItems: 'center' }}>
-          <RefreshCw size={15} />
-        </button>
+        <button onClick={load} style={{ background: 'none', border: '1px solid var(--border)', color: 'var(--text-2)', cursor: 'pointer', padding: '7px 10px', borderRadius: 8, display: 'flex', alignItems: 'center' }}><RefreshCw size={15} /></button>
       </div>
-
-      {err && (
-        <div style={{ color: 'var(--red)', fontSize: 13, marginBottom: 16, padding: '10px 14px', background: 'rgba(248,113,113,0.08)', borderRadius: 8, border: '1px solid rgba(248,113,113,0.2)' }}>
-          {err}
-        </div>
-      )}
-
+      {err && <div style={{ color: 'var(--red)', fontSize: 13, marginBottom: 16, padding: '10px 14px', background: 'rgba(248,113,113,0.08)', borderRadius: 8, border: '1px solid rgba(248,113,113,0.2)' }}>{err}</div>}
       {loading ? (
         <div style={{ textAlign: 'center', padding: '48px 0', color: 'var(--text-3)' }}>Loading…</div>
       ) : users.length === 0 ? (
@@ -362,27 +392,20 @@ const DisabledUsersTab = () => {
             </thead>
             <tbody>
               {users.map((u, i) => (
-                <tr
-                  key={u.id}
-                  style={{ borderBottom: i < users.length - 1 ? '1px solid var(--border)' : 'none' }}
+                <tr key={u.id} style={{ borderBottom: i < users.length - 1 ? '1px solid var(--border)' : 'none' }}
                   onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.02)'}
-                  onMouseLeave={e => e.currentTarget.style.background = 'none'}
-                >
+                  onMouseLeave={e => e.currentTarget.style.background = 'none'}>
                   <td style={{ padding: '14px 20px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <Avatar name={u.name} />
-                      <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-2)' }}>{u.name}</span>
+                      <Avatar name={u.name} /><span style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-2)' }}>{u.name}</span>
                     </div>
                   </td>
                   <td style={{ padding: '14px 20px', fontSize: 13, color: 'var(--text-2)' }}>{u.email}</td>
                   <td style={{ padding: '14px 20px' }}><RoleBadge role={u.role} /></td>
                   <td style={{ padding: '14px 20px', fontSize: 13, color: 'var(--text-2)' }}>{fmt(u.created_at)}</td>
                   <td style={{ padding: '14px 20px' }}>
-                    <button
-                      onClick={() => handleEnable(u.id)}
-                      disabled={enablingId === u.id}
-                      style={{ padding: '6px 14px', borderRadius: 8, background: 'rgba(74,222,128,0.1)', color: '#4ade80', border: '1px solid rgba(74,222,128,0.3)', cursor: 'pointer', fontSize: 12, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}
-                    >
+                    <button onClick={() => handleEnable(u.id)} disabled={enablingId === u.id}
+                      style={{ padding: '6px 14px', borderRadius: 8, background: 'rgba(74,222,128,0.1)', color: '#4ade80', border: '1px solid rgba(74,222,128,0.3)', cursor: 'pointer', fontSize: 12, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
                       <Check size={12} /> {enablingId === u.id ? 'Enabling…' : 'Enable'}
                     </button>
                   </td>
@@ -401,7 +424,6 @@ const ArchivedUsersTab = () => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [restoringId, setRestoringId] = useState(null);
-  const [deletingId, setDeletingId] = useState(null);
   const [err, setErr] = useState('');
 
   const load = async () => {
@@ -409,12 +431,7 @@ const ArchivedUsersTab = () => {
     try {
       const res = await axios.get(`${API_URL}/api/manager/users/archived`);
       setUsers(res.data.data?.users || []);
-    } catch (e) {
-      setErr('Failed to load archived users.');
-      console.error(e);
-    } finally {
-      setLoading(false);
-    }
+    } catch (e) { setErr('Failed to load archived users.'); } finally { setLoading(false); }
   };
 
   useEffect(() => { load(); }, []);
@@ -424,23 +441,7 @@ const ArchivedUsersTab = () => {
     try {
       await axios.post(`${API_URL}/api/manager/users/${id}/restore`);
       setUsers(prev => prev.filter(u => u.id !== id));
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setRestoringId(null);
-    }
-  };
-
-  const handleDelete = async (id) => {
-    setDeletingId(id);
-    try {
-      await axios.delete(`${API_URL}/api/manager/users/${id}`);
-      setUsers(prev => prev.filter(u => u.id !== id));
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setDeletingId(null);
-    }
+    } catch (e) { console.error(e); } finally { setRestoringId(null); }
   };
 
   const fmt = (d) => {
@@ -453,21 +454,11 @@ const ArchivedUsersTab = () => {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <h2 style={{ fontFamily: 'Syne, sans-serif', fontSize: 18, fontWeight: 700, margin: 0 }}>Archived Users</h2>
-          <span style={{ background: 'rgba(154,160,176,0.1)', color: 'var(--text-3)', borderRadius: 20, padding: '2px 10px', fontSize: 11, fontWeight: 700, border: '1px solid rgba(154,160,176,0.2)' }}>
-            {users.length}
-          </span>
+          <span style={{ background: 'rgba(154,160,176,0.1)', color: 'var(--text-3)', borderRadius: 20, padding: '2px 10px', fontSize: 11, fontWeight: 700, border: '1px solid rgba(154,160,176,0.2)' }}>{users.length}</span>
         </div>
-        <button onClick={load} style={{ background: 'none', border: '1px solid var(--border)', color: 'var(--text-2)', cursor: 'pointer', padding: '7px 10px', borderRadius: 8, display: 'flex', alignItems: 'center' }}>
-          <RefreshCw size={15} />
-        </button>
+        <button onClick={load} style={{ background: 'none', border: '1px solid var(--border)', color: 'var(--text-2)', cursor: 'pointer', padding: '7px 10px', borderRadius: 8, display: 'flex', alignItems: 'center' }}><RefreshCw size={15} /></button>
       </div>
-
-      {err && (
-        <div style={{ color: 'var(--red)', fontSize: 13, marginBottom: 16, padding: '10px 14px', background: 'rgba(248,113,113,0.08)', borderRadius: 8, border: '1px solid rgba(248,113,113,0.2)' }}>
-          {err}
-        </div>
-      )}
-
+      {err && <div style={{ color: 'var(--red)', fontSize: 13, marginBottom: 16, padding: '10px 14px', background: 'rgba(248,113,113,0.08)', borderRadius: 8, border: '1px solid rgba(248,113,113,0.2)' }}>{err}</div>}
       {loading ? (
         <div style={{ textAlign: 'center', padding: '48px 0', color: 'var(--text-3)' }}>Loading…</div>
       ) : users.length === 0 ? (
@@ -488,16 +479,12 @@ const ArchivedUsersTab = () => {
             </thead>
             <tbody>
               {users.map((u, i) => (
-                <tr
-                  key={u.id}
-                  style={{ borderBottom: i < users.length - 1 ? '1px solid var(--border)' : 'none' }}
+                <tr key={u.id} style={{ borderBottom: i < users.length - 1 ? '1px solid var(--border)' : 'none' }}
                   onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.02)'}
-                  onMouseLeave={e => e.currentTarget.style.background = 'none'}
-                >
+                  onMouseLeave={e => e.currentTarget.style.background = 'none'}>
                   <td style={{ padding: '14px 20px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <Avatar name={u.name} />
-                      <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-2)' }}>{u.name}</span>
+                      <Avatar name={u.name} /><span style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-2)' }}>{u.name}</span>
                     </div>
                   </td>
                   <td style={{ padding: '14px 20px', fontSize: 13, color: 'var(--text-2)' }}>{u.email}</td>
@@ -507,11 +494,8 @@ const ArchivedUsersTab = () => {
                     {u.archive_reason || 'No reason given'}
                   </td>
                   <td style={{ padding: '14px 20px' }}>
-                    <button
-                      onClick={() => handleRestore(u.id)}
-                      disabled={restoringId === u.id}
-                      style={{ padding: '6px 14px', borderRadius: 8, background: 'rgba(74,222,128,0.1)', color: '#4ade80', border: '1px solid rgba(74,222,128,0.3)', cursor: 'pointer', fontSize: 12, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}
-                    >
+                    <button onClick={() => handleRestore(u.id)} disabled={restoringId === u.id}
+                      style={{ padding: '6px 14px', borderRadius: 8, background: 'rgba(74,222,128,0.1)', color: '#4ade80', border: '1px solid rgba(74,222,128,0.3)', cursor: 'pointer', fontSize: 12, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
                       <Check size={12} /> {restoringId === u.id ? 'Restoring…' : 'Restore'}
                     </button>
                   </td>
@@ -525,7 +509,7 @@ const ArchivedUsersTab = () => {
   );
 };
 
-// ── Main AdminPanel ────────────────────────────────────────────────────────────
+// ── Main AdminPanel ───────────────────────────────────────────────────────────
 export default function AdminPanel() {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -550,7 +534,6 @@ export default function AdminPanel() {
 
   useEffect(() => { if (!isAdmin) navigate('/dashboard'); }, [isAdmin]);
 
-  // SSE connection
   useEffect(() => {
     if (!isAdmin) return;
     const connect = () => {
@@ -593,11 +576,7 @@ export default function AdminPanel() {
       const res = await axios.get(`${API_URL}/api/manager/users`, { params });
       setUsers(res.data.data.users);
       setPagination(res.data.data.pagination);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
-    }
+    } catch (e) { console.error(e); } finally { setLoading(false); }
   };
 
   useEffect(() => { fetchUsers(); }, [page, roleFilter]);
@@ -617,9 +596,7 @@ export default function AdminPanel() {
     return (
       <div>
         <div>{date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</div>
-        <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 1 }}>
-          {date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}
-        </div>
+        <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 1 }}>{date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}</div>
       </div>
     );
   };
@@ -668,15 +645,9 @@ export default function AdminPanel() {
 
         {/* Tabs */}
         <div style={{ display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap' }}>
-          <button style={tabStyle('users')} onClick={() => setActiveTab('users')}>
-            <Users size={14} /> Users
-          </button>
-          <button style={tabStyle('disabled')} onClick={() => setActiveTab('disabled')}>
-            <Ban size={14} /> Disabled
-          </button>
-          <button style={tabStyle('archived')} onClick={() => setActiveTab('archived')}>
-            <Archive size={14} /> Archived
-          </button>
+          <button style={tabStyle('users')} onClick={() => setActiveTab('users')}><Users size={14} /> Users</button>
+          <button style={tabStyle('disabled')} onClick={() => setActiveTab('disabled')}><Ban size={14} /> Disabled</button>
+          <button style={tabStyle('archived')} onClick={() => setActiveTab('archived')}><Archive size={14} /> Archived</button>
         </div>
 
         {/* Users Tab */}
@@ -685,13 +656,7 @@ export default function AdminPanel() {
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '16px 20px', borderBottom: '1px solid var(--border)', flexWrap: 'wrap' }}>
               <div className="search-wrapper" style={{ maxWidth: 300, flex: 1 }}>
                 <Search size={15} className="search-icon" />
-                <input
-                  className="search-input"
-                  placeholder="Search name or email…"
-                  value={search}
-                  onChange={e => setSearch(e.target.value)}
-                  style={{ padding: '9px 16px 9px 38px', borderRadius: 10 }}
-                />
+                <input className="search-input" placeholder="Search name or email…" value={search} onChange={e => setSearch(e.target.value)} style={{ padding: '9px 16px 9px 38px', borderRadius: 10 }} />
               </div>
               <div style={{ display: 'flex', gap: 6 }}>
                 {['all', 'user', 'admin'].map(r => (
@@ -701,12 +666,10 @@ export default function AdminPanel() {
                   </button>
                 ))}
               </div>
-              <button
-                onClick={() => { fetchUsers(); fetchStats(); }}
+              <button onClick={() => { fetchUsers(); fetchStats(); }}
                 style={{ marginLeft: 'auto', background: 'none', border: '1px solid var(--border)', color: 'var(--text-2)', cursor: 'pointer', padding: '7px 10px', borderRadius: 8, display: 'flex', alignItems: 'center', transition: 'all 0.15s' }}
                 onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--accent)'; e.currentTarget.style.color = 'var(--accent)'; }}
-                onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-2)'; }}
-              >
+                onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-2)'; }}>
                 <RefreshCw size={15} />
               </button>
             </div>
@@ -726,12 +689,10 @@ export default function AdminPanel() {
                   ) : users.length === 0 ? (
                     <tr><td colSpan={6} style={{ padding: '48px 20px', textAlign: 'center', color: 'var(--text-3)' }}>No users found</td></tr>
                   ) : users.map((u, i) => (
-                    <tr
-                      key={u.id}
+                    <tr key={u.id}
                       style={{ borderBottom: i < users.length - 1 ? '1px solid var(--border)' : 'none', transition: 'background 0.1s' }}
                       onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.02)'}
-                      onMouseLeave={e => e.currentTarget.style.background = 'none'}
-                    >
+                      onMouseLeave={e => e.currentTarget.style.background = 'none'}>
                       <td style={{ padding: '14px 20px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                           <Avatar name={u.name} />
@@ -748,12 +709,7 @@ export default function AdminPanel() {
                       <td style={{ padding: '14px 20px', fontSize: 13, color: 'var(--text-2)', whiteSpace: 'nowrap' }}>{fmt(u.created_at)}</td>
                       <td style={{ padding: '14px 20px', fontSize: 13, color: 'var(--text-2)', whiteSpace: 'nowrap' }}>{fmt(u.last_login)}</td>
                       <td style={{ padding: '14px 20px' }}>
-                        <RowActions
-                          user={u}
-                          currentId={user?.id}
-                          onDisable={() => setDisableUser(u)}
-                          onArchive={() => setArchiveUser(u)}
-                        />
+                        <RowActions user={u} currentId={user?.id} onDisable={() => setDisableUser(u)} onArchive={() => setArchiveUser(u)} />
                       </td>
                     </tr>
                   ))}

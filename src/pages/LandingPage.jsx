@@ -4,6 +4,22 @@ import { useAuth } from '../contexts/AuthContext';
 import { useState, useEffect } from 'react';
 import AuthModal from '../components/Auth/AuthModal';
 
+const ContactEmail = () => (
+  <a
+    href="https://mail.google.com/mail/?view=cm&to=support@specsmart.com&su=SpecSmart%20Inquiry&body=Hi%20SpecSmart%20team%2C%0A%0A"
+    target="_blank"
+    rel="noopener noreferrer"
+    className="btn btn-primary"
+    style={{ padding: '14px 32px', fontSize: '15px', display: 'inline-flex', alignItems: 'center', gap: 8, textDecoration: 'none' }}
+  >
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect width="20" height="16" x="2" y="4" rx="2"/>
+      <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
+    </svg>
+    support@specsmart.com
+  </a>
+);
+
 export default function LandingPage() {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
@@ -146,9 +162,7 @@ export default function LandingPage() {
         <p style={{ fontSize: '16px', color: 'var(--text-2)', lineHeight: 1.8, marginBottom: '32px' }}>
           Have questions, feedback, or want to partner with us? We'd love to hear from you.
         </p>
-        <a href="mailto:support@specsmart.com" className="btn btn-primary" style={{ padding: '14px 32px', fontSize: '15px' }}>
-          support@specsmart.com
-        </a>
+        <ContactEmail />
       </section>
 
       {/* Footer */}
