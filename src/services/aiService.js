@@ -80,7 +80,6 @@ export async function askAI(messages) {
   }
 }
 
-// Groq Vision — replaces TensorFlow.js MobileNet, same logic as Android app
 export async function analyzeImageWithGroq(base64Image, mimeType = 'image/jpeg', userQuery = '') {
   try {
     const token = localStorage.getItem('token');
@@ -103,7 +102,6 @@ export async function analyzeImageWithGroq(base64Image, mimeType = 'image/jpeg',
   }
 }
 
-// Legacy kept for compatibility
 export async function analyzeImage(base64Image, mimeType = 'image/jpeg') {
   const result = await analyzeImageWithGroq(base64Image, mimeType);
   return result.fullSpecs || result.message || 'Could not analyze image.';

@@ -4,7 +4,7 @@ import Navbar from '../components/Navbar';
 import { askAIStream, analyzeImageWithGroq } from '../services/aiService';
 import { saveChat } from '../services/historyService';
 
-// ─── Inline SVG thumbnails — NO external images, NO proxy, always works ───────
+// ─── Inline SVG thumbnails ────────────────────────────────────────────────────
 const CategoryThumbnail = ({ category, brand, name }) => {
   const cfg = {
     SMARTPHONE: {
@@ -213,17 +213,13 @@ const CategoryThumbnail = ({ category, brand, name }) => {
   );
 };
 
-// ─── DeviceImage — URL first → localImg fallback → SVG thumbnail ──────────────
 function DeviceImage({ device, category }) {
   const [urlFailed, setUrlFailed] = useState(false);
   const [localFailed, setLocalFailed] = useState(false);
 
-  // Support both `img` and `image` field names for the remote URL
-  const urlSrc = device.img || device.image || null;
-  // Local image stored in /public/images/ — set via `localImg` field in devices.js
+  const urlSrc   = device.img || device.image || null;
   const localSrc = device.localImg || null;
 
-  // Reset on device change
   useEffect(() => {
     setUrlFailed(false);
     setLocalFailed(false);
@@ -238,31 +234,12 @@ function DeviceImage({ device, category }) {
     background: '#f8f9ff',
   };
 
-  // 1️⃣ Try remote URL first
   if (urlSrc && !urlFailed) {
-    return (
-      <img
-        src={urlSrc}
-        alt={device.name}
-        onError={() => setUrlFailed(true)}
-        style={imgStyle}
-      />
-    );
+    return <img src={urlSrc} alt={device.name} onError={() => setUrlFailed(true)} style={imgStyle} />;
   }
-
-  // 2️⃣ URL failed — try local image from /public/images/
   if (localSrc && !localFailed) {
-    return (
-      <img
-        src={localSrc}
-        alt={device.name}
-        onError={() => setLocalFailed(true)}
-        style={imgStyle}
-      />
-    );
+    return <img src={localSrc} alt={device.name} onError={() => setLocalFailed(true)} style={imgStyle} />;
   }
-
-  // 3️⃣ Both failed — show inline SVG category thumbnail
   return <CategoryThumbnail category={category} brand={device.brand} name={device.name} />;
 }
 
@@ -338,138 +315,138 @@ const DEVICE_CATALOG = {
     { name: 'Nothing Phone (2)', brand: 'Nothing', img: 'https://fdn2.gsmarena.com/vv/bigpic/nothing-phone-2-.jpg' },
     { name: 'Sony Xperia 1 VI', brand: 'Sony', img: 'https://fdn2.gsmarena.com/vv/bigpic/sony-xperia-1-vi.jpg' },
     { name: 'Motorola Edge 50 Ultra', brand: 'Motorola', img: 'https://fdn2.gsmarena.com/vv/bigpic/motorola-edge-50-ultra.jpg' },
-    { name: 'Tecno Phantom X2 Pro', brand: 'Tecno' },
-    { name: 'Infinix Zero 30', brand: 'Infinix' },
+    { name: 'Tecno Phantom X2 Pro', brand: 'Tecno', localImg: '/images/phone-tecno-phantom-x2-pro.png' },
+    { name: 'Infinix Zero 30', brand: 'Infinix', localImg: '/images/phone-infinix-zero-30.png' },
   ],
   GPU: [
-    { name: 'NVIDIA GeForce RTX 4090', brand: 'NVIDIA' },
-    { name: 'NVIDIA GeForce RTX 4080 Super', brand: 'NVIDIA' },
-    { name: 'NVIDIA GeForce RTX 4080', brand: 'NVIDIA' },
-    { name: 'NVIDIA GeForce RTX 4070 Ti Super', brand: 'NVIDIA' },
-    { name: 'NVIDIA GeForce RTX 4070 Super', brand: 'NVIDIA' },
-    { name: 'NVIDIA GeForce RTX 4070', brand: 'NVIDIA' },
-    { name: 'NVIDIA GeForce RTX 4060 Ti', brand: 'NVIDIA' },
-    { name: 'NVIDIA GeForce RTX 4060', brand: 'NVIDIA' },
-    { name: 'NVIDIA GeForce RTX 3090 Ti', brand: 'NVIDIA' },
-    { name: 'NVIDIA GeForce RTX 3080 Ti', brand: 'NVIDIA' },
-    { name: 'NVIDIA GeForce RTX 3080', brand: 'NVIDIA' },
-    { name: 'NVIDIA GeForce RTX 3070 Ti', brand: 'NVIDIA' },
-    { name: 'NVIDIA GeForce RTX 3070', brand: 'NVIDIA' },
-    { name: 'NVIDIA GeForce RTX 3060 Ti', brand: 'NVIDIA' },
-    { name: 'NVIDIA GeForce RTX 3060 12GB', brand: 'NVIDIA' },
-    { name: 'NVIDIA GeForce GTX 1660 Super', brand: 'NVIDIA' },
-    { name: 'NVIDIA GeForce GTX 1650', brand: 'NVIDIA' },
-    { name: 'AMD Radeon RX 7900 XTX', brand: 'AMD' },
-    { name: 'AMD Radeon RX 7900 XT', brand: 'AMD' },
-    { name: 'AMD Radeon RX 7800 XT', brand: 'AMD' },
-    { name: 'AMD Radeon RX 7700 XT', brand: 'AMD' },
-    { name: 'AMD Radeon RX 7600', brand: 'AMD' },
-    { name: 'AMD Radeon RX 6950 XT', brand: 'AMD' },
-    { name: 'AMD Radeon RX 6800 XT', brand: 'AMD' },
-    { name: 'AMD Radeon RX 6700 XT', brand: 'AMD' },
-    { name: 'AMD Radeon RX 6600 XT', brand: 'AMD' },
-    { name: 'Intel Arc A770 16GB', brand: 'Intel' },
-    { name: 'Intel Arc A750', brand: 'Intel' },
+    { name: 'NVIDIA GeForce RTX 4090', brand: 'NVIDIA', localImg: '/images/gpu-nvidia-rtx-4090.png' },
+    { name: 'NVIDIA GeForce RTX 4080 Super', brand: 'NVIDIA', localImg: '/images/gpu-nvidia-rtx-4080-super.png' },
+    { name: 'NVIDIA GeForce RTX 4080', brand: 'NVIDIA', localImg: '/images/gpu-nvidia-rtx-4080.png' },
+    { name: 'NVIDIA GeForce RTX 4070 Ti Super', brand: 'NVIDIA', localImg: '/images/gpu-nvidia-rtx-4070ti-super.png' },
+    { name: 'NVIDIA GeForce RTX 4070 Super', brand: 'NVIDIA', localImg: '/images/gpu-nvidia-rtx-4070-super.png' },
+    { name: 'NVIDIA GeForce RTX 4070', brand: 'NVIDIA', localImg: '/images/gpu-nvidia-rtx-4070.png' },
+    { name: 'NVIDIA GeForce RTX 4060 Ti', brand: 'NVIDIA', localImg: '/images/gpu-nvidia-rtx-4060ti.png' },
+    { name: 'NVIDIA GeForce RTX 4060', brand: 'NVIDIA', localImg: '/images/gpu-nvidia-rtx-4060.png' },
+    { name: 'NVIDIA GeForce RTX 3090 Ti', brand: 'NVIDIA', localImg: '/images/gpu-nvidia-rtx-3090ti.png' },
+    { name: 'NVIDIA GeForce RTX 3080 Ti', brand: 'NVIDIA', localImg: '/images/gpu-nvidia-rtx-3080ti.png' },
+    { name: 'NVIDIA GeForce RTX 3080', brand: 'NVIDIA', localImg: '/images/gpu-nvidia-rtx-3080.png' },
+    { name: 'NVIDIA GeForce RTX 3070 Ti', brand: 'NVIDIA', localImg: '/images/gpu-nvidia-rtx-3070ti.png' },
+    { name: 'NVIDIA GeForce RTX 3070', brand: 'NVIDIA', localImg: '/images/gpu-nvidia-rtx-3070.png' },
+    { name: 'NVIDIA GeForce RTX 3060 Ti', brand: 'NVIDIA', localImg: '/images/gpu-nvidia-rtx-3060ti.png' },
+    { name: 'NVIDIA GeForce RTX 3060 12GB', brand: 'NVIDIA', localImg: '/images/gpu-nvidia-rtx-3060.png' },
+    { name: 'NVIDIA GeForce GTX 1660 Super', brand: 'NVIDIA', localImg: '/images/gpu-nvidia-gtx-1660-super.png' },
+    { name: 'NVIDIA GeForce GTX 1650', brand: 'NVIDIA', localImg: '/images/gpu-nvidia-gtx-1650.png' },
+    { name: 'AMD Radeon RX 7900 XTX', brand: 'AMD', localImg: '/images/gpu-amd-rx-7900xtx.png' },
+    { name: 'AMD Radeon RX 7900 XT', brand: 'AMD', localImg: '/images/gpu-amd-rx-7900xt.png' },
+    { name: 'AMD Radeon RX 7800 XT', brand: 'AMD', localImg: '/images/gpu-amd-rx-7800xt.png' },
+    { name: 'AMD Radeon RX 7700 XT', brand: 'AMD', localImg: '/images/gpu-amd-rx-7700xt.png' },
+    { name: 'AMD Radeon RX 7600', brand: 'AMD', localImg: '/images/gpu-amd-rx-7600.png' },
+    { name: 'AMD Radeon RX 6950 XT', brand: 'AMD', localImg: '/images/gpu-amd-rx-6950xt.png' },
+    { name: 'AMD Radeon RX 6800 XT', brand: 'AMD', localImg: '/images/gpu-amd-rx-6800xt.png' },
+    { name: 'AMD Radeon RX 6700 XT', brand: 'AMD', localImg: '/images/gpu-amd-rx-6700xt.png' },
+    { name: 'AMD Radeon RX 6600 XT', brand: 'AMD', localImg: '/images/gpu-amd-rx-6600xt.png' },
+    { name: 'Intel Arc A770 16GB', brand: 'Intel', localImg: '/images/gpu-intel-arc-a770.png' },
+    { name: 'Intel Arc A750', brand: 'Intel', localImg: '/images/gpu-intel-arc-a750.png' },
   ],
   CPU: [
-    { name: 'Intel Core i9-14900KS', brand: 'Intel' },
-    { name: 'Intel Core i9-14900K', brand: 'Intel' },
-    { name: 'Intel Core i7-14700K', brand: 'Intel' },
-    { name: 'Intel Core i5-14600K', brand: 'Intel' },
-    { name: 'Intel Core i5-14400F', brand: 'Intel' },
-    { name: 'Intel Core i3-14100F', brand: 'Intel' },
-    { name: 'Intel Core i9-13900K', brand: 'Intel' },
-    { name: 'Intel Core i7-13700K', brand: 'Intel' },
-    { name: 'Intel Core i5-13600K', brand: 'Intel' },
-    { name: 'Intel Core i5-13400F', brand: 'Intel' },
-    { name: 'Intel Core i9-12900K', brand: 'Intel' },
-    { name: 'Intel Core i7-12700K', brand: 'Intel' },
-    { name: 'Intel Core i5-12600K', brand: 'Intel' },
-    { name: 'Intel Core i5-12400F', brand: 'Intel' },
-    { name: 'AMD Ryzen 9 9950X', brand: 'AMD' },
-    { name: 'AMD Ryzen 9 9900X', brand: 'AMD' },
-    { name: 'AMD Ryzen 7 9700X', brand: 'AMD' },
-    { name: 'AMD Ryzen 5 9600X', brand: 'AMD' },
-    { name: 'AMD Ryzen 9 7950X3D', brand: 'AMD' },
-    { name: 'AMD Ryzen 9 7950X', brand: 'AMD' },
-    { name: 'AMD Ryzen 7 7800X3D', brand: 'AMD' },
-    { name: 'AMD Ryzen 7 7700X', brand: 'AMD' },
-    { name: 'AMD Ryzen 5 7600X', brand: 'AMD' },
-    { name: 'AMD Ryzen 5 7600', brand: 'AMD' },
-    { name: 'AMD Ryzen 9 5950X', brand: 'AMD' },
-    { name: 'AMD Ryzen 9 5900X', brand: 'AMD' },
-    { name: 'AMD Ryzen 7 5800X3D', brand: 'AMD' },
-    { name: 'AMD Ryzen 5 5600X', brand: 'AMD' },
-    { name: 'AMD Ryzen 5 5600', brand: 'AMD' },
+    { name: 'Intel Core i9-14900KS', brand: 'Intel', localImg: '/images/cpu-intel-i9-14900k.png' },
+    { name: 'Intel Core i9-14900K', brand: 'Intel', localImg: '/images/cpu-intel-i9-14900k.png' },
+    { name: 'Intel Core i7-14700K', brand: 'Intel', localImg: '/images/cpu-intel-i7-14700k.png' },
+    { name: 'Intel Core i5-14600K', brand: 'Intel', localImg: '/images/cpu-intel-i5-14600k.png' },
+    { name: 'Intel Core i5-14400F', brand: 'Intel', localImg: '/images/cpu-intel-i5-14600k.png' },
+    { name: 'Intel Core i3-14100F', brand: 'Intel', localImg: '/images/cpu-intel-i3-13100.png' },
+    { name: 'Intel Core i9-13900K', brand: 'Intel', localImg: '/images/cpu-intel-i9-13900k.png' },
+    { name: 'Intel Core i7-13700K', brand: 'Intel', localImg: '/images/cpu-intel-i7-13700k.png' },
+    { name: 'Intel Core i5-13600K', brand: 'Intel', localImg: '/images/cpu-intel-i5-13600k.png' },
+    { name: 'Intel Core i5-13400F', brand: 'Intel', localImg: '/images/cpu-intel-i5-13600k.png' },
+    { name: 'Intel Core i9-12900K', brand: 'Intel', localImg: '/images/cpu-intel-i9-13900k.png' },
+    { name: 'Intel Core i7-12700K', brand: 'Intel', localImg: '/images/cpu-intel-i7-13700k.png' },
+    { name: 'Intel Core i5-12600K', brand: 'Intel', localImg: '/images/cpu-intel-i5-13600k.png' },
+    { name: 'Intel Core i5-12400F', brand: 'Intel', localImg: '/images/cpu-intel-i5-13600k.png' },
+    { name: 'AMD Ryzen 9 9950X', brand: 'AMD', localImg: '/images/cpu-amd-ryzen9-7950x.png' },
+    { name: 'AMD Ryzen 9 9900X', brand: 'AMD', localImg: '/images/cpu-amd-ryzen9-7950x.png' },
+    { name: 'AMD Ryzen 7 9700X', brand: 'AMD', localImg: '/images/cpu-amd-ryzen7-7800x3d.png' },
+    { name: 'AMD Ryzen 5 9600X', brand: 'AMD', localImg: '/images/cpu-amd-ryzen5-7600x.png' },
+    { name: 'AMD Ryzen 9 7950X3D', brand: 'AMD', localImg: '/images/cpu-amd-ryzen9-7950x.png' },
+    { name: 'AMD Ryzen 9 7950X', brand: 'AMD', localImg: '/images/cpu-amd-ryzen9-7950x.png' },
+    { name: 'AMD Ryzen 7 7800X3D', brand: 'AMD', localImg: '/images/cpu-amd-ryzen7-7800x3d.png' },
+    { name: 'AMD Ryzen 7 7700X', brand: 'AMD', localImg: '/images/cpu-amd-ryzen7-7700x.png' },
+    { name: 'AMD Ryzen 5 7600X', brand: 'AMD', localImg: '/images/cpu-amd-ryzen5-7600x.png' },
+    { name: 'AMD Ryzen 5 7600', brand: 'AMD', localImg: '/images/cpu-amd-ryzen5-7600x.png' },
+    { name: 'AMD Ryzen 9 5950X', brand: 'AMD', localImg: '/images/cpu-amd-ryzen9-7950x.png' },
+    { name: 'AMD Ryzen 9 5900X', brand: 'AMD', localImg: '/images/cpu-amd-ryzen9-7900x3d.png' },
+    { name: 'AMD Ryzen 7 5800X3D', brand: 'AMD', localImg: '/images/cpu-amd-ryzen7-7800x3d.png' },
+    { name: 'AMD Ryzen 5 5600X', brand: 'AMD', localImg: '/images/cpu-amd-ryzen5-5600x.png' },
+    { name: 'AMD Ryzen 5 5600', brand: 'AMD', localImg: '/images/cpu-amd-ryzen5-5600x.png' },
   ],
   RAM: [
-    { name: 'Corsair Dominator Titanium DDR5', brand: 'Corsair' },
-    { name: 'Corsair Vengeance DDR5 6000MHz', brand: 'Corsair' },
-    { name: 'Corsair Vengeance RGB Pro DDR4 3600', brand: 'Corsair' },
-    { name: 'Corsair Vengeance LPX DDR4 3200', brand: 'Corsair' },
-    { name: 'G.Skill Trident Z5 RGB DDR5 6400', brand: 'G.Skill' },
-    { name: 'G.Skill Trident Z5 RGB DDR5 6000', brand: 'G.Skill' },
-    { name: 'G.Skill Trident Z Neo DDR4 3600', brand: 'G.Skill' },
-    { name: 'G.Skill Ripjaws V DDR4 3600', brand: 'G.Skill' },
-    { name: 'Kingston Fury Beast DDR5 6000', brand: 'Kingston' },
-    { name: 'Kingston Fury Beast DDR4 3600', brand: 'Kingston' },
-    { name: 'Kingston Fury Renegade DDR5 6400', brand: 'Kingston' },
-    { name: 'Crucial Pro DDR5 6000', brand: 'Crucial' },
-    { name: 'Crucial Pro DDR4 3200', brand: 'Crucial' },
-    { name: 'TeamGroup T-Force Delta RGB DDR5', brand: 'TeamGroup' },
-    { name: 'Patriot Viper Venom DDR5 6200', brand: 'Patriot' },
+    { name: 'Corsair Dominator Titanium DDR5', brand: 'Corsair', localImg: '/images/ram-corsair-vengeance-ddr5-32gb.png' },
+    { name: 'Corsair Vengeance DDR5 6000MHz', brand: 'Corsair', localImg: '/images/ram-corsair-vengeance-ddr5-32gb.png' },
+    { name: 'Corsair Vengeance RGB Pro DDR4 3600', brand: 'Corsair', localImg: '/images/ram-corsair-lpx-ddr4-32gb.png' },
+    { name: 'Corsair Vengeance LPX DDR4 3200', brand: 'Corsair', localImg: '/images/ram-corsair-lpx-ddr4-32gb.png' },
+    { name: 'G.Skill Trident Z5 RGB DDR5 6400', brand: 'G.Skill', localImg: '/images/ram-gskill-tridentz5-64gb.png' },
+    { name: 'G.Skill Trident Z5 RGB DDR5 6000', brand: 'G.Skill', localImg: '/images/ram-gskill-tridentz5-32gb.png' },
+    { name: 'G.Skill Trident Z Neo DDR4 3600', brand: 'G.Skill', localImg: '/images/ram-gskill-ripjaws-ddr4-16gb.png' },
+    { name: 'G.Skill Ripjaws V DDR4 3600', brand: 'G.Skill', localImg: '/images/ram-gskill-ripjaws-ddr4-16gb.png' },
+    { name: 'Kingston Fury Beast DDR5 6000', brand: 'Kingston', localImg: '/images/ram-kingston-fury-ddr5-32gb.png' },
+    { name: 'Kingston Fury Beast DDR4 3600', brand: 'Kingston', localImg: '/images/ram-kingston-fury-ddr4-32gb.png' },
+    { name: 'Kingston Fury Renegade DDR5 6400', brand: 'Kingston', localImg: '/images/ram-kingston-fury-ddr5-32gb.png' },
+    { name: 'Crucial Pro DDR5 6000', brand: 'Crucial', localImg: '/images/ram-corsair-vengeance-ddr5-32gb.png' },
+    { name: 'Crucial Pro DDR4 3200', brand: 'Crucial', localImg: '/images/ram-corsair-lpx-ddr4-32gb.png' },
+    { name: 'TeamGroup T-Force Delta RGB DDR5', brand: 'TeamGroup', localImg: '/images/ram-corsair-vengeance-ddr5-32gb.png' },
+    { name: 'Patriot Viper Venom DDR5 6200', brand: 'Patriot', localImg: '/images/ram-corsair-vengeance-ddr5-32gb.png' },
   ],
   SSD: [
-    { name: 'Samsung 990 Pro 2TB NVMe', brand: 'Samsung' },
-    { name: 'Samsung 990 Pro 1TB NVMe', brand: 'Samsung' },
-    { name: 'Samsung 980 Pro 2TB NVMe', brand: 'Samsung' },
-    { name: 'Samsung 870 EVO 2TB SATA', brand: 'Samsung' },
-    { name: 'WD Black SN850X 2TB NVMe', brand: 'WD' },
-    { name: 'WD Black SN850X 1TB NVMe', brand: 'WD' },
-    { name: 'WD Black SN770 1TB NVMe', brand: 'WD' },
-    { name: 'WD Blue SN580 1TB NVMe', brand: 'WD' },
-    { name: 'Seagate FireCuda 530 2TB NVMe', brand: 'Seagate' },
-    { name: 'Seagate FireCuda 530 1TB NVMe', brand: 'Seagate' },
-    { name: 'Kingston KC3000 NVMe 2TB', brand: 'Kingston' },
-    { name: 'Kingston NV2 NVMe 1TB', brand: 'Kingston' },
-    { name: 'Crucial T700 NVMe 2TB', brand: 'Crucial' },
-    { name: 'Crucial T700 NVMe 1TB', brand: 'Crucial' },
-    { name: 'Crucial MX500 1TB SATA', brand: 'Crucial' },
-    { name: 'SK Hynix Platinum P41 1TB NVMe', brand: 'SK Hynix' },
-    { name: 'Sabrent Rocket 4 Plus 2TB NVMe', brand: 'Sabrent' },
+    { name: 'Samsung 990 Pro 2TB NVMe', brand: 'Samsung', localImg: '/images/ssd-samsung-990pro-2tb.png' },
+    { name: 'Samsung 990 Pro 1TB NVMe', brand: 'Samsung', localImg: '/images/ssd-samsung-990pro-1tb.png' },
+    { name: 'Samsung 980 Pro 2TB NVMe', brand: 'Samsung', localImg: '/images/ssd-samsung-990pro-2tb.png' },
+    { name: 'Samsung 870 EVO 2TB SATA', brand: 'Samsung', localImg: '/images/ssd-samsung-870evo-2tb.png' },
+    { name: 'WD Black SN850X 2TB NVMe', brand: 'WD', localImg: '/images/ssd-wd-sn850x-2tb.png' },
+    { name: 'WD Black SN850X 1TB NVMe', brand: 'WD', localImg: '/images/ssd-wd-sn850x-1tb.png' },
+    { name: 'WD Black SN770 1TB NVMe', brand: 'WD', localImg: '/images/ssd-wd-sn850x-1tb.png' },
+    { name: 'WD Blue SN580 1TB NVMe', brand: 'WD', localImg: '/images/ssd-wd-blue-1tb.png' },
+    { name: 'Seagate FireCuda 530 2TB NVMe', brand: 'Seagate', localImg: '/images/ssd-seagate-firecuda530-2tb.png' },
+    { name: 'Seagate FireCuda 530 1TB NVMe', brand: 'Seagate', localImg: '/images/ssd-seagate-firecuda530-2tb.png' },
+    { name: 'Kingston KC3000 NVMe 2TB', brand: 'Kingston', localImg: '/images/ssd-kingston-nv2-1tb.png' },
+    { name: 'Kingston NV2 NVMe 1TB', brand: 'Kingston', localImg: '/images/ssd-kingston-nv2-1tb.png' },
+    { name: 'Crucial T700 NVMe 2TB', brand: 'Crucial', localImg: '/images/ssd-crucial-p3plus-2tb.png' },
+    { name: 'Crucial T700 NVMe 1TB', brand: 'Crucial', localImg: '/images/ssd-crucial-p3plus-2tb.png' },
+    { name: 'Crucial MX500 1TB SATA', brand: 'Crucial', localImg: '/images/ssd-crucial-mx500-2tb.png' },
+    { name: 'SK Hynix Platinum P41 1TB NVMe', brand: 'SK Hynix', localImg: '/images/ssd-samsung-990pro-1tb.png' },
+    { name: 'Sabrent Rocket 4 Plus 2TB NVMe', brand: 'Sabrent', localImg: '/images/ssd-samsung-990pro-2tb.png' },
   ],
   MOTHERBOARD: [
-    { name: 'ASUS ROG Maximus Z790 Hero', brand: 'ASUS' },
-    { name: 'ASUS ROG Strix Z790-E Gaming', brand: 'ASUS' },
-    { name: 'ASUS TUF Gaming Z790-Plus', brand: 'ASUS' },
-    { name: 'ASUS ROG Crosshair X670E Hero', brand: 'ASUS' },
-    { name: 'ASUS TUF Gaming B650-Plus', brand: 'ASUS' },
-    { name: 'MSI MEG Z790 Ace', brand: 'MSI' },
-    { name: 'MSI MPG Z790 Carbon', brand: 'MSI' },
-    { name: 'MSI MAG Z790 Tomahawk', brand: 'MSI' },
-    { name: 'MSI MEG X670E Ace', brand: 'MSI' },
-    { name: 'MSI MAG B650 Tomahawk', brand: 'MSI' },
-    { name: 'Gigabyte Z790 Aorus Master', brand: 'Gigabyte' },
-    { name: 'Gigabyte Z790 Aorus Elite AX', brand: 'Gigabyte' },
-    { name: 'Gigabyte B650 Aorus Elite AX', brand: 'Gigabyte' },
-    { name: 'ASRock Z790 Taichi', brand: 'ASRock' },
-    { name: 'ASRock B650 Steel Legend', brand: 'ASRock' },
+    { name: 'ASUS ROG Maximus Z790 Hero', brand: 'ASUS', localImg: '/images/mb-asus-rog-maximus-z790-hero.png' },
+    { name: 'ASUS ROG Strix Z790-E Gaming', brand: 'ASUS', localImg: '/images/mb-asus-rog-strix-z790e.png' },
+    { name: 'ASUS TUF Gaming Z790-Plus', brand: 'ASUS', localImg: '/images/mb-asus-rog-strix-z790e.png' },
+    { name: 'ASUS ROG Crosshair X670E Hero', brand: 'ASUS', localImg: '/images/mb-asus-rog-strix-b650e-f.png' },
+    { name: 'ASUS TUF Gaming B650-Plus', brand: 'ASUS', localImg: '/images/mb-asus-rog-strix-b650e-f.png' },
+    { name: 'MSI MEG Z790 Ace', brand: 'MSI', localImg: '/images/mb-msi-mag-z790-tomahawk.png' },
+    { name: 'MSI MPG Z790 Carbon', brand: 'MSI', localImg: '/images/mb-msi-mag-z790-tomahawk.png' },
+    { name: 'MSI MAG Z790 Tomahawk', brand: 'MSI', localImg: '/images/mb-msi-mag-z790-tomahawk.png' },
+    { name: 'MSI MEG X670E Ace', brand: 'MSI', localImg: '/images/mb-msi-mag-b650-tomahawk.png' },
+    { name: 'MSI MAG B650 Tomahawk', brand: 'MSI', localImg: '/images/mb-msi-mag-b650-tomahawk.png' },
+    { name: 'Gigabyte Z790 Aorus Master', brand: 'Gigabyte', localImg: '/images/mb-gigabyte-z790-aorus-elite.png' },
+    { name: 'Gigabyte Z790 Aorus Elite AX', brand: 'Gigabyte', localImg: '/images/mb-gigabyte-z790-aorus-elite.png' },
+    { name: 'Gigabyte B650 Aorus Elite AX', brand: 'Gigabyte', localImg: '/images/mb-gigabyte-b650-aorus-elite.png' },
+    { name: 'ASRock Z790 Taichi', brand: 'ASRock', localImg: '/images/mb-gigabyte-z790-aorus-elite.png' },
+    { name: 'ASRock B650 Steel Legend', brand: 'ASRock', localImg: '/images/mb-gigabyte-b650-aorus-elite.png' },
   ],
   PSU: [
-    { name: 'Corsair HX1200i 1200W Platinum', brand: 'Corsair' },
-    { name: 'Corsair RM1000x 1000W Gold', brand: 'Corsair' },
-    { name: 'Corsair RM850x 850W Gold', brand: 'Corsair' },
-    { name: 'Corsair RM750x 750W Gold', brand: 'Corsair' },
-    { name: 'Seasonic Prime TX-1000 1000W Titanium', brand: 'Seasonic' },
-    { name: 'Seasonic Focus GX-850 850W Gold', brand: 'Seasonic' },
-    { name: 'Seasonic Focus GX-750 750W Gold', brand: 'Seasonic' },
-    { name: 'be quiet! Dark Power 13 1000W Titanium', brand: 'be quiet!' },
-    { name: 'be quiet! Pure Power 12 M 750W Gold', brand: 'be quiet!' },
-    { name: 'MSI MAG A1000GL PCIE5 1000W Gold', brand: 'MSI' },
-    { name: 'MSI MAG A850GL PCIE5 850W Gold', brand: 'MSI' },
-    { name: 'Thermaltake Toughpower GF3 850W Gold', brand: 'Thermaltake' },
-    { name: 'EVGA SuperNOVA 850 G6 850W Gold', brand: 'EVGA' },
-    { name: 'Fractal Design Ion+ 2 Platinum 860W', brand: 'Fractal' },
+    { name: 'Corsair HX1200i 1200W Platinum', brand: 'Corsair', localImg: '/images/psu-corsair-rm1000x.png' },
+    { name: 'Corsair RM1000x 1000W Gold', brand: 'Corsair', localImg: '/images/psu-corsair-rm1000x.png' },
+    { name: 'Corsair RM850x 850W Gold', brand: 'Corsair', localImg: '/images/psu-corsair-rm850x.png' },
+    { name: 'Corsair RM750x 750W Gold', brand: 'Corsair', localImg: '/images/psu-corsair-rm750x.png' },
+    { name: 'Seasonic Prime TX-1000 1000W Titanium', brand: 'Seasonic', localImg: '/images/psu-seasonic-focus-gx-1000.png' },
+    { name: 'Seasonic Focus GX-850 850W Gold', brand: 'Seasonic', localImg: '/images/psu-seasonic-focus-gx-750.png' },
+    { name: 'Seasonic Focus GX-750 750W Gold', brand: 'Seasonic', localImg: '/images/psu-seasonic-focus-gx-750.png' },
+    { name: 'be quiet! Dark Power 13 1000W Titanium', brand: 'be quiet!', localImg: '/images/psu-bequiet-dark-power13-1000w.png' },
+    { name: 'be quiet! Pure Power 12 M 750W Gold', brand: 'be quiet!', localImg: '/images/psu-bequiet-dark-power13-1000w.png' },
+    { name: 'MSI MAG A1000GL PCIE5 1000W Gold', brand: 'MSI', localImg: '/images/psu-corsair-rm1000x.png' },
+    { name: 'MSI MAG A850GL PCIE5 850W Gold', brand: 'MSI', localImg: '/images/psu-corsair-rm850x.png' },
+    { name: 'Thermaltake Toughpower GF3 850W Gold', brand: 'Thermaltake', localImg: '/images/psu-thermaltake-toughpower-gf3-850w.png' },
+    { name: 'EVGA SuperNOVA 850 G6 850W Gold', brand: 'EVGA', localImg: '/images/psu-corsair-rm850x.png' },
+    { name: 'Fractal Design Ion+ 2 Platinum 860W', brand: 'Fractal', localImg: '/images/psu-seasonic-focus-gx-750.png' },
   ],
 };
 
@@ -955,9 +932,22 @@ export default function ChatPage({ onLogout }) {
         catch (e) { throw new Error('Image analysis failed: ' + e.message); }
         setModelStatus(''); setIsLoading(false);
         if (scanResult.isUnsupported) { setMessages(prev => [...prev, { id: Date.now() + 1, role: 'assistant', content: scanResult.message }]); return; }
+
         const { displayName, category, confidence } = scanResult;
         const confEmoji = confidence === 'HIGH' ? '🟢' : confidence === 'MEDIUM' ? '🟡' : '🔴';
-        setMessages(prev => [...prev, { id: Date.now() + 1, role: 'assistant', content: `📷 Identified: **${displayName}** (${category}) ${confEmoji} ${confidence || ''} confidence` }]);
+
+        const confNote = confidence === 'LOW'
+          ? '\n⚠️ Low confidence — please confirm the correct model below.'
+          : confidence === 'MEDIUM'
+          ? '\n🟡 Medium confidence — please verify with the options below.'
+          : '';
+
+        setMessages(prev => [...prev, {
+          id: Date.now() + 1,
+          role: 'assistant',
+          content: `📷 Identified: **${displayName}** (${category}) ${confEmoji} ${confidence || ''} confidence${confNote}`
+        }]);
+
         const cat = category?.toUpperCase();
         setWizardState({ phase: 'confirm', scanResult, category: cat, displayName });
         setMessages(prev => {
