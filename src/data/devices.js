@@ -178,7 +178,7 @@ export const devices = [
     details: { capacity: '32GB (2x16GB)', type: 'DDR5', speed: '6000MHz', latency: 'CL30', voltage: '1.35V', profile: 'XMP 3.0', formFactor: 'DIMM' } },
 
   { id: 30, category: 'RAM', name: 'Kingston Fury Beast DDR5 32GB',
-    image: 'https://www.kingston.com/dataSheets/KF556C40BBK2-32_en.pdf',
+    image: 'https://wsrv.nl/?url=https%3A%2F%2Fmedia.kingston.com%2Fkingston%2Fproduct%2Fktc-product-fury-beast-ddr5-1-lg.jpg&w=300',
     localImg: '/images/ram-kingston-fury-ddr5-32gb.png',
     specs: '5600MHz, CL40, DDR5', price: '₱4,990', brand: 'Kingston',
     details: { capacity: '32GB (2x16GB)', type: 'DDR5', speed: '5600MHz', latency: 'CL40', voltage: '1.25V', profile: 'XMP 3.0', formFactor: 'DIMM' } },
@@ -196,7 +196,7 @@ export const devices = [
     details: { capacity: '16GB (2x8GB)', type: 'DDR4', speed: '3600MHz', latency: 'CL18', voltage: '1.35V', profile: 'XMP 2.0', formFactor: 'DIMM' } },
 
   { id: 33, category: 'RAM', name: 'Kingston Fury Beast DDR4 32GB',
-    image: 'https://www.kingston.com/dataSheets/KF556C40BBK2-32_en.pdf',
+    image: 'https://wsrv.nl/?url=https%3A%2F%2Fmedia.kingston.com%2Fkingston%2Fproduct%2Fktc-product-fury-beast-ddr5-1-lg.jpg&w=300',
     localImg: '/images/ram-kingston-fury-ddr4-32gb.png',
     specs: '3200MHz, CL16, DDR4', price: '₱3,490', brand: 'Kingston',
     details: { capacity: '32GB (2x16GB)', type: 'DDR4', speed: '3200MHz', latency: 'CL16', voltage: '1.35V', profile: 'XMP 2.0', formFactor: 'DIMM' } },
@@ -239,7 +239,7 @@ export const devices = [
     details: { capacity: '2TB', interface: 'PCIe 4.0 x4, NVMe', readSpeed: '5,000 MB/s', writeSpeed: '4,200 MB/s', tbw: '440 TBW', formFactor: 'M.2 2280', cache: 'No DRAM' } },
 
   { id: 40, category: 'NVMe SSD', name: 'Kingston NV2 1TB',
-    image: 'https://www.kingston.com/dataSheets/SNV2S_1000G_en.pdf',
+    image: 'https://wsrv.nl/?url=https%3A%2F%2Fmedia.kingston.com%2Fkingston%2Fproduct%2Fktc-product-ssds-nv2-1-lg.jpg&w=300',
     localImg: '/images/ssd-kingston-nv2-1tb.png',
     specs: 'PCIe 4.0, 3500MB/s Read', price: '₱2,490', brand: 'Kingston',
     details: { capacity: '1TB', interface: 'PCIe 4.0 x4, NVMe', readSpeed: '3,500 MB/s', writeSpeed: '2,100 MB/s', tbw: '320 TBW', formFactor: 'M.2 2280', cache: 'No DRAM' } },
@@ -270,20 +270,20 @@ export const devices = [
     details: { capacity: '1TB', interface: 'SATA III', readSpeed: '560 MB/s', writeSpeed: '530 MB/s', tbw: '400 TBW', formFactor: '2.5"', cache: 'DRAM Included' } },
 
   { id: 45, category: 'SATA SSD', name: 'Kingston A400 480GB',
-    image: 'https://www.kingston.com/dataSheets/SA400S37_480G_en.pdf',
+    image: 'https://wsrv.nl/?url=https%3A%2F%2Fmedia.kingston.com%2Fkingston%2Fproduct%2Fktc-product-ssds-a400-1-lg.jpg&w=300',
     localImg: '/images/ssd-kingston-a400-480gb.png',
     specs: 'SATA III, 500MB/s Read', price: '₱1,490', brand: 'Kingston',
     details: { capacity: '480GB', interface: 'SATA III', readSpeed: '500 MB/s', writeSpeed: '450 MB/s', tbw: '160 TBW', formFactor: '2.5"', cache: 'No DRAM' } },
 
   // ── Motherboards ──────────────────────────────────────────────────────────
   { id: 46, category: 'Motherboard', name: 'ASUS ROG Maximus Z790 Hero',
-    image: 'https://dlcdnets.asus.com/pub/ASUS/mb/LGA1700/ROG_MAXIMUS_Z790_HERO/overview/ROG-MAXIMUS-Z790-HERO_overview.jpg',
+    image: 'https://wsrv.nl/?url=https%3A%2F%2Fdlcdnets.asus.com%2Fpub%2FASUS%2Fmb%2FLGA1700%2FROG_MAXIMUS_Z790_HERO%2Foverview%2FROG-MAXIMUS-Z790-HERO_overview.jpg&w=300',
     localImg: '/images/mb-asus-rog-maximus-z790-hero.png',
     specs: 'LGA1700, DDR5, ATX', price: '₱38,990', brand: 'ASUS',
     details: { socket: 'LGA1700', chipset: 'Intel Z790', memType: 'DDR5', memSlots: '4 DIMM (128GB max)', pcie: 'PCIe 5.0 x16', m2Slots: '5x M.2', usbPorts: 'USB4, USB 3.2 Gen 2x2', formFactor: 'ATX' } },
 
   { id: 47, category: 'Motherboard', name: 'ASUS ROG Strix Z790-E',
-    image: 'https://dlcdnets.asus.com/pub/ASUS/mb/LGA1700/ROG_MAXIMUS_Z790_HERO/overview/ROG-MAXIMUS-Z790-HERO_overview.jpg',
+    image: 'https://wsrv.nl/?url=https%3A%2F%2Fdlcdnets.asus.com%2Fpub%2FASUS%2Fmb%2FLGA1700%2FROG_MAXIMUS_Z790_HERO%2Foverview%2FROG-MAXIMUS-Z790-HERO_overview.jpg&w=300',
     localImg: '/images/mb-asus-rog-strix-z790e.png',
     specs: 'LGA1700, DDR5, ATX', price: '₱24,990', brand: 'ASUS',
     details: { socket: 'LGA1700', chipset: 'Intel Z790', memType: 'DDR5', memSlots: '4 DIMM (128GB max)', pcie: 'PCIe 5.0 x16', m2Slots: '5x M.2', usbPorts: 'USB4, USB 3.2 Gen 2', formFactor: 'ATX' } },
@@ -307,7 +307,7 @@ export const devices = [
     details: { socket: 'LGA1700', chipset: 'Intel B760', memType: 'DDR4', memSlots: '4 DIMM (128GB max)', pcie: 'PCIe 4.0 x16', m2Slots: '2x M.2', usbPorts: 'USB 3.2 Gen 1', formFactor: 'mATX' } },
 
   { id: 51, category: 'Motherboard', name: 'ASUS ROG Strix B650E-F',
-    image: 'https://dlcdnets.asus.com/pub/ASUS/mb/LGA1700/ROG_MAXIMUS_Z790_HERO/overview/ROG-MAXIMUS-Z790-HERO_overview.jpg',
+    image: 'https://wsrv.nl/?url=https%3A%2F%2Fdlcdnets.asus.com%2Fpub%2FASUS%2Fmb%2FLGA1700%2FROG_MAXIMUS_Z790_HERO%2Foverview%2FROG-MAXIMUS-Z790-HERO_overview.jpg&w=300',
     localImg: '/images/mb-asus-rog-strix-b650e-f.png',
     specs: 'AM5, DDR5, ATX', price: '₱18,990', brand: 'ASUS',
     details: { socket: 'AM5', chipset: 'AMD B650E', memType: 'DDR5', memSlots: '4 DIMM (128GB max)', pcie: 'PCIe 5.0 x16', m2Slots: '4x M.2', usbPorts: 'USB4, USB 3.2 Gen 2', formFactor: 'ATX' } },
@@ -375,25 +375,25 @@ export const devices = [
 
   // ── Smartphones ───────────────────────────────────────────────────────────
   { id: 62, category: 'Smartphone', name: 'Samsung Galaxy S24 Ultra',
-    image: 'https://image-us.samsung.com/SamsungUS/home/mobile/galaxy-s/s24/06032024/Galaxy-S24-Ultra-Titanium-Violet.jpg',
+    image: 'https://wsrv.nl/?url=https%3A%2F%2Fimage-us.samsung.com%2FSamsungUS%2Fhome%2Fmobile%2Fgalaxy-s%2Fs24%2F06032024%2FGalaxy-S24-Ultra-Titanium-Violet.jpg&w=300',
     localImg: '/images/phone-samsung-s24-ultra.png',
     specs: 'Snapdragon 8 Gen 3, 12GB RAM', price: '₱74,990', brand: 'Samsung',
     details: { display: '6.8" QHD+ AMOLED, 120Hz', processor: 'Snapdragon 8 Gen 3', ram: '12GB', storage: '256GB / 512GB / 1TB', mainCamera: '200MP + 12MP + 10MP + 50MP', battery: '5000mAh, 45W', os: 'Android 14 / One UI 6.1' } },
 
   { id: 63, category: 'Smartphone', name: 'Samsung Galaxy S24+',
-    image: 'https://image-us.samsung.com/SamsungUS/home/mobile/galaxy-s/s24/06032024/Galaxy-S24-Ultra-Titanium-Violet.jpg',
+    image: 'https://wsrv.nl/?url=https%3A%2F%2Fimage-us.samsung.com%2FSamsungUS%2Fhome%2Fmobile%2Fgalaxy-s%2Fs24%2F06032024%2FGalaxy-S24-Ultra-Titanium-Violet.jpg&w=300',
     localImg: '/images/phone-samsung-s24-plus.png',
     specs: 'Snapdragon 8 Gen 3, 12GB RAM', price: '₱54,990', brand: 'Samsung',
     details: { display: '6.7" QHD+ AMOLED, 120Hz', processor: 'Snapdragon 8 Gen 3', ram: '12GB', storage: '256GB / 512GB', mainCamera: '50MP + 12MP + 10MP', battery: '4900mAh, 45W', os: 'Android 14 / One UI 6.1' } },
 
   { id: 64, category: 'Smartphone', name: 'Samsung Galaxy S24',
-    image: 'https://image-us.samsung.com/SamsungUS/home/mobile/galaxy-s/s24/06032024/Galaxy-S24-Ultra-Titanium-Violet.jpg',
+    image: 'https://wsrv.nl/?url=https%3A%2F%2Fimage-us.samsung.com%2FSamsungUS%2Fhome%2Fmobile%2Fgalaxy-s%2Fs24%2F06032024%2FGalaxy-S24-Ultra-Titanium-Violet.jpg&w=300',
     localImg: '/images/phone-samsung-s24.png',
     specs: 'Snapdragon 8 Gen 3, 8GB RAM', price: '₱42,990', brand: 'Samsung',
     details: { display: '6.2" FHD+ AMOLED, 120Hz', processor: 'Snapdragon 8 Gen 3', ram: '8GB', storage: '128GB / 256GB', mainCamera: '50MP + 12MP + 10MP', battery: '4000mAh, 25W', os: 'Android 14 / One UI 6.1' } },
 
   { id: 65, category: 'Smartphone', name: 'Samsung Galaxy A55',
-    image: 'https://image-us.samsung.com/SamsungUS/home/mobile/galaxy-s/s24/06032024/Galaxy-S24-Ultra-Titanium-Violet.jpg',
+    image: 'https://wsrv.nl/?url=https%3A%2F%2Fimage-us.samsung.com%2FSamsungUS%2Fhome%2Fmobile%2Fgalaxy-s%2Fs24%2F06032024%2FGalaxy-S24-Ultra-Titanium-Violet.jpg&w=300',
     localImg: '/images/phone-samsung-a55.png',
     specs: 'Exynos 1480, 8GB RAM', price: '₱22,990', brand: 'Samsung',
     details: { display: '6.6" FHD+ AMOLED, 120Hz', processor: 'Exynos 1480', ram: '8GB', storage: '128GB / 256GB', mainCamera: '50MP + 12MP + 5MP', battery: '5000mAh, 25W', os: 'Android 14 / One UI 6.1' } },
@@ -435,12 +435,24 @@ export const devices = [
     details: { display: '6.82" LTPO AMOLED, 120Hz', processor: 'Snapdragon 8 Gen 3', ram: '12GB / 16GB', storage: '256GB / 512GB', mainCamera: '50MP Hasselblad + 48MP + 64MP', battery: '5400mAh, 100W', os: 'Android 14 / OxygenOS 14' } },
 
   { id: 72, category: 'Smartphone', name: 'ASUS ROG Phone 8 Pro',
-    image: 'https://www.asus.com/media/global/products/9TcRFCLOsMXBsZQR/P_500.png',
+    image: 'https://wsrv.nl/?url=https%3A%2F%2Fwww.asus.com%2Fmedia%2Fglobal%2Fproducts%2F9TcRFCLOsMXBsZQR%2FP_500.png&w=300',
     localImg: '/images/phone-asus-rog-phone-8-pro.png',
     specs: 'Snapdragon 8 Gen 3, 24GB RAM', price: '₱65,990', brand: 'ASUS',
     details: { display: '6.78" AMOLED, 165Hz', processor: 'Snapdragon 8 Gen 3', ram: '24GB', storage: '1TB', mainCamera: '50MP + 13MP + 32MP', battery: '5500mAh, 65W', os: 'Android 14 / ROG UI' } },
 
-  { id: 73, category: 'Smartphone', name: 'Apple iPhone 12 Pro',
+  { id: 73, category: 'Smartphone', name: 'Infinix Hot 30',
+    image: 'https://fdn2.gsmarena.com/vv/bigpic/infinix-hot-30.jpg',
+    localImg: '/images/phone-infinix-hot-30.png',
+    specs: 'Helio G88, 8GB RAM, 6.78" IPS', price: '₱6,490 – ₱7,990', brand: 'Infinix',
+    details: { display: '6.78" IPS LCD, 2460×1080, 90Hz', processor: 'MediaTek Helio G88 (12nm)', ram: '8GB', storage: '128GB, microSD', mainCamera: '50MP (f/1.6) + AI lens + depth', battery: '5000mAh, 18W wired', os: 'Android 13, XOS 12' } },
+
+  { id: 74, category: 'Smartphone', name: 'Infinix Note 30 Pro',
+    image: 'https://fdn2.gsmarena.com/vv/bigpic/infinix-note-30-pro.jpg',
+    localImg: '/images/phone-infinix-note-30-pro.png',
+    specs: 'Helio G99, 8GB RAM, 6.67" AMOLED', price: '₱10,990 – ₱12,990', brand: 'Infinix',
+    details: { display: '6.67" AMOLED, 2400×1080, 120Hz, 1000 nits', processor: 'MediaTek Helio G99 (6nm)', ram: '8GB', storage: '256GB, microSD', mainCamera: '108MP (f/1.75) + 2MP depth + 2MP macro', battery: '5000mAh, 68W wired (0-100% in ~35 min)', os: 'Android 13, XOS 13' } },
+
+  { id: 75, category: 'Smartphone', name: 'Apple iPhone 12 Pro',
     image: 'https://fdn2.gsmarena.com/vv/bigpic/apple-iphone-12-pro.jpg',
     localImg: '/images/phone-iphone-12-pro.png',
     specs: 'A14 Bionic, 6GB RAM, Triple Camera', price: '₱19,990 – ₱24,990', brand: 'Apple',

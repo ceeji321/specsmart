@@ -1453,7 +1453,11 @@ CONFIDENCE_REASON: [exact clue used to pick this one model]`;
       });
     }
 
-    const displayName = [brand, model].filter(Boolean).join(' ') || 'Unknown Device';
+    // Avoid duplicate brand in displayName e.g. "Infinix" + "Infinix Note 30 Pro" → "Infinix Note 30 Pro"
+    const modelStartsWithBrand = brand && model && model.toLowerCase().startsWith(brand.toLowerCase());
+    const displayName = modelStartsWithBrand
+      ? model
+      : [brand, model].filter(Boolean).join(' ') || 'Unknown Device';
 
     // ── PASS 4: Fetch specs — check DB first ──────────────────────────────────
     const dbEntry = lookupSpecDB(displayName);

@@ -190,72 +190,82 @@ const CategoryThumbnail = ({ category, brand }) => {
 };
 
 function DeviceImage({ device, category }) {
-  const [urlFailed, setUrlFailed] = useState(false);
   const [localFailed, setLocalFailed] = useState(false);
+  const [remoteFailed, setRemoteFailed] = useState(false);
 
-  useEffect(() => { setUrlFailed(false); setLocalFailed(false); }, [device.name]);
+  useEffect(() => { setLocalFailed(false); setRemoteFailed(false); }, [device.name]);
 
   const imgStyle = {
     width: '100%', height: '100%', objectFit: 'contain',
     padding: '10px', boxSizing: 'border-box', background: '#f8f9ff',
   };
 
-  const urlSrc = device.img || device.image || null;
   const localSrc = device.localImg || null;
+  const remoteSrc = device.img || device.image || null;
+  // Use wsrv.nl as a free image proxy to bypass hotlink blocking on GSMArena
+  const proxiedSrc = remoteSrc
+    ? `https://wsrv.nl/?url=${encodeURIComponent(remoteSrc)}&w=300&output=webp`
+    : null;
 
-  if (urlSrc && !urlFailed)
-    return <img src={urlSrc} alt={device.name} onError={() => setUrlFailed(true)} style={imgStyle} />;
+  // Try local first (fastest, always works if file exists)
   if (localSrc && !localFailed)
     return <img src={localSrc} alt={device.name} onError={() => setLocalFailed(true)} style={imgStyle} />;
+  // Try proxied remote (bypasses hotlink protection)
+  if (proxiedSrc && !remoteFailed)
+    return <img src={proxiedSrc} alt={device.name} referrerPolicy="no-referrer" onError={() => setRemoteFailed(true)} style={imgStyle} />;
+  // Final fallback: SVG thumbnail
   return <CategoryThumbnail category={category} brand={device.brand} name={device.name} />;
 }
 
 // ─── Device catalog ───────────────────────────────────────────────────────────
 const DEVICE_CATALOG = {
   SMARTPHONE: [
-    { name: 'Apple iPhone 16 Pro Max', brand: 'Apple', img: 'https://fdn2.gsmarena.com/vv/bigpic/apple-iphone-16-pro-max.jpg' },
-    { name: 'Apple iPhone 16 Pro', brand: 'Apple', img: 'https://fdn2.gsmarena.com/vv/bigpic/apple-iphone-16-pro.jpg' },
-    { name: 'Apple iPhone 16 Plus', brand: 'Apple', img: 'https://fdn2.gsmarena.com/vv/bigpic/apple-iphone-16-plus.jpg' },
-    { name: 'Apple iPhone 16', brand: 'Apple', img: 'https://fdn2.gsmarena.com/vv/bigpic/apple-iphone-16.jpg' },
-    { name: 'Apple iPhone 15 Pro Max', brand: 'Apple', img: 'https://fdn2.gsmarena.com/vv/bigpic/apple-iphone-15-pro-max.jpg' },
-    { name: 'Apple iPhone 15 Pro', brand: 'Apple', img: 'https://fdn2.gsmarena.com/vv/bigpic/apple-iphone-15-pro.jpg' },
-    { name: 'Apple iPhone 15 Plus', brand: 'Apple', img: 'https://fdn2.gsmarena.com/vv/bigpic/apple-iphone-15-plus.jpg' },
-    { name: 'Apple iPhone 15', brand: 'Apple', img: 'https://fdn2.gsmarena.com/vv/bigpic/apple-iphone-15.jpg' },
-    { name: 'Apple iPhone 14 Pro Max', brand: 'Apple', img: 'https://fdn2.gsmarena.com/vv/bigpic/apple-iphone-14-pro-max.jpg' },
-    { name: 'Apple iPhone 14 Pro', brand: 'Apple', img: 'https://fdn2.gsmarena.com/vv/bigpic/apple-iphone-14-pro.jpg' },
-    { name: 'Apple iPhone 14', brand: 'Apple', img: 'https://fdn2.gsmarena.com/vv/bigpic/apple-iphone-14.jpg' },
-    { name: 'Apple iPhone 13 Pro Max', brand: 'Apple', img: 'https://fdn2.gsmarena.com/vv/bigpic/apple-iphone-13-pro-max.jpg' },
-    { name: 'Apple iPhone 13 Pro', brand: 'Apple', img: 'https://fdn2.gsmarena.com/vv/bigpic/apple-iphone-13-pro.jpg' },
-    { name: 'Apple iPhone 13', brand: 'Apple', img: 'https://fdn2.gsmarena.com/vv/bigpic/apple-iphone-13.jpg' },
-    { name: 'Apple iPhone 13 Mini', brand: 'Apple', img: 'https://fdn2.gsmarena.com/vv/bigpic/apple-iphone-13-mini.jpg' },
-    { name: 'Apple iPhone 12 Pro Max', brand: 'Apple', img: 'https://fdn2.gsmarena.com/vv/bigpic/apple-iphone-12-pro-max.jpg' },
-    { name: 'Apple iPhone 12 Pro', brand: 'Apple', img: 'https://fdn2.gsmarena.com/vv/bigpic/apple-iphone-12-pro.jpg' },
-    { name: 'Apple iPhone 12', brand: 'Apple', img: 'https://fdn2.gsmarena.com/vv/bigpic/apple-iphone-12.jpg' },
-    { name: 'Apple iPhone SE (2022)', brand: 'Apple', img: 'https://fdn2.gsmarena.com/vv/bigpic/apple-iphone-se-2022.jpg' },
-    { name: 'Samsung Galaxy S24 Ultra', brand: 'Samsung', img: 'https://fdn2.gsmarena.com/vv/bigpic/samsung-galaxy-s24-ultra-5g.jpg' },
-    { name: 'Samsung Galaxy S24+', brand: 'Samsung', img: 'https://fdn2.gsmarena.com/vv/bigpic/samsung-galaxy-s24plus-5g.jpg' },
-    { name: 'Samsung Galaxy S24', brand: 'Samsung', img: 'https://fdn2.gsmarena.com/vv/bigpic/samsung-galaxy-s24-5g.jpg' },
-    { name: 'Samsung Galaxy S23 Ultra', brand: 'Samsung', img: 'https://fdn2.gsmarena.com/vv/bigpic/samsung-galaxy-s23-ultra-5g.jpg' },
-    { name: 'Samsung Galaxy S23', brand: 'Samsung', img: 'https://fdn2.gsmarena.com/vv/bigpic/samsung-galaxy-s23-5g.jpg' },
-    { name: 'Samsung Galaxy Z Fold 5', brand: 'Samsung', img: 'https://fdn2.gsmarena.com/vv/bigpic/samsung-galaxy-z-fold5.jpg' },
-    { name: 'Samsung Galaxy Z Flip 5', brand: 'Samsung', img: 'https://fdn2.gsmarena.com/vv/bigpic/samsung-galaxy-z-flip5.jpg' },
-    { name: 'Samsung Galaxy A55', brand: 'Samsung', img: 'https://fdn2.gsmarena.com/vv/bigpic/samsung-galaxy-a55.jpg' },
-    { name: 'Samsung Galaxy A35', brand: 'Samsung', img: 'https://fdn2.gsmarena.com/vv/bigpic/samsung-galaxy-a35.jpg' },
-    { name: 'Samsung Galaxy A15', brand: 'Samsung', img: 'https://fdn2.gsmarena.com/vv/bigpic/samsung-galaxy-a15.jpg' },
-    { name: 'Xiaomi 14 Ultra', brand: 'Xiaomi', img: 'https://fdn2.gsmarena.com/vv/bigpic/xiaomi-14-ultra.jpg' },
-    { name: 'Xiaomi 14', brand: 'Xiaomi', img: 'https://fdn2.gsmarena.com/vv/bigpic/xiaomi-14.jpg' },
-    { name: 'Xiaomi Redmi Note 13 Pro+', brand: 'Xiaomi', img: 'https://fdn2.gsmarena.com/vv/bigpic/xiaomi-redmi-note-13-pro-plus.jpg' },
-    { name: 'Xiaomi Redmi Note 13 Pro', brand: 'Xiaomi', img: 'https://fdn2.gsmarena.com/vv/bigpic/xiaomi-redmi-note-13-pro.jpg' },
-    { name: 'Xiaomi Redmi Note 13', brand: 'Xiaomi', img: 'https://fdn2.gsmarena.com/vv/bigpic/xiaomi-redmi-note-13.jpg' },
-    { name: 'POCO F6 Pro', brand: 'POCO', img: 'https://fdn2.gsmarena.com/vv/bigpic/poco-f6-pro.jpg' },
-    { name: 'POCO X6 Pro', brand: 'POCO', img: 'https://fdn2.gsmarena.com/vv/bigpic/poco-x6-pro.jpg' },
-    { name: 'Google Pixel 9 Pro XL', brand: 'Google', img: 'https://fdn2.gsmarena.com/vv/bigpic/google-pixel-9-pro-xl.jpg' },
-    { name: 'Google Pixel 9 Pro', brand: 'Google', img: 'https://fdn2.gsmarena.com/vv/bigpic/google-pixel-9-pro.jpg' },
-    { name: 'Google Pixel 9', brand: 'Google', img: 'https://fdn2.gsmarena.com/vv/bigpic/google-pixel-9.jpg' },
-    { name: 'OnePlus 12', brand: 'OnePlus', img: 'https://fdn2.gsmarena.com/vv/bigpic/oneplus-12.jpg' },
-    { name: 'Nothing Phone (2a)', brand: 'Nothing', img: 'https://fdn2.gsmarena.com/vv/bigpic/nothing-phone-2a-.jpg' },
-    { name: 'Sony Xperia 1 VI', brand: 'Sony', img: 'https://fdn2.gsmarena.com/vv/bigpic/sony-xperia-1-vi.jpg' },
-    { name: 'Motorola Edge 50 Ultra', brand: 'Motorola', img: 'https://fdn2.gsmarena.com/vv/bigpic/motorola-edge-50-ultra.jpg' },
+    { name: 'Apple iPhone 16 Pro Max', brand: 'Apple', img: 'https://fdn2.gsmarena.com/vv/bigpic/apple-iphone-16-pro-max.jpg', localImg: '/images/phone-iphone-16-pro-max.png' },
+    { name: 'Apple iPhone 16 Pro', brand: 'Apple', img: 'https://fdn2.gsmarena.com/vv/bigpic/apple-iphone-16-pro.jpg', localImg: '/images/phone-iphone-16-pro.png' },
+    { name: 'Apple iPhone 16 Plus', brand: 'Apple', img: 'https://fdn2.gsmarena.com/vv/bigpic/apple-iphone-16-plus.jpg', localImg: '/images/phone-iphone-16-plus.png' },
+    { name: 'Apple iPhone 16', brand: 'Apple', img: 'https://fdn2.gsmarena.com/vv/bigpic/apple-iphone-16.jpg', localImg: '/images/phone-iphone-16.png' },
+    { name: 'Apple iPhone 15 Pro Max', brand: 'Apple', img: 'https://fdn2.gsmarena.com/vv/bigpic/apple-iphone-15-pro-max.jpg', localImg: '/images/phone-iphone-15-pro-max.png' },
+    { name: 'Apple iPhone 15 Pro', brand: 'Apple', img: 'https://fdn2.gsmarena.com/vv/bigpic/apple-iphone-15-pro.jpg', localImg: '/images/phone-iphone-15-pro.png' },
+    { name: 'Apple iPhone 15 Plus', brand: 'Apple', img: 'https://fdn2.gsmarena.com/vv/bigpic/apple-iphone-15-plus.jpg', localImg: '/images/phone-iphone-15-plus.png' },
+    { name: 'Apple iPhone 15', brand: 'Apple', img: 'https://fdn2.gsmarena.com/vv/bigpic/apple-iphone-15.jpg', localImg: '/images/phone-iphone-15.png' },
+    { name: 'Apple iPhone 14 Pro Max', brand: 'Apple', img: 'https://fdn2.gsmarena.com/vv/bigpic/apple-iphone-14-pro-max.jpg', localImg: '/images/phone-iphone-14-pro-max.png' },
+    { name: 'Apple iPhone 14 Pro', brand: 'Apple', img: 'https://fdn2.gsmarena.com/vv/bigpic/apple-iphone-14-pro.jpg', localImg: '/images/phone-iphone-14-pro.png' },
+    { name: 'Apple iPhone 14', brand: 'Apple', img: 'https://fdn2.gsmarena.com/vv/bigpic/apple-iphone-14.jpg', localImg: '/images/phone-iphone-14.png' },
+    { name: 'Apple iPhone 13 Pro Max', brand: 'Apple', img: 'https://fdn2.gsmarena.com/vv/bigpic/apple-iphone-13-pro-max.jpg', localImg: '/images/phone-iphone-13-pro-max.png' },
+    { name: 'Apple iPhone 13 Pro', brand: 'Apple', img: 'https://fdn2.gsmarena.com/vv/bigpic/apple-iphone-13-pro.jpg', localImg: '/images/phone-iphone-13-pro.png' },
+    { name: 'Apple iPhone 13', brand: 'Apple', img: 'https://fdn2.gsmarena.com/vv/bigpic/apple-iphone-13.jpg', localImg: '/images/phone-iphone-13.png' },
+    { name: 'Apple iPhone 13 Mini', brand: 'Apple', img: 'https://fdn2.gsmarena.com/vv/bigpic/apple-iphone-13-mini.jpg', localImg: '/images/phone-iphone-13-mini.png' },
+    { name: 'Apple iPhone 12 Pro Max', brand: 'Apple', img: 'https://fdn2.gsmarena.com/vv/bigpic/apple-iphone-12-pro-max.jpg', localImg: '/images/phone-iphone-12-pro-max.png' },
+    { name: 'Apple iPhone 12 Pro', brand: 'Apple', img: 'https://fdn2.gsmarena.com/vv/bigpic/apple-iphone-12-pro.jpg', localImg: '/images/phone-iphone-12-pro.png' },
+    { name: 'Apple iPhone 12', brand: 'Apple', img: 'https://fdn2.gsmarena.com/vv/bigpic/apple-iphone-12.jpg', localImg: '/images/phone-iphone-12.png' },
+    { name: 'Apple iPhone SE (2022)', brand: 'Apple', img: 'https://fdn2.gsmarena.com/vv/bigpic/apple-iphone-se-2022.jpg', localImg: '/images/phone-iphone-se-2022.png' },
+    { name: 'Samsung Galaxy S24 Ultra', brand: 'Samsung', img: 'https://fdn2.gsmarena.com/vv/bigpic/samsung-galaxy-s24-ultra-5g.jpg', localImg: '/images/phone-samsung-s24-ultra.png' },
+    { name: 'Samsung Galaxy S24+', brand: 'Samsung', img: 'https://fdn2.gsmarena.com/vv/bigpic/samsung-galaxy-s24plus-5g.jpg', localImg: '/images/phone-samsung-s24-plus.png' },
+    { name: 'Samsung Galaxy S24', brand: 'Samsung', img: 'https://fdn2.gsmarena.com/vv/bigpic/samsung-galaxy-s24-5g.jpg', localImg: '/images/phone-samsung-s24.png' },
+    { name: 'Samsung Galaxy S23 Ultra', brand: 'Samsung', img: 'https://fdn2.gsmarena.com/vv/bigpic/samsung-galaxy-s23-ultra-5g.jpg', localImg: '/images/phone-samsung-s23-ultra.png' },
+    { name: 'Samsung Galaxy S23', brand: 'Samsung', img: 'https://fdn2.gsmarena.com/vv/bigpic/samsung-galaxy-s23-5g.jpg', localImg: '/images/phone-samsung-s23.png' },
+    { name: 'Samsung Galaxy Z Fold 5', brand: 'Samsung', img: 'https://fdn2.gsmarena.com/vv/bigpic/samsung-galaxy-z-fold5.jpg', localImg: '/images/phone-samsung-z-fold5.png' },
+    { name: 'Samsung Galaxy Z Flip 5', brand: 'Samsung', img: 'https://fdn2.gsmarena.com/vv/bigpic/samsung-galaxy-z-flip5.jpg', localImg: '/images/phone-samsung-z-flip5.png' },
+    { name: 'Samsung Galaxy A55', brand: 'Samsung', img: 'https://fdn2.gsmarena.com/vv/bigpic/samsung-galaxy-a55.jpg', localImg: '/images/phone-samsung-a55.png' },
+    { name: 'Samsung Galaxy A35', brand: 'Samsung', img: 'https://fdn2.gsmarena.com/vv/bigpic/samsung-galaxy-a35.jpg', localImg: '/images/phone-samsung-a35.png' },
+    { name: 'Samsung Galaxy A15', brand: 'Samsung', img: 'https://fdn2.gsmarena.com/vv/bigpic/samsung-galaxy-a15.jpg', localImg: '/images/phone-samsung-a15.png' },
+    { name: 'Xiaomi 14 Ultra', brand: 'Xiaomi', img: 'https://fdn2.gsmarena.com/vv/bigpic/xiaomi-14-ultra.jpg', localImg: '/images/phone-xiaomi-14-ultra.png' },
+    { name: 'Xiaomi 14', brand: 'Xiaomi', img: 'https://fdn2.gsmarena.com/vv/bigpic/xiaomi-14.jpg', localImg: '/images/phone-xiaomi-14.png' },
+    { name: 'Xiaomi Redmi Note 13 Pro+', brand: 'Xiaomi', img: 'https://fdn2.gsmarena.com/vv/bigpic/xiaomi-redmi-note-13-pro-plus.jpg', localImg: '/images/phone-xiaomi-redmi-note-13-pro-plus.png' },
+    { name: 'Xiaomi Redmi Note 13 Pro', brand: 'Xiaomi', img: 'https://fdn2.gsmarena.com/vv/bigpic/xiaomi-redmi-note-13-pro.jpg', localImg: '/images/phone-xiaomi-redmi-note-13-pro.png' },
+    { name: 'Xiaomi Redmi Note 13', brand: 'Xiaomi', img: 'https://fdn2.gsmarena.com/vv/bigpic/xiaomi-redmi-note-13.jpg', localImg: '/images/phone-xiaomi-redmi-note-13.png' },
+    { name: 'POCO F6 Pro', brand: 'POCO', img: 'https://fdn2.gsmarena.com/vv/bigpic/poco-f6-pro.jpg', localImg: '/images/phone-poco-f6-pro.png' },
+    { name: 'POCO X6 Pro', brand: 'POCO', img: 'https://fdn2.gsmarena.com/vv/bigpic/poco-x6-pro.jpg', localImg: '/images/phone-poco-x6-pro.png' },
+    { name: 'Google Pixel 9 Pro XL', brand: 'Google', img: 'https://fdn2.gsmarena.com/vv/bigpic/google-pixel-9-pro-xl.jpg', localImg: '/images/phone-google-pixel-9-pro-xl.png' },
+    { name: 'Google Pixel 9 Pro', brand: 'Google', img: 'https://fdn2.gsmarena.com/vv/bigpic/google-pixel-9-pro.jpg', localImg: '/images/phone-google-pixel-9-pro.png' },
+    { name: 'Google Pixel 9', brand: 'Google', img: 'https://fdn2.gsmarena.com/vv/bigpic/google-pixel-9.jpg', localImg: '/images/phone-google-pixel-9.png' },
+    { name: 'OnePlus 12', brand: 'OnePlus', img: 'https://fdn2.gsmarena.com/vv/bigpic/oneplus-12.jpg', localImg: '/images/phone-oneplus-12.png' },
+    { name: 'Nothing Phone (2a)', brand: 'Nothing', img: 'https://fdn2.gsmarena.com/vv/bigpic/nothing-phone-2a-.jpg', localImg: '/images/phone-nothing-phone-2a.png' },
+    { name: 'Sony Xperia 1 VI', brand: 'Sony', img: 'https://fdn2.gsmarena.com/vv/bigpic/sony-xperia-1-vi.jpg', localImg: '/images/phone-sony-xperia-1-vi.png' },
+    { name: 'Motorola Edge 50 Ultra', brand: 'Motorola', img: 'https://fdn2.gsmarena.com/vv/bigpic/motorola-edge-50-ultra.jpg', localImg: '/images/phone-motorola-edge-50-ultra.png' },
+    { name: 'Infinix Hot 30', brand: 'Infinix', img: 'https://fdn2.gsmarena.com/vv/bigpic/infinix-hot-30.jpg', localImg: '/images/phone-infinix-hot-30.png' },
+    { name: 'Infinix Note 30 Pro', brand: 'Infinix', img: 'https://fdn2.gsmarena.com/vv/bigpic/infinix-note-30-pro.jpg', localImg: '/images/phone-infinix-note-30-pro.png' },
+    { name: 'Apple iPhone 12 Pro', brand: 'Apple', img: 'https://fdn2.gsmarena.com/vv/bigpic/apple-iphone-12-pro.jpg', localImg: '/images/phone-iphone-12-pro.png' },
   ],
   GPU: [
     { name: 'NVIDIA GeForce RTX 4090', brand: 'NVIDIA', localImg: '/images/gpu-nvidia-rtx-4090.png' },
@@ -563,7 +573,12 @@ function findCatalogDevice(name) {
 function DeviceOptionButton({ name, isPrimary, category, onClick }) {
   const catalogDevice = findCatalogDevice(name);
   const brand = name?.split(' ')[0] || '';
-  const imgSrc = catalogDevice?.img || catalogDevice?.localImg || null;
+  const localSrc = catalogDevice?.localImg || null;
+  const remoteSrc = catalogDevice?.img || null;
+  const proxiedSrc = remoteSrc
+    ? `https://wsrv.nl/?url=${encodeURIComponent(remoteSrc)}&w=200&output=webp`
+    : null;
+  const [localFailed, setLocalFailed] = useState(false);
   const [imgFailed, setImgFailed] = useState(false);
 
   return (
@@ -607,13 +622,12 @@ function DeviceOptionButton({ name, isPrimary, category, onClick }) {
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         overflow: 'hidden', borderRight: isPrimary ? '1px solid rgba(255,255,255,0.2)' : '1px solid var(--border)',
       }}>
-        {imgSrc && !imgFailed ? (
-          <img
-            src={imgSrc}
-            alt={name}
-            onError={() => setImgFailed(true)}
-            style={{ width: '100%', height: '100%', objectFit: 'contain', padding: '6px', boxSizing: 'border-box' }}
-          />
+        {localSrc && !localFailed ? (
+          <img src={localSrc} alt={name} onError={() => setLocalFailed(true)}
+            style={{ width: '100%', height: '100%', objectFit: 'contain', padding: '6px', boxSizing: 'border-box' }} />
+        ) : proxiedSrc && !imgFailed ? (
+          <img src={proxiedSrc} alt={name} referrerPolicy="no-referrer" onError={() => setImgFailed(true)}
+            style={{ width: '100%', height: '100%', objectFit: 'contain', padding: '6px', boxSizing: 'border-box' }} />
         ) : (
           <CategoryThumbnail category={category || 'SMARTPHONE'} brand={brand} />
         )}
@@ -753,6 +767,7 @@ export default function ChatPage({ onLogout }) {
   const { id } = useParams();
   const navigate = useNavigate();
   const [messages, setMessages] = useState([]);
+  const messagesRef = useRef([]); // always up-to-date messages for sendMessage callback
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isStreaming, setIsStreaming] = useState(false);
@@ -772,6 +787,8 @@ export default function ChatPage({ onLogout }) {
   const savedChatIdRef = useRef(null);
 
   // ── Load chat history or pending message ──────────────────────────────────
+  const WELCOME_MESSAGE = "👋 Hi! I'm SpecSmart AI, your specialized tech advisor for the Philippine market.\n\nI can help with:\n• PC Components (CPU, GPU, RAM, Storage, Motherboards, PSU)\n• Smartphones\n• Laptops\n\nAsk me anything, or upload a hardware image for AI identification! Prices are in Philippine Peso (₱).";
+
   useEffect(() => {
     const loadHistory = async () => {
       if (id) {
@@ -808,9 +825,10 @@ export default function ChatPage({ onLogout }) {
     loadHistory();
   }, [id]); // eslint-disable-line
 
-  const WELCOME_MESSAGE = "👋 Hi! I'm SpecSmart AI, your specialized tech advisor for the Philippine market.\n\nI can help with:\n• PC Components (CPU, GPU, RAM, Storage, Motherboards, PSU)\n• Smartphones\n• Laptops\n\nAsk me anything, or upload a hardware image for AI identification! Prices are in Philippine Peso (₱).";
-
-  useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages, wizardState]);
+  useEffect(() => {
+    messagesRef.current = messages;
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, wizardState]);
   useEffect(() => { return () => { if (cancelStreamRef.current) cancelStreamRef.current(); }; }, []);
 
   // ── Confirm device and fetch specs ────────────────────────────────────────
@@ -951,7 +969,15 @@ export default function ChatPage({ onLogout }) {
         };
 
         const rawDisplayName = scanResult.displayName || 'Unknown Device';
-        const displayName = sanitizeName(rawDisplayName) || rawDisplayName;
+        // Fix duplicate brand prefix e.g. "Infinix Infinix Note 30 Pro" → "Infinix Note 30 Pro"
+        const dedupedName = (() => {
+          const words = rawDisplayName.split(' ');
+          if (words.length >= 2 && words[0] === words[1]) {
+            return words.slice(1).join(' ');
+          }
+          return rawDisplayName;
+        })();
+        const displayName = sanitizeName(dedupedName) || dedupedName;
         const { category, confidence } = scanResult;
 
         // Sanitize alternatives — also hide them if confidence is HIGH (no need to show alternatives)
@@ -1000,7 +1026,7 @@ export default function ChatPage({ onLogout }) {
 
       // ── Text chat path ──────────────────────────────────────────────────
       const apiMessages = [
-        ...messages.filter(m => !(m.role === 'assistant' && m.id === 0)),
+        ...messagesRef.current.filter(m => !(m.role === 'assistant' && m.id === 0)),
         userMessage,
       ].map(m => ({
         role: m.role,
@@ -1054,14 +1080,16 @@ export default function ChatPage({ onLogout }) {
       setIsStreaming(false);
       setMessages(prev => [...prev, { id: Date.now() + 1, role: 'assistant', content: err.message || '⚠️ Something went wrong. Please try again.' }]);
     }
-  }, [input, messages]);
+  }, [input]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (pendingAutoSend && messages.length > 0) {
-      const timer = setTimeout(() => { sendMessage(pendingAutoSend); setPendingAutoSend(null); }, 300);
+      const msg = pendingAutoSend;
+      setPendingAutoSend(null); // clear immediately to prevent re-firing
+      const timer = setTimeout(() => { sendMessage(msg); }, 300);
       return () => clearTimeout(timer);
     }
-  }, [pendingAutoSend, messages, sendMessage]);
+  }, [pendingAutoSend]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Form submit ───────────────────────────────────────────────────────────
   const handleSubmit = async e => {
