@@ -4,16 +4,14 @@ import Navbar from '../components/Navbar';
 import { askAIStream, analyzeImageWithGroq } from '../services/aiService';
 import { saveChat } from '../services/historyService';
 
-// ─── Inline SVG thumbnails ────────────────────────────────────────────────────
-const CategoryThumbnail = ({ category, brand, name }) => {
+// ─── Category SVG thumbnails ──────────────────────────────────────────────────
+const CategoryThumbnail = ({ category, brand }) => {
   const cfg = {
     SMARTPHONE: {
-      bg: '#f0f4ff',
-      accent: '#4f6ef7',
+      bg: '#f0f4ff', accent: '#4f6ef7',
       svg: (
         <svg viewBox="0 0 80 120" width="52" height="78">
           <rect x="8" y="2" width="64" height="116" rx="10" ry="10" fill="#1a1a2e" />
-          <rect x="12" y="8" width="56" height="96" rx="6" ry="6" fill="#0d1b4b" />
           <rect x="12" y="8" width="56" height="96" rx="6" ry="6" fill="url(#screenGrad)" />
           <defs>
             <linearGradient id="screenGrad" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -34,8 +32,7 @@ const CategoryThumbnail = ({ category, brand, name }) => {
       ),
     },
     GPU: {
-      bg: '#f0fff4',
-      accent: '#22c55e',
+      bg: '#f0fff4', accent: '#22c55e',
       svg: (
         <svg viewBox="0 0 120 70" width="78" height="46">
           <rect x="4" y="10" width="112" height="52" rx="8" fill="#1b2838" />
@@ -50,18 +47,14 @@ const CategoryThumbnail = ({ category, brand, name }) => {
           <rect x="56" y="34" width="44" height="3" rx="1.5" fill="#4b5563" />
           <rect x="56" y="40" width="32" height="3" rx="1.5" fill="#4b5563" />
           <rect x="56" y="48" width="52" height="3" rx="1.5" fill="#22c55e" opacity="0.5" />
-          <rect x="14" y="60" width="8" height="4" fill="#374151" />
-          <rect x="25" y="60" width="8" height="4" fill="#374151" />
-          <rect x="36" y="60" width="8" height="4" fill="#374151" />
-          <rect x="47" y="60" width="8" height="4" fill="#374151" />
-          <rect x="58" y="60" width="8" height="4" fill="#374151" />
-          <rect x="69" y="60" width="8" height="4" fill="#374151" />
+          {[14,25,36,47,58,69].map((x, i) => (
+            <rect key={i} x={x} y="60" width="8" height="4" fill="#374151" />
+          ))}
         </svg>
       ),
     },
     CPU: {
-      bg: '#fff7ed',
-      accent: '#f97316',
+      bg: '#fff7ed', accent: '#f97316',
       svg: (
         <svg viewBox="0 0 80 80" width="58" height="58">
           <rect x="18" y="18" width="44" height="44" rx="4" fill="#1c1917" />
@@ -86,8 +79,7 @@ const CategoryThumbnail = ({ category, brand, name }) => {
       ),
     },
     RAM: {
-      bg: '#fdf4ff',
-      accent: '#a855f7',
+      bg: '#fdf4ff', accent: '#a855f7',
       svg: (
         <svg viewBox="0 0 110 50" width="72" height="33">
           <rect x="2" y="10" width="106" height="32" rx="3" fill="#1e1b4b" />
@@ -101,14 +93,11 @@ const CategoryThumbnail = ({ category, brand, name }) => {
           <rect x="4" y="38" width="102" height="2" fill="#a855f7" opacity="0.5" />
           <rect x="2" y="6" width="4" height="4" rx="1" fill="#6b7280" />
           <rect x="104" y="6" width="4" height="4" rx="1" fill="#6b7280" />
-          <rect x="2" y="42" width="4" height="4" rx="1" fill="#6b7280" />
-          <rect x="104" y="42" width="4" height="4" rx="1" fill="#6b7280" />
         </svg>
       ),
     },
     SSD: {
-      bg: '#f0f9ff',
-      accent: '#0ea5e9',
+      bg: '#f0f9ff', accent: '#0ea5e9',
       svg: (
         <svg viewBox="0 0 110 60" width="72" height="39">
           <rect x="4" y="6" width="102" height="48" rx="6" fill="#0c1a2e" />
@@ -116,7 +105,6 @@ const CategoryThumbnail = ({ category, brand, name }) => {
           <rect x="14" y="16" width="40" height="8" rx="2" fill="#1e3a5f" />
           <rect x="14" y="28" width="56" height="4" rx="2" fill="#1e3a5f" />
           <rect x="14" y="35" width="40" height="4" rx="2" fill="#1e3a5f" />
-          <rect x="62" y="16" width="30" height="16" rx="3" fill="#0ea5e9" opacity="0.15" />
           <circle cx="77" cy="24" r="7" fill="#0ea5e9" opacity="0.2" />
           <circle cx="77" cy="24" r="4" fill="#0ea5e9" opacity="0.4" />
           <circle cx="77" cy="24" r="2" fill="#7dd3fc" />
@@ -125,8 +113,7 @@ const CategoryThumbnail = ({ category, brand, name }) => {
       ),
     },
     MOTHERBOARD: {
-      bg: '#f0fdf4',
-      accent: '#16a34a',
+      bg: '#f0fdf4', accent: '#16a34a',
       svg: (
         <svg viewBox="0 0 100 100" width="62" height="62">
           <rect x="4" y="4" width="92" height="92" rx="4" fill="#14532d" />
@@ -140,20 +127,15 @@ const CategoryThumbnail = ({ category, brand, name }) => {
           {[14,22,30,38,46,54,62,70,78,86].map((x, i) => (
             <rect key={i} x={x} y="68" width="4" height="8" rx="1" fill="#4ade80" opacity="0.6" />
           ))}
-          {[14,22,30].map((y, i) => (
-            <rect key={i} x="86" y={y+56} width="8" height="4" rx="1" fill="#4ade80" opacity="0.6" />
-          ))}
           <rect x="46" y="36" width="46" height="24" rx="3" fill="#0f1923" />
           <rect x="48" y="38" width="42" height="20" rx="2" fill="#1e3a5f" />
           <rect x="50" y="40" width="12" height="8" rx="1" fill="#2563eb" opacity="0.4" />
           <rect x="65" y="40" width="12" height="8" rx="1" fill="#2563eb" opacity="0.4" />
-          <rect x="80" y="40" width="8" height="8" rx="1" fill="#2563eb" opacity="0.4" />
         </svg>
       ),
     },
     PSU: {
-      bg: '#fefce8',
-      accent: '#ca8a04',
+      bg: '#fefce8', accent: '#ca8a04',
       svg: (
         <svg viewBox="0 0 100 80" width="65" height="52">
           <rect x="4" y="4" width="92" height="72" rx="6" fill="#1c1917" />
@@ -167,10 +149,9 @@ const CategoryThumbnail = ({ category, brand, name }) => {
             const rad = angle * Math.PI / 180;
             return <line key={i} x1={30 + 9*Math.cos(rad)} y1={40 + 9*Math.sin(rad)} x2={30 + 15*Math.cos(rad)} y2={40 + 15*Math.sin(rad)} stroke="#eab308" strokeWidth="2" opacity="0.6" />;
           })}
-          <rect x="58" y="14" width="28" height="8" rx="2" fill="#374151" />
-          <rect x="58" y="26" width="28" height="8" rx="2" fill="#374151" />
-          <rect x="58" y="38" width="28" height="8" rx="2" fill="#374151" />
-          <rect x="58" y="50" width="28" height="8" rx="2" fill="#374151" />
+          {[14,26,38,50].map((y, i) => (
+            <rect key={i} x="58" y={y} width="28" height="8" rx="2" fill="#374151" />
+          ))}
           <rect x="58" y="62" width="12" height="6" rx="2" fill="#eab308" opacity="0.6" />
           <rect x="74" y="62" width="12" height="6" rx="2" fill="#ef4444" opacity="0.6" />
         </svg>
@@ -189,23 +170,18 @@ const CategoryThumbnail = ({ category, brand, name }) => {
     'Infinix': '#ef4e23', 'NVIDIA': '#76b900', 'AMD': '#ed1c24',
     'Intel': '#0071c5', 'Corsair': '#ffd200', 'G.Skill': '#ff0000',
     'Kingston': '#e30613', 'Crucial': '#006400', 'TeamGroup': '#1e90ff',
-    'Patriot': '#0000cd', 'WD': '#0066cc', 'Seagate': '#00ae42',
-    'Sabrent': '#ff6600', 'SK Hynix': '#005baa', 'ASUS': '#00539b',
-    'MSI': '#e4002b', 'Gigabyte': '#e31837', 'ASRock': '#b31b1b',
-    'Seasonic': '#f5a623', 'be quiet!': '#1a1a1a', 'Thermaltake': '#c0392b',
-    'EVGA': '#0066cc', 'Fractal': '#4a4a4a', 'Super Flower': '#ff8c00',
+    'WD': '#0066cc', 'Seagate': '#00ae42',
+    'ASUS': '#00539b', 'MSI': '#e4002b', 'Gigabyte': '#e31837',
+    'ASRock': '#b31b1b', 'Seasonic': '#f5a623', 'be quiet!': '#1a1a1a',
+    'Thermaltake': '#c0392b', 'EVGA': '#0066cc',
   }[brand] || accent;
 
   return (
     <div style={{
-      width: '100%', height: '100%',
-      background: bg,
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'center',
-      position: 'relative',
-      overflow: 'hidden',
+      width: '100%', height: '100%', background: bg,
+      display: 'flex', flexDirection: 'column',
+      alignItems: 'center', justifyContent: 'center',
+      position: 'relative', overflow: 'hidden',
     }}>
       <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '3px', background: brandColor }} />
       {svg}
@@ -217,32 +193,24 @@ function DeviceImage({ device, category }) {
   const [urlFailed, setUrlFailed] = useState(false);
   const [localFailed, setLocalFailed] = useState(false);
 
-  const urlSrc   = device.img || device.image || null;
-  const localSrc = device.localImg || null;
-
-  useEffect(() => {
-    setUrlFailed(false);
-    setLocalFailed(false);
-  }, [device.name]);
+  useEffect(() => { setUrlFailed(false); setLocalFailed(false); }, [device.name]);
 
   const imgStyle = {
-    width: '100%',
-    height: '100%',
-    objectFit: 'contain',
-    padding: '10px',
-    boxSizing: 'border-box',
-    background: '#f8f9ff',
+    width: '100%', height: '100%', objectFit: 'contain',
+    padding: '10px', boxSizing: 'border-box', background: '#f8f9ff',
   };
 
-  if (urlSrc && !urlFailed) {
+  const urlSrc = device.img || device.image || null;
+  const localSrc = device.localImg || null;
+
+  if (urlSrc && !urlFailed)
     return <img src={urlSrc} alt={device.name} onError={() => setUrlFailed(true)} style={imgStyle} />;
-  }
-  if (localSrc && !localFailed) {
+  if (localSrc && !localFailed)
     return <img src={localSrc} alt={device.name} onError={() => setLocalFailed(true)} style={imgStyle} />;
-  }
   return <CategoryThumbnail category={category} brand={device.brand} name={device.name} />;
 }
 
+// ─── Device catalog ───────────────────────────────────────────────────────────
 const DEVICE_CATALOG = {
   SMARTPHONE: [
     { name: 'Apple iPhone 16 Pro Max', brand: 'Apple', img: 'https://fdn2.gsmarena.com/vv/bigpic/apple-iphone-16-pro-max.jpg' },
@@ -255,7 +223,6 @@ const DEVICE_CATALOG = {
     { name: 'Apple iPhone 15', brand: 'Apple', img: 'https://fdn2.gsmarena.com/vv/bigpic/apple-iphone-15.jpg' },
     { name: 'Apple iPhone 14 Pro Max', brand: 'Apple', img: 'https://fdn2.gsmarena.com/vv/bigpic/apple-iphone-14-pro-max.jpg' },
     { name: 'Apple iPhone 14 Pro', brand: 'Apple', img: 'https://fdn2.gsmarena.com/vv/bigpic/apple-iphone-14-pro.jpg' },
-    { name: 'Apple iPhone 14 Plus', brand: 'Apple', img: 'https://fdn2.gsmarena.com/vv/bigpic/apple-iphone-14-plus.jpg' },
     { name: 'Apple iPhone 14', brand: 'Apple', img: 'https://fdn2.gsmarena.com/vv/bigpic/apple-iphone-14.jpg' },
     { name: 'Apple iPhone 13 Pro Max', brand: 'Apple', img: 'https://fdn2.gsmarena.com/vv/bigpic/apple-iphone-13-pro-max.jpg' },
     { name: 'Apple iPhone 13 Pro', brand: 'Apple', img: 'https://fdn2.gsmarena.com/vv/bigpic/apple-iphone-13-pro.jpg' },
@@ -264,59 +231,31 @@ const DEVICE_CATALOG = {
     { name: 'Apple iPhone 12 Pro Max', brand: 'Apple', img: 'https://fdn2.gsmarena.com/vv/bigpic/apple-iphone-12-pro-max.jpg' },
     { name: 'Apple iPhone 12 Pro', brand: 'Apple', img: 'https://fdn2.gsmarena.com/vv/bigpic/apple-iphone-12-pro.jpg' },
     { name: 'Apple iPhone 12', brand: 'Apple', img: 'https://fdn2.gsmarena.com/vv/bigpic/apple-iphone-12.jpg' },
-    { name: 'Apple iPhone 12 Mini', brand: 'Apple', img: 'https://fdn2.gsmarena.com/vv/bigpic/apple-iphone-12-mini.jpg' },
-    { name: 'Apple iPhone 11 Pro Max', brand: 'Apple', img: 'https://fdn2.gsmarena.com/vv/bigpic/apple-iphone-11-pro-max.jpg' },
-    { name: 'Apple iPhone 11 Pro', brand: 'Apple', img: 'https://fdn2.gsmarena.com/vv/bigpic/apple-iphone-11-pro.jpg' },
-    { name: 'Apple iPhone 11', brand: 'Apple', img: 'https://fdn2.gsmarena.com/vv/bigpic/apple-iphone-11.jpg' },
-    { name: 'Apple iPhone XS Max', brand: 'Apple', img: 'https://fdn2.gsmarena.com/vv/bigpic/apple-iphone-xs-max.jpg' },
-    { name: 'Apple iPhone XS', brand: 'Apple', img: 'https://fdn2.gsmarena.com/vv/bigpic/apple-iphone-xs.jpg' },
-    { name: 'Apple iPhone XR', brand: 'Apple', img: 'https://fdn2.gsmarena.com/vv/bigpic/apple-iphone-xr.jpg' },
-    { name: 'Apple iPhone X', brand: 'Apple', img: 'https://fdn2.gsmarena.com/vv/bigpic/apple-iphone-x.jpg' },
     { name: 'Apple iPhone SE (2022)', brand: 'Apple', img: 'https://fdn2.gsmarena.com/vv/bigpic/apple-iphone-se-2022.jpg' },
-    { name: 'Apple iPhone SE (2020)', brand: 'Apple', img: 'https://fdn2.gsmarena.com/vv/bigpic/apple-iphone-se-2020-.jpg' },
     { name: 'Samsung Galaxy S24 Ultra', brand: 'Samsung', img: 'https://fdn2.gsmarena.com/vv/bigpic/samsung-galaxy-s24-ultra-5g.jpg' },
     { name: 'Samsung Galaxy S24+', brand: 'Samsung', img: 'https://fdn2.gsmarena.com/vv/bigpic/samsung-galaxy-s24plus-5g.jpg' },
     { name: 'Samsung Galaxy S24', brand: 'Samsung', img: 'https://fdn2.gsmarena.com/vv/bigpic/samsung-galaxy-s24-5g.jpg' },
     { name: 'Samsung Galaxy S23 Ultra', brand: 'Samsung', img: 'https://fdn2.gsmarena.com/vv/bigpic/samsung-galaxy-s23-ultra-5g.jpg' },
-    { name: 'Samsung Galaxy S23+', brand: 'Samsung', img: 'https://fdn2.gsmarena.com/vv/bigpic/samsung-galaxy-s23plus-5g.jpg' },
     { name: 'Samsung Galaxy S23', brand: 'Samsung', img: 'https://fdn2.gsmarena.com/vv/bigpic/samsung-galaxy-s23-5g.jpg' },
-    { name: 'Samsung Galaxy S23 FE', brand: 'Samsung', img: 'https://fdn2.gsmarena.com/vv/bigpic/samsung-galaxy-s23-fe.jpg' },
-    { name: 'Samsung Galaxy S22 Ultra', brand: 'Samsung', img: 'https://fdn2.gsmarena.com/vv/bigpic/samsung-galaxy-s22-ultra-5g.jpg' },
-    { name: 'Samsung Galaxy S22+', brand: 'Samsung', img: 'https://fdn2.gsmarena.com/vv/bigpic/samsung-galaxy-s22-plus-5g.jpg' },
-    { name: 'Samsung Galaxy S22', brand: 'Samsung', img: 'https://fdn2.gsmarena.com/vv/bigpic/samsung-galaxy-s22-5g.jpg' },
     { name: 'Samsung Galaxy Z Fold 5', brand: 'Samsung', img: 'https://fdn2.gsmarena.com/vv/bigpic/samsung-galaxy-z-fold5.jpg' },
     { name: 'Samsung Galaxy Z Flip 5', brand: 'Samsung', img: 'https://fdn2.gsmarena.com/vv/bigpic/samsung-galaxy-z-flip5.jpg' },
     { name: 'Samsung Galaxy A55', brand: 'Samsung', img: 'https://fdn2.gsmarena.com/vv/bigpic/samsung-galaxy-a55.jpg' },
-    { name: 'Samsung Galaxy A54', brand: 'Samsung', img: 'https://fdn2.gsmarena.com/vv/bigpic/samsung-galaxy-a54.jpg' },
     { name: 'Samsung Galaxy A35', brand: 'Samsung', img: 'https://fdn2.gsmarena.com/vv/bigpic/samsung-galaxy-a35.jpg' },
     { name: 'Samsung Galaxy A15', brand: 'Samsung', img: 'https://fdn2.gsmarena.com/vv/bigpic/samsung-galaxy-a15.jpg' },
     { name: 'Xiaomi 14 Ultra', brand: 'Xiaomi', img: 'https://fdn2.gsmarena.com/vv/bigpic/xiaomi-14-ultra.jpg' },
-    { name: 'Xiaomi 14 Pro', brand: 'Xiaomi', img: 'https://fdn2.gsmarena.com/vv/bigpic/xiaomi-14-pro.jpg' },
     { name: 'Xiaomi 14', brand: 'Xiaomi', img: 'https://fdn2.gsmarena.com/vv/bigpic/xiaomi-14.jpg' },
     { name: 'Xiaomi Redmi Note 13 Pro+', brand: 'Xiaomi', img: 'https://fdn2.gsmarena.com/vv/bigpic/xiaomi-redmi-note-13-pro-plus.jpg' },
     { name: 'Xiaomi Redmi Note 13 Pro', brand: 'Xiaomi', img: 'https://fdn2.gsmarena.com/vv/bigpic/xiaomi-redmi-note-13-pro.jpg' },
     { name: 'Xiaomi Redmi Note 13', brand: 'Xiaomi', img: 'https://fdn2.gsmarena.com/vv/bigpic/xiaomi-redmi-note-13.jpg' },
     { name: 'POCO F6 Pro', brand: 'POCO', img: 'https://fdn2.gsmarena.com/vv/bigpic/poco-f6-pro.jpg' },
-    { name: 'POCO F6', brand: 'POCO', img: 'https://fdn2.gsmarena.com/vv/bigpic/poco-f6.jpg' },
     { name: 'POCO X6 Pro', brand: 'POCO', img: 'https://fdn2.gsmarena.com/vv/bigpic/poco-x6-pro.jpg' },
-    { name: 'OPPO Find X7 Ultra', brand: 'OPPO', img: 'https://fdn2.gsmarena.com/vv/bigpic/oppo-find-x7-ultra.jpg' },
-    { name: 'OPPO Reno 12 Pro', brand: 'OPPO', img: 'https://fdn2.gsmarena.com/vv/bigpic/oppo-reno12-pro.jpg' },
-    { name: 'OPPO Reno 11 Pro', brand: 'OPPO', img: 'https://fdn2.gsmarena.com/vv/bigpic/oppo-reno11-pro.jpg' },
-    { name: 'Realme GT 5 Pro', brand: 'Realme', img: 'https://fdn2.gsmarena.com/vv/bigpic/realme-gt-5-pro.jpg' },
-    { name: 'Realme 12 Pro+', brand: 'Realme', img: 'https://fdn2.gsmarena.com/vv/bigpic/realme-12-pro-plus.jpg' },
-    { name: 'Vivo X100 Pro', brand: 'Vivo', img: 'https://fdn2.gsmarena.com/vv/bigpic/vivo-x100-pro.jpg' },
-    { name: 'Vivo V30 Pro', brand: 'Vivo', img: 'https://fdn2.gsmarena.com/vv/bigpic/vivo-v30-pro.jpg' },
     { name: 'Google Pixel 9 Pro XL', brand: 'Google', img: 'https://fdn2.gsmarena.com/vv/bigpic/google-pixel-9-pro-xl.jpg' },
     { name: 'Google Pixel 9 Pro', brand: 'Google', img: 'https://fdn2.gsmarena.com/vv/bigpic/google-pixel-9-pro.jpg' },
     { name: 'Google Pixel 9', brand: 'Google', img: 'https://fdn2.gsmarena.com/vv/bigpic/google-pixel-9.jpg' },
     { name: 'OnePlus 12', brand: 'OnePlus', img: 'https://fdn2.gsmarena.com/vv/bigpic/oneplus-12.jpg' },
-    { name: 'OnePlus 11', brand: 'OnePlus', img: 'https://fdn2.gsmarena.com/vv/bigpic/oneplus-11.jpg' },
     { name: 'Nothing Phone (2a)', brand: 'Nothing', img: 'https://fdn2.gsmarena.com/vv/bigpic/nothing-phone-2a-.jpg' },
-    { name: 'Nothing Phone (2)', brand: 'Nothing', img: 'https://fdn2.gsmarena.com/vv/bigpic/nothing-phone-2-.jpg' },
     { name: 'Sony Xperia 1 VI', brand: 'Sony', img: 'https://fdn2.gsmarena.com/vv/bigpic/sony-xperia-1-vi.jpg' },
     { name: 'Motorola Edge 50 Ultra', brand: 'Motorola', img: 'https://fdn2.gsmarena.com/vv/bigpic/motorola-edge-50-ultra.jpg' },
-    { name: 'Tecno Phantom X2 Pro', brand: 'Tecno', localImg: '/images/phone-tecno-phantom-x2-pro.png' },
-    { name: 'Infinix Zero 30', brand: 'Infinix', localImg: '/images/phone-infinix-zero-30.png' },
   ],
   GPU: [
     { name: 'NVIDIA GeForce RTX 4090', brand: 'NVIDIA', localImg: '/images/gpu-nvidia-rtx-4090.png' },
@@ -327,129 +266,59 @@ const DEVICE_CATALOG = {
     { name: 'NVIDIA GeForce RTX 4070', brand: 'NVIDIA', localImg: '/images/gpu-nvidia-rtx-4070.png' },
     { name: 'NVIDIA GeForce RTX 4060 Ti', brand: 'NVIDIA', localImg: '/images/gpu-nvidia-rtx-4060ti.png' },
     { name: 'NVIDIA GeForce RTX 4060', brand: 'NVIDIA', localImg: '/images/gpu-nvidia-rtx-4060.png' },
-    { name: 'NVIDIA GeForce RTX 3090 Ti', brand: 'NVIDIA', localImg: '/images/gpu-nvidia-rtx-3090ti.png' },
-    { name: 'NVIDIA GeForce RTX 3080 Ti', brand: 'NVIDIA', localImg: '/images/gpu-nvidia-rtx-3080ti.png' },
     { name: 'NVIDIA GeForce RTX 3080', brand: 'NVIDIA', localImg: '/images/gpu-nvidia-rtx-3080.png' },
-    { name: 'NVIDIA GeForce RTX 3070 Ti', brand: 'NVIDIA', localImg: '/images/gpu-nvidia-rtx-3070ti.png' },
     { name: 'NVIDIA GeForce RTX 3070', brand: 'NVIDIA', localImg: '/images/gpu-nvidia-rtx-3070.png' },
-    { name: 'NVIDIA GeForce RTX 3060 Ti', brand: 'NVIDIA', localImg: '/images/gpu-nvidia-rtx-3060ti.png' },
     { name: 'NVIDIA GeForce RTX 3060 12GB', brand: 'NVIDIA', localImg: '/images/gpu-nvidia-rtx-3060.png' },
-    { name: 'NVIDIA GeForce GTX 1660 Super', brand: 'NVIDIA', localImg: '/images/gpu-nvidia-gtx-1660-super.png' },
-    { name: 'NVIDIA GeForce GTX 1650', brand: 'NVIDIA', localImg: '/images/gpu-nvidia-gtx-1650.png' },
     { name: 'AMD Radeon RX 7900 XTX', brand: 'AMD', localImg: '/images/gpu-amd-rx-7900xtx.png' },
-    { name: 'AMD Radeon RX 7900 XT', brand: 'AMD', localImg: '/images/gpu-amd-rx-7900xt.png' },
     { name: 'AMD Radeon RX 7800 XT', brand: 'AMD', localImg: '/images/gpu-amd-rx-7800xt.png' },
-    { name: 'AMD Radeon RX 7700 XT', brand: 'AMD', localImg: '/images/gpu-amd-rx-7700xt.png' },
     { name: 'AMD Radeon RX 7600', brand: 'AMD', localImg: '/images/gpu-amd-rx-7600.png' },
-    { name: 'AMD Radeon RX 6950 XT', brand: 'AMD', localImg: '/images/gpu-amd-rx-6950xt.png' },
-    { name: 'AMD Radeon RX 6800 XT', brand: 'AMD', localImg: '/images/gpu-amd-rx-6800xt.png' },
-    { name: 'AMD Radeon RX 6700 XT', brand: 'AMD', localImg: '/images/gpu-amd-rx-6700xt.png' },
-    { name: 'AMD Radeon RX 6600 XT', brand: 'AMD', localImg: '/images/gpu-amd-rx-6600xt.png' },
     { name: 'Intel Arc A770 16GB', brand: 'Intel', localImg: '/images/gpu-intel-arc-a770.png' },
-    { name: 'Intel Arc A750', brand: 'Intel', localImg: '/images/gpu-intel-arc-a750.png' },
   ],
   CPU: [
-    { name: 'Intel Core i9-14900KS', brand: 'Intel', localImg: '/images/cpu-intel-i9-14900k.png' },
     { name: 'Intel Core i9-14900K', brand: 'Intel', localImg: '/images/cpu-intel-i9-14900k.png' },
     { name: 'Intel Core i7-14700K', brand: 'Intel', localImg: '/images/cpu-intel-i7-14700k.png' },
     { name: 'Intel Core i5-14600K', brand: 'Intel', localImg: '/images/cpu-intel-i5-14600k.png' },
     { name: 'Intel Core i5-14400F', brand: 'Intel', localImg: '/images/cpu-intel-i5-14600k.png' },
     { name: 'Intel Core i3-14100F', brand: 'Intel', localImg: '/images/cpu-intel-i3-13100.png' },
-    { name: 'Intel Core i9-13900K', brand: 'Intel', localImg: '/images/cpu-intel-i9-13900k.png' },
-    { name: 'Intel Core i7-13700K', brand: 'Intel', localImg: '/images/cpu-intel-i7-13700k.png' },
-    { name: 'Intel Core i5-13600K', brand: 'Intel', localImg: '/images/cpu-intel-i5-13600k.png' },
-    { name: 'Intel Core i5-13400F', brand: 'Intel', localImg: '/images/cpu-intel-i5-13600k.png' },
-    { name: 'Intel Core i9-12900K', brand: 'Intel', localImg: '/images/cpu-intel-i9-13900k.png' },
-    { name: 'Intel Core i7-12700K', brand: 'Intel', localImg: '/images/cpu-intel-i7-13700k.png' },
-    { name: 'Intel Core i5-12600K', brand: 'Intel', localImg: '/images/cpu-intel-i5-13600k.png' },
-    { name: 'Intel Core i5-12400F', brand: 'Intel', localImg: '/images/cpu-intel-i5-13600k.png' },
-    { name: 'AMD Ryzen 9 9950X', brand: 'AMD', localImg: '/images/cpu-amd-ryzen9-7950x.png' },
-    { name: 'AMD Ryzen 9 9900X', brand: 'AMD', localImg: '/images/cpu-amd-ryzen9-7950x.png' },
-    { name: 'AMD Ryzen 7 9700X', brand: 'AMD', localImg: '/images/cpu-amd-ryzen7-7800x3d.png' },
-    { name: 'AMD Ryzen 5 9600X', brand: 'AMD', localImg: '/images/cpu-amd-ryzen5-7600x.png' },
-    { name: 'AMD Ryzen 9 7950X3D', brand: 'AMD', localImg: '/images/cpu-amd-ryzen9-7950x.png' },
     { name: 'AMD Ryzen 9 7950X', brand: 'AMD', localImg: '/images/cpu-amd-ryzen9-7950x.png' },
     { name: 'AMD Ryzen 7 7800X3D', brand: 'AMD', localImg: '/images/cpu-amd-ryzen7-7800x3d.png' },
-    { name: 'AMD Ryzen 7 7700X', brand: 'AMD', localImg: '/images/cpu-amd-ryzen7-7700x.png' },
     { name: 'AMD Ryzen 5 7600X', brand: 'AMD', localImg: '/images/cpu-amd-ryzen5-7600x.png' },
-    { name: 'AMD Ryzen 5 7600', brand: 'AMD', localImg: '/images/cpu-amd-ryzen5-7600x.png' },
-    { name: 'AMD Ryzen 9 5950X', brand: 'AMD', localImg: '/images/cpu-amd-ryzen9-7950x.png' },
-    { name: 'AMD Ryzen 9 5900X', brand: 'AMD', localImg: '/images/cpu-amd-ryzen9-7900x3d.png' },
     { name: 'AMD Ryzen 7 5800X3D', brand: 'AMD', localImg: '/images/cpu-amd-ryzen7-7800x3d.png' },
     { name: 'AMD Ryzen 5 5600X', brand: 'AMD', localImg: '/images/cpu-amd-ryzen5-5600x.png' },
     { name: 'AMD Ryzen 5 5600', brand: 'AMD', localImg: '/images/cpu-amd-ryzen5-5600x.png' },
   ],
   RAM: [
-    { name: 'Corsair Dominator Titanium DDR5', brand: 'Corsair', localImg: '/images/ram-corsair-vengeance-ddr5-32gb.png' },
     { name: 'Corsair Vengeance DDR5 6000MHz', brand: 'Corsair', localImg: '/images/ram-corsair-vengeance-ddr5-32gb.png' },
-    { name: 'Corsair Vengeance RGB Pro DDR4 3600', brand: 'Corsair', localImg: '/images/ram-corsair-lpx-ddr4-32gb.png' },
     { name: 'Corsair Vengeance LPX DDR4 3200', brand: 'Corsair', localImg: '/images/ram-corsair-lpx-ddr4-32gb.png' },
-    { name: 'G.Skill Trident Z5 RGB DDR5 6400', brand: 'G.Skill', localImg: '/images/ram-gskill-tridentz5-64gb.png' },
     { name: 'G.Skill Trident Z5 RGB DDR5 6000', brand: 'G.Skill', localImg: '/images/ram-gskill-tridentz5-32gb.png' },
-    { name: 'G.Skill Trident Z Neo DDR4 3600', brand: 'G.Skill', localImg: '/images/ram-gskill-ripjaws-ddr4-16gb.png' },
     { name: 'G.Skill Ripjaws V DDR4 3600', brand: 'G.Skill', localImg: '/images/ram-gskill-ripjaws-ddr4-16gb.png' },
     { name: 'Kingston Fury Beast DDR5 6000', brand: 'Kingston', localImg: '/images/ram-kingston-fury-ddr5-32gb.png' },
     { name: 'Kingston Fury Beast DDR4 3600', brand: 'Kingston', localImg: '/images/ram-kingston-fury-ddr4-32gb.png' },
-    { name: 'Kingston Fury Renegade DDR5 6400', brand: 'Kingston', localImg: '/images/ram-kingston-fury-ddr5-32gb.png' },
-    { name: 'Crucial Pro DDR5 6000', brand: 'Crucial', localImg: '/images/ram-corsair-vengeance-ddr5-32gb.png' },
-    { name: 'Crucial Pro DDR4 3200', brand: 'Crucial', localImg: '/images/ram-corsair-lpx-ddr4-32gb.png' },
-    { name: 'TeamGroup T-Force Delta RGB DDR5', brand: 'TeamGroup', localImg: '/images/ram-corsair-vengeance-ddr5-32gb.png' },
-    { name: 'Patriot Viper Venom DDR5 6200', brand: 'Patriot', localImg: '/images/ram-corsair-vengeance-ddr5-32gb.png' },
   ],
   SSD: [
     { name: 'Samsung 990 Pro 2TB NVMe', brand: 'Samsung', localImg: '/images/ssd-samsung-990pro-2tb.png' },
-    { name: 'Samsung 990 Pro 1TB NVMe', brand: 'Samsung', localImg: '/images/ssd-samsung-990pro-1tb.png' },
-    { name: 'Samsung 980 Pro 2TB NVMe', brand: 'Samsung', localImg: '/images/ssd-samsung-990pro-2tb.png' },
-    { name: 'Samsung 870 EVO 2TB SATA', brand: 'Samsung', localImg: '/images/ssd-samsung-870evo-2tb.png' },
     { name: 'WD Black SN850X 2TB NVMe', brand: 'WD', localImg: '/images/ssd-wd-sn850x-2tb.png' },
-    { name: 'WD Black SN850X 1TB NVMe', brand: 'WD', localImg: '/images/ssd-wd-sn850x-1tb.png' },
-    { name: 'WD Black SN770 1TB NVMe', brand: 'WD', localImg: '/images/ssd-wd-sn850x-1tb.png' },
-    { name: 'WD Blue SN580 1TB NVMe', brand: 'WD', localImg: '/images/ssd-wd-blue-1tb.png' },
-    { name: 'Seagate FireCuda 530 2TB NVMe', brand: 'Seagate', localImg: '/images/ssd-seagate-firecuda530-2tb.png' },
-    { name: 'Seagate FireCuda 530 1TB NVMe', brand: 'Seagate', localImg: '/images/ssd-seagate-firecuda530-2tb.png' },
-    { name: 'Kingston KC3000 NVMe 2TB', brand: 'Kingston', localImg: '/images/ssd-kingston-nv2-1tb.png' },
     { name: 'Kingston NV2 NVMe 1TB', brand: 'Kingston', localImg: '/images/ssd-kingston-nv2-1tb.png' },
-    { name: 'Crucial T700 NVMe 2TB', brand: 'Crucial', localImg: '/images/ssd-crucial-p3plus-2tb.png' },
-    { name: 'Crucial T700 NVMe 1TB', brand: 'Crucial', localImg: '/images/ssd-crucial-p3plus-2tb.png' },
     { name: 'Crucial MX500 1TB SATA', brand: 'Crucial', localImg: '/images/ssd-crucial-mx500-2tb.png' },
-    { name: 'SK Hynix Platinum P41 1TB NVMe', brand: 'SK Hynix', localImg: '/images/ssd-samsung-990pro-1tb.png' },
-    { name: 'Sabrent Rocket 4 Plus 2TB NVMe', brand: 'Sabrent', localImg: '/images/ssd-samsung-990pro-2tb.png' },
+    { name: 'Seagate FireCuda 530 2TB NVMe', brand: 'Seagate', localImg: '/images/ssd-seagate-firecuda530-2tb.png' },
   ],
   MOTHERBOARD: [
-    { name: 'ASUS ROG Maximus Z790 Hero', brand: 'ASUS', localImg: '/images/mb-asus-rog-maximus-z790-hero.png' },
     { name: 'ASUS ROG Strix Z790-E Gaming', brand: 'ASUS', localImg: '/images/mb-asus-rog-strix-z790e.png' },
     { name: 'ASUS TUF Gaming Z790-Plus', brand: 'ASUS', localImg: '/images/mb-asus-rog-strix-z790e.png' },
-    { name: 'ASUS ROG Crosshair X670E Hero', brand: 'ASUS', localImg: '/images/mb-asus-rog-strix-b650e-f.png' },
-    { name: 'ASUS TUF Gaming B650-Plus', brand: 'ASUS', localImg: '/images/mb-asus-rog-strix-b650e-f.png' },
-    { name: 'MSI MEG Z790 Ace', brand: 'MSI', localImg: '/images/mb-msi-mag-z790-tomahawk.png' },
-    { name: 'MSI MPG Z790 Carbon', brand: 'MSI', localImg: '/images/mb-msi-mag-z790-tomahawk.png' },
     { name: 'MSI MAG Z790 Tomahawk', brand: 'MSI', localImg: '/images/mb-msi-mag-z790-tomahawk.png' },
-    { name: 'MSI MEG X670E Ace', brand: 'MSI', localImg: '/images/mb-msi-mag-b650-tomahawk.png' },
-    { name: 'MSI MAG B650 Tomahawk', brand: 'MSI', localImg: '/images/mb-msi-mag-b650-tomahawk.png' },
-    { name: 'Gigabyte Z790 Aorus Master', brand: 'Gigabyte', localImg: '/images/mb-gigabyte-z790-aorus-elite.png' },
-    { name: 'Gigabyte Z790 Aorus Elite AX', brand: 'Gigabyte', localImg: '/images/mb-gigabyte-z790-aorus-elite.png' },
     { name: 'Gigabyte B650 Aorus Elite AX', brand: 'Gigabyte', localImg: '/images/mb-gigabyte-b650-aorus-elite.png' },
-    { name: 'ASRock Z790 Taichi', brand: 'ASRock', localImg: '/images/mb-gigabyte-z790-aorus-elite.png' },
-    { name: 'ASRock B650 Steel Legend', brand: 'ASRock', localImg: '/images/mb-gigabyte-b650-aorus-elite.png' },
+    { name: 'Gigabyte Z790 Aorus Elite AX', brand: 'Gigabyte', localImg: '/images/mb-gigabyte-z790-aorus-elite.png' },
   ],
   PSU: [
-    { name: 'Corsair HX1200i 1200W Platinum', brand: 'Corsair', localImg: '/images/psu-corsair-rm1000x.png' },
     { name: 'Corsair RM1000x 1000W Gold', brand: 'Corsair', localImg: '/images/psu-corsair-rm1000x.png' },
     { name: 'Corsair RM850x 850W Gold', brand: 'Corsair', localImg: '/images/psu-corsair-rm850x.png' },
     { name: 'Corsair RM750x 750W Gold', brand: 'Corsair', localImg: '/images/psu-corsair-rm750x.png' },
-    { name: 'Seasonic Prime TX-1000 1000W Titanium', brand: 'Seasonic', localImg: '/images/psu-seasonic-focus-gx-1000.png' },
     { name: 'Seasonic Focus GX-850 850W Gold', brand: 'Seasonic', localImg: '/images/psu-seasonic-focus-gx-750.png' },
     { name: 'Seasonic Focus GX-750 750W Gold', brand: 'Seasonic', localImg: '/images/psu-seasonic-focus-gx-750.png' },
-    { name: 'be quiet! Dark Power 13 1000W Titanium', brand: 'be quiet!', localImg: '/images/psu-bequiet-dark-power13-1000w.png' },
-    { name: 'be quiet! Pure Power 12 M 750W Gold', brand: 'be quiet!', localImg: '/images/psu-bequiet-dark-power13-1000w.png' },
-    { name: 'MSI MAG A1000GL PCIE5 1000W Gold', brand: 'MSI', localImg: '/images/psu-corsair-rm1000x.png' },
-    { name: 'MSI MAG A850GL PCIE5 850W Gold', brand: 'MSI', localImg: '/images/psu-corsair-rm850x.png' },
-    { name: 'Thermaltake Toughpower GF3 850W Gold', brand: 'Thermaltake', localImg: '/images/psu-thermaltake-toughpower-gf3-850w.png' },
-    { name: 'EVGA SuperNOVA 850 G6 850W Gold', brand: 'EVGA', localImg: '/images/psu-corsair-rm850x.png' },
-    { name: 'Fractal Design Ion+ 2 Platinum 860W', brand: 'Fractal', localImg: '/images/psu-seasonic-focus-gx-750.png' },
   ],
 };
 
+// ─── Quick actions ─────────────────────────────────────────────────────────────
 const QUICK_ACTIONS = {
   SMARTPHONE: [
     { id: 'full_specs', label: '📋 Full Specs & Price' },
@@ -479,7 +348,6 @@ const QUICK_ACTIONS = {
     { id: 'full_specs', label: '📋 Full Specs & Price' },
     { id: 'compatible', label: '🔌 Compatible Motherboards' },
     { id: 'gaming', label: '🎮 Impact on Gaming' },
-    { id: 'overclock', label: '⚡ Overclocking Potential' },
     { id: 'vs_competitor', label: '⚖️ Compare with Rivals' },
     { id: 'worth_buying', label: '💰 Worth Buying?' },
   ],
@@ -509,28 +377,28 @@ const QUICK_ACTIONS = {
 
 function getQuickActionQuery(questionId, deviceName) {
   const map = {
-    full_specs: `Give me the full specs, Philippine Peso price, and where to buy the ${deviceName}.`,
+    full_specs: `Give me the full specs, Philippine Peso price, and where to buy the ${deviceName} in 2025.`,
     camera: `How good is the camera on the ${deviceName}? Include photo and video quality details.`,
     battery: `What is the battery life like on the ${deviceName}? Include charging speed.`,
-    gaming: `How does the ${deviceName} perform for gaming? Include benchmarks if possible.`,
+    gaming: `How does the ${deviceName} perform for gaming? Include benchmarks or FPS estimates if possible.`,
     gaming_1080p: `How does the ${deviceName} perform at 1080p gaming? Include average FPS on popular games.`,
     gaming_1440p: `How does the ${deviceName} perform at 1440p gaming? Include average FPS on popular games.`,
     gaming_4k: `How does the ${deviceName} perform at 4K gaming?`,
     productivity: `How does the ${deviceName} perform for productivity tasks like video editing, rendering, and multitasking?`,
-    compatible_mb: `Which motherboards are compatible with the ${deviceName}?`,
+    compatible_mb: `Which motherboards are compatible with the ${deviceName}? List specific models available in the Philippines.`,
     compatible_cpu: `Which CPUs are compatible with the ${deviceName} motherboard?`,
     compatible_ram: `What RAM type, speed, and capacity does the ${deviceName} support?`,
     compatible: `What systems or components is the ${deviceName} compatible with?`,
-    overclock: `Can the ${deviceName} be overclocked? What speeds can it reach?`,
-    read_write: `What are the read and write speeds of the ${deviceName}?`,
+    read_write: `What are the read and write speeds of the ${deviceName}? How does it compare to other SSDs?`,
     features: `What are the key features and connectivity options of the ${deviceName}?`,
-    efficiency: `What is the efficiency rating and 80 PLUS certification of the ${deviceName}?`,
-    vs_competitor: `Compare the ${deviceName} against its main competitors in the same price range.`,
-    worth_buying: `Is the ${deviceName} worth buying in the Philippines in 2025? Pros, cons, and verdict.`,
+    efficiency: `What is the efficiency rating and 80 PLUS certification of the ${deviceName}? How efficient is it?`,
+    vs_competitor: `Compare the ${deviceName} against its main competitors in the same price range in the Philippines.`,
+    worth_buying: `Is the ${deviceName} worth buying in the Philippines in 2025? Give pros, cons, and a final verdict.`,
   };
   return map[questionId] || `Tell me more about the ${deviceName}.`;
 }
 
+// ─── Wizard steps ─────────────────────────────────────────────────────────────
 const SMARTPHONE_STEPS = [
   {
     id: 'notch', question: 'What is at the top of the screen?',
@@ -585,6 +453,7 @@ const PC_STEPS = [
   },
 ];
 
+// ─── Message renderer ─────────────────────────────────────────────────────────
 function renderMessage(content) {
   if (!content) return null;
   return content.split('\n').map((line, i) => {
@@ -592,7 +461,8 @@ function renderMessage(content) {
       return <strong key={i} style={{ display: 'block', marginBottom: '4px' }}>{line.slice(2, -2)}</strong>;
     if (line.startsWith('• ') || line.startsWith('- '))
       return <div key={i} style={{ paddingLeft: '12px', marginBottom: '2px' }}>• {line.slice(2)}</div>;
-    if (['🥇','🥈','🥉','✅','❌','⚠️','📱','📷','💡','🎮','🖥️','🧠','💾','⚡','🔌'].some(e => line.startsWith(e)))
+    const emojiStart = ['🥇','🥈','🥉','✅','❌','⚠️','📱','📷','💡','🎮','🖥️','🧠','💾','⚡','🔌','💰','🛒','🏗️','📡','❄️','📋','⚙️','🔋','🚀','🔥','⏱️','🛡️','🔧','📐','🔊','📎'];
+    if (emojiStart.some(e => line.startsWith(e)))
       return <div key={i} style={{ marginBottom: '4px' }}>{line}</div>;
     if (line === '') return <div key={i} style={{ marginBottom: '8px' }} />;
     return <div key={i} style={{ whiteSpace: 'pre-wrap' }}>{line}</div>;
@@ -600,11 +470,21 @@ function renderMessage(content) {
 }
 
 function StreamingCursor() {
-  return <span style={{ display: 'inline-block', width: '2px', height: '14px', background: 'var(--accent)', marginLeft: '2px', verticalAlign: 'middle', animation: 'blink 0.8s step-end infinite' }} />;
+  return (
+    <span style={{
+      display: 'inline-block', width: '2px', height: '14px',
+      background: 'var(--accent)', marginLeft: '2px',
+      verticalAlign: 'middle', animation: 'blink 0.8s step-end infinite',
+    }} />
+  );
 }
 
+// ─── Catalog modal ────────────────────────────────────────────────────────────
 const CATALOG_TABS = ['SMARTPHONE', 'GPU', 'CPU', 'RAM', 'SSD', 'MOTHERBOARD', 'PSU'];
-const TAB_LABELS = { SMARTPHONE: '📱 Phones', GPU: '🎮 GPU', CPU: '🧠 CPU', RAM: '💾 RAM', SSD: '💿 SSD', MOTHERBOARD: '🔌 Motherboard', PSU: '⚡ PSU' };
+const TAB_LABELS = {
+  SMARTPHONE: '📱 Phones', GPU: '🎮 GPU', CPU: '🧠 CPU',
+  RAM: '💾 RAM', SSD: '💿 SSD', MOTHERBOARD: '🔌 Motherboard', PSU: '⚡ PSU',
+};
 
 function CatalogModal({ initialCategory, onSelect, onClose }) {
   const [activeTab, setActiveTab] = useState(initialCategory || 'SMARTPHONE');
@@ -612,6 +492,7 @@ function CatalogModal({ initialCategory, onSelect, onClose }) {
   const items = (DEVICE_CATALOG[activeTab] || []).filter(d =>
     !search || d.name.toLowerCase().includes(search.toLowerCase()) || d.brand.toLowerCase().includes(search.toLowerCase())
   );
+
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }} onClick={onClose}>
       <div style={{ background: 'var(--bg-1)', borderRadius: '20px 20px 0 0', width: '100%', maxWidth: '820px', maxHeight: '88vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }} onClick={e => e.stopPropagation()}>
@@ -664,16 +545,123 @@ function CatalogModal({ initialCategory, onSelect, onClose }) {
   );
 }
 
-function ConfirmDeviceCard({ displayName, alt1, alt2, onConfirm, onHelpIdentify, onUploadAgain, onSeeMore }) {
+// ─── UI cards ─────────────────────────────────────────────────────────────────
+// ─── Helper: find a device entry from catalog by name ─────────────────────────
+function findCatalogDevice(name) {
+  if (!name) return null;
+  const lower = name.toLowerCase();
+  for (const items of Object.values(DEVICE_CATALOG)) {
+    const found = items.find(d => d.name.toLowerCase() === lower ||
+      lower.includes(d.name.toLowerCase()) ||
+      d.name.toLowerCase().includes(lower));
+    if (found) return found;
+  }
+  return null;
+}
+
+// ─── Device option button with image ─────────────────────────────────────────
+function DeviceOptionButton({ name, isPrimary, category, onClick }) {
+  const catalogDevice = findCatalogDevice(name);
+  const brand = name?.split(' ')[0] || '';
+  const imgSrc = catalogDevice?.img || catalogDevice?.localImg || null;
+  const [imgFailed, setImgFailed] = useState(false);
+
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        background: isPrimary ? 'var(--accent)' : 'var(--bg-3)',
+        border: isPrimary ? '2px solid var(--accent)' : '1px solid var(--border)',
+        borderRadius: '12px',
+        padding: '0',
+        cursor: 'pointer',
+        textAlign: 'left',
+        transition: 'all 0.15s',
+        overflow: 'hidden',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '0',
+        width: '100%',
+      }}
+      onMouseEnter={e => {
+        if (!isPrimary) {
+          e.currentTarget.style.borderColor = 'var(--accent)';
+          e.currentTarget.style.background = 'var(--bg-2)';
+        }
+        e.currentTarget.style.transform = 'translateY(-1px)';
+        e.currentTarget.style.boxShadow = '0 4px 16px rgba(99,102,241,0.2)';
+      }}
+      onMouseLeave={e => {
+        if (!isPrimary) {
+          e.currentTarget.style.borderColor = 'var(--border)';
+          e.currentTarget.style.background = 'var(--bg-3)';
+        }
+        e.currentTarget.style.transform = 'none';
+        e.currentTarget.style.boxShadow = 'none';
+      }}
+    >
+      {/* Device image thumbnail */}
+      <div style={{
+        width: '72px', height: '72px', flexShrink: 0,
+        background: isPrimary ? 'rgba(255,255,255,0.15)' : 'var(--bg-2)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        overflow: 'hidden', borderRight: isPrimary ? '1px solid rgba(255,255,255,0.2)' : '1px solid var(--border)',
+      }}>
+        {imgSrc && !imgFailed ? (
+          <img
+            src={imgSrc}
+            alt={name}
+            onError={() => setImgFailed(true)}
+            style={{ width: '100%', height: '100%', objectFit: 'contain', padding: '6px', boxSizing: 'border-box' }}
+          />
+        ) : (
+          <CategoryThumbnail category={category || 'SMARTPHONE'} brand={brand} />
+        )}
+      </div>
+      {/* Device name */}
+      <div style={{ padding: '10px 14px', flex: 1 }}>
+        {isPrimary && (
+          <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.7)', fontWeight: 600, marginBottom: '3px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+            Best match
+          </div>
+        )}
+        <div style={{
+          fontSize: isPrimary ? '15px' : '14px',
+          color: isPrimary ? 'white' : 'var(--text)',
+          fontWeight: isPrimary ? 700 : 500,
+          fontFamily: isPrimary ? 'Syne, sans-serif' : 'inherit',
+          lineHeight: 1.3,
+        }}>
+          {name}
+        </div>
+      </div>
+      {/* Arrow */}
+      <div style={{ paddingRight: '14px', color: isPrimary ? 'rgba(255,255,255,0.7)' : 'var(--text-3)' }}>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="m9 18 6-6-6-6"/></svg>
+      </div>
+    </button>
+  );
+}
+
+function ConfirmDeviceCard({ displayName, alt1, alt2, category, confidence, onConfirm, onHelpIdentify, onUploadAgain, onSeeMore }) {
+  const isHigh = confidence === 'HIGH';
   return (
     <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden', marginTop: '4px' }}>
       <div style={{ padding: '16px 18px 12px' }}>
-        <div style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text)', marginBottom: '4px', fontFamily: 'Syne, sans-serif' }}>Which device is this?</div>
-        <div style={{ fontSize: '12px', color: 'var(--text-3)', marginBottom: '14px' }}>High confidence — we think it is the first one.</div>
+        <div style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text)', marginBottom: '2px', fontFamily: 'Syne, sans-serif' }}>
+          {isHigh ? 'Is this your device?' : 'Which device is this?'}
+        </div>
+        <div style={{ fontSize: '12px', color: 'var(--text-3)', marginBottom: '14px' }}>
+          {isHigh ? "We're confident this is the right match. Tap to confirm." : "Tap the correct model to get full specs."}
+        </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          <button onClick={() => onConfirm(displayName)} style={{ background: 'var(--accent)', border: 'none', borderRadius: '10px', padding: '14px 16px', fontSize: '15px', color: 'white', cursor: 'pointer', textAlign: 'center', fontFamily: 'Syne, sans-serif', fontWeight: 700 }}>{displayName}</button>
-          {alt1 && alt1 !== 'null' && <button onClick={() => onConfirm(alt1)} style={{ background: 'var(--bg-3)', border: '1px solid var(--border)', borderRadius: '10px', padding: '12px 16px', fontSize: '14px', color: 'var(--text)', cursor: 'pointer', textAlign: 'center', fontFamily: 'inherit', fontWeight: 500 }}>{alt1}</button>}
-          {alt2 && alt2 !== 'null' && <button onClick={() => onConfirm(alt2)} style={{ background: 'var(--bg-3)', border: '1px solid var(--border)', borderRadius: '10px', padding: '12px 16px', fontSize: '14px', color: 'var(--text)', cursor: 'pointer', textAlign: 'center', fontFamily: 'inherit', fontWeight: 500 }}>{alt2}</button>}
+          <DeviceOptionButton name={displayName} isPrimary={true} category={category} onClick={() => onConfirm(displayName)} />
+          {alt1 && alt1 !== 'null' && (
+            <DeviceOptionButton name={alt1} isPrimary={false} category={category} onClick={() => onConfirm(alt1)} />
+          )}
+          {alt2 && alt2 !== 'null' && (
+            <DeviceOptionButton name={alt2} isPrimary={false} category={category} onClick={() => onConfirm(alt2)} />
+          )}
           <button onClick={onSeeMore} style={{ background: 'none', border: '1px dashed var(--border)', borderRadius: '10px', padding: '10px 16px', fontSize: '13px', color: 'var(--accent)', cursor: 'pointer', textAlign: 'center', fontFamily: 'inherit', fontWeight: 600 }}>📦 See More Models</button>
         </div>
       </div>
@@ -760,6 +748,7 @@ function QuickActionCard({ deviceName, category, onSelect }) {
   );
 }
 
+// ─── Main ChatPage component ──────────────────────────────────────────────────
 export default function ChatPage({ onLogout }) {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -782,6 +771,7 @@ export default function ChatPage({ onLogout }) {
   const streamingMsgIdRef = useRef(null);
   const savedChatIdRef = useRef(null);
 
+  // ── Load chat history or pending message ──────────────────────────────────
   useEffect(() => {
     const loadHistory = async () => {
       if (id) {
@@ -792,7 +782,7 @@ export default function ChatPage({ onLogout }) {
           });
           const data = await res.json();
           const historyItem = data.history?.find(h => h.id === parseInt(id));
-          if (historyItem && historyItem.messages?.length) {
+          if (historyItem?.messages?.length) {
             savedChatIdRef.current = historyItem.id;
             setMessages(historyItem.messages.map(m => ({ ...m, id: Math.random() })));
             return;
@@ -804,45 +794,44 @@ export default function ChatPage({ onLogout }) {
       if (pending) {
         sessionStorage.removeItem('pendingMessage');
         const { content, imageData, imageMime } = JSON.parse(pending);
-        setMessages([{
-          id: 0, role: 'assistant',
-          content: "👋 Hi! I'm SpecSmart AI, your specialized tech advisor for:\n• PC Components (CPU, GPU, RAM, Storage, Motherboards)\n• Smartphones\n• Keyboards & Mice\n\nAsk me anything, or upload a hardware image for AI identification!"
-        }]);
+        setMessages([{ id: 0, role: 'assistant', content: WELCOME_MESSAGE }]);
         if (imageData) {
-          setTimeout(() => {
-            sendMessage(
-              content || 'What is this hardware? Identify it and give full specs.',
-              imageData,
-              imageMime || 'image/jpeg'
-            );
-          }, 300);
+          setTimeout(() => sendMessage(content || 'What is this hardware? Identify it and give full specs.', imageData, imageMime || 'image/jpeg'), 300);
         } else if (content) {
           setPendingAutoSend(content);
         }
         return;
       }
 
-      setMessages([{
-        id: 0, role: 'assistant',
-        content: "👋 Hi! I'm SpecSmart AI, your specialized tech advisor for:\n• PC Components (CPU, GPU, RAM, Storage, Motherboards)\n• Smartphones\n• Keyboards & Mice\n\nAsk me anything, or upload a hardware image for AI identification!"
-      }]);
+      setMessages([{ id: 0, role: 'assistant', content: WELCOME_MESSAGE }]);
     };
     loadHistory();
   }, [id]); // eslint-disable-line
 
+  const WELCOME_MESSAGE = "👋 Hi! I'm SpecSmart AI, your specialized tech advisor for the Philippine market.\n\nI can help with:\n• PC Components (CPU, GPU, RAM, Storage, Motherboards, PSU)\n• Smartphones\n• Laptops\n\nAsk me anything, or upload a hardware image for AI identification! Prices are in Philippine Peso (₱).";
+
   useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages, wizardState]);
   useEffect(() => { return () => { if (cancelStreamRef.current) cancelStreamRef.current(); }; }, []);
 
+  // ── Confirm device and fetch specs ────────────────────────────────────────
   const confirmDevice = useCallback(async (deviceName, category) => {
-    setWizardState(null); setCatalogOpen(false); setIsLoading(true);
+    setWizardState(null);
+    setCatalogOpen(false);
+    setIsLoading(true);
     setMessages(prev => [...prev, { id: Date.now(), role: 'user', content: `✅ That's the ${deviceName}` }]);
+
     try {
       const token = localStorage.getItem('token');
       const API_BASE = import.meta.env.DEV ? 'http://localhost:5000' : 'https://specsmart-production.up.railway.app';
       const res = await fetch(`${API_BASE}/api/ai/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...(token && { Authorization: `Bearer ${token}` }) },
-        body: JSON.stringify({ messages: [{ role: 'user', content: `I confirmed this device: ${deviceName}.\n\nProvide full specs, Philippine price (PHP), where to buy in the Philippines, and a brief verdict. Plain language, no markdown symbols.` }] }),
+        body: JSON.stringify({
+          messages: [{
+            role: 'user',
+            content: `I confirmed this device: ${deviceName}.\n\nProvide full specs, Philippine price (PHP, as of 2025), where to buy in the Philippines, and a brief verdict. Plain language, no markdown symbols.`,
+          }],
+        }),
       });
       const data = await res.json();
       setMessages(prev => [...prev, { id: Date.now() + 1, role: 'assistant', content: data.content || 'Could not fetch specs.' }]);
@@ -851,10 +840,11 @@ export default function ChatPage({ onLogout }) {
       if (QUICK_ACTIONS[cat]) setWizardState({ phase: 'quick_actions', deviceName, category: cat });
     } catch {
       setIsLoading(false);
-      setMessages(prev => [...prev, { id: Date.now() + 1, role: 'assistant', content: '⚠️ Could not fetch specs.' }]);
+      setMessages(prev => [...prev, { id: Date.now() + 1, role: 'assistant', content: '⚠️ Could not fetch specs. Please try again.' }]);
     }
   }, []);
 
+  // ── Wizard ────────────────────────────────────────────────────────────────
   const startWizard = useCallback((scanResult, category) => {
     const steps = category === 'SMARTPHONE' ? SMARTPHONE_STEPS : PC_STEPS;
     setWizardState({ phase: 'steps', scanResult, category, steps, stepIndex: 0, answers: {} });
@@ -875,26 +865,31 @@ export default function ChatPage({ onLogout }) {
     const { scanResult, category, answers } = wizardState;
     const answerSummary = Object.entries(answers).map(([k, v]) => `${k}: ${v.label}`).join(', ');
     const prompt = category === 'SMARTPHONE'
-      ? `A smartphone was scanned. Clues: ${answerSummary}. AI identified: "${scanResult.displayName}", alternatives: "${scanResult.alternative1}", "${scanResult.alternative2}". List 3 most likely exact models. Respond ONLY with JSON: { "reasoning": "one sentence", "suggestions": ["Model 1", "Model 2", "Model 3"] }`
+      ? `A smartphone was scanned. Visual clues: ${answerSummary}. AI identified: "${scanResult.displayName}", alternatives: "${scanResult.alternative1}", "${scanResult.alternative2}". Based on the visual clues, list 3 most likely exact models. Respond ONLY with JSON: { "reasoning": "one sentence", "suggestions": ["Model 1", "Model 2", "Model 3"] }`
       : `A PC component was scanned (AI guess: "${scanResult.displayName}"). Clues: ${answerSummary}. List 3 most likely exact models. Respond ONLY with JSON: { "reasoning": "one sentence", "suggestions": ["Model 1", "Model 2", "Model 3"] }`;
+
     setIsLoading(true);
     const token = localStorage.getItem('token');
     const API_BASE = import.meta.env.DEV ? 'http://localhost:5000' : 'https://specsmart-production.up.railway.app';
     fetch(`${API_BASE}/api/ai/chat`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json', ...(token && { Authorization: `Bearer ${token}` }) },
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...(token && { Authorization: `Bearer ${token}` }) },
       body: JSON.stringify({ messages: [{ role: 'user', content: prompt }] }),
-    }).then(r => r.json()).then(data => {
-      setIsLoading(false);
-      try {
-        const parsed = JSON.parse((data.content || '').replace(/```json|```/g, '').trim());
-        setWizardState(prev => ({ ...prev, phase: 'refined', reasoning: parsed.reasoning || '', suggestions: parsed.suggestions || [scanResult.displayName] }));
-      } catch {
-        setWizardState(prev => ({ ...prev, phase: 'refined', reasoning: '', suggestions: [scanResult.displayName, scanResult.alternative1, scanResult.alternative2].filter(Boolean) }));
-      }
-    }).catch(() => {
-      setIsLoading(false);
-      setWizardState(prev => ({ ...prev, phase: 'refined', reasoning: '', suggestions: [scanResult.displayName] }));
-    });
+    })
+      .then(r => r.json())
+      .then(data => {
+        setIsLoading(false);
+        try {
+          const parsed = JSON.parse((data.content || '').replace(/```json|```/g, '').trim());
+          setWizardState(prev => ({ ...prev, phase: 'refined', reasoning: parsed.reasoning || '', suggestions: parsed.suggestions || [scanResult.displayName] }));
+        } catch {
+          setWizardState(prev => ({ ...prev, phase: 'refined', reasoning: '', suggestions: [scanResult.displayName, scanResult.alternative1, scanResult.alternative2].filter(Boolean) }));
+        }
+      })
+      .catch(() => {
+        setIsLoading(false);
+        setWizardState(prev => ({ ...prev, phase: 'refined', reasoning: '', suggestions: [scanResult.displayName] }));
+      });
   }, [wizardState?.phase]); // eslint-disable-line
 
   const handleQuickAction = useCallback((questionId) => {
@@ -904,12 +899,17 @@ export default function ChatPage({ onLogout }) {
     sendMessage(query);
   }, [wizardState]); // eslint-disable-line
 
-  const openCatalog = useCallback((category) => { setCatalogCategory(category || 'SMARTPHONE'); setCatalogOpen(true); }, []);
+  const openCatalog = useCallback((category) => {
+    setCatalogCategory(category || 'SMARTPHONE');
+    setCatalogOpen(true);
+  }, []);
 
+  // ── Send message ──────────────────────────────────────────────────────────
   const sendMessage = useCallback(async (messageContent, imageData, imageMime) => {
     const textContent = messageContent || input;
     if (!textContent && !imageData) return;
-    setWizardState(null); setCatalogOpen(false);
+    setWizardState(null);
+    setCatalogOpen(false);
 
     const userMessage = {
       id: Date.now(),
@@ -920,67 +920,139 @@ export default function ChatPage({ onLogout }) {
     };
 
     setMessages(prev => [...prev, userMessage]);
-    setInput(''); setUploadedFile(null); setUploadedPreview(null);
+    setInput('');
+    setUploadedFile(null);
+    setUploadedPreview(null);
     if (fileRef.current) fileRef.current.value = '';
     setIsLoading(true);
 
     try {
+      // ── Image analysis path ─────────────────────────────────────────────
       if (imageData) {
         setModelStatus('🔍 Analyzing with Groq Vision AI...');
         let scanResult;
-        try { scanResult = await analyzeImageWithGroq(imageData, imageMime || 'image/jpeg', textContent); }
-        catch (e) { throw new Error('Image analysis failed: ' + e.message); }
-        setModelStatus(''); setIsLoading(false);
-        if (scanResult.isUnsupported) { setMessages(prev => [...prev, { id: Date.now() + 1, role: 'assistant', content: scanResult.message }]); return; }
+        try {
+          scanResult = await analyzeImageWithGroq(imageData, imageMime || 'image/jpeg', textContent);
+        } catch (e) {
+          throw new Error('Image analysis failed: ' + e.message);
+        }
+        setModelStatus('');
+        setIsLoading(false);
 
-        const { displayName, category, confidence } = scanResult;
+        if (scanResult.isUnsupported) {
+          setMessages(prev => [...prev, { id: Date.now() + 1, role: 'assistant', content: scanResult.message }]);
+          return;
+        }
+
+        // Sanitize ALL model names — strip any "X or Y" combined answers the AI might return
+        const sanitizeName = (name) => {
+          if (!name || name === 'null') return '';
+          return name.includes(' or ') ? name.split(' or ')[0].trim() : name;
+        };
+
+        const rawDisplayName = scanResult.displayName || 'Unknown Device';
+        const displayName = sanitizeName(rawDisplayName) || rawDisplayName;
+        const { category, confidence } = scanResult;
+
+        // Sanitize alternatives — also hide them if confidence is HIGH (no need to show alternatives)
+        const rawAlt1 = sanitizeName(scanResult.alternative1 || '');
+        const rawAlt2 = sanitizeName(scanResult.alternative2 || '');
+        // Don't show alts that are the same as displayName, or if HIGH confidence auto-confirmed
+        const alt1 = (rawAlt1 && rawAlt1 !== displayName) ? rawAlt1 : '';
+        const alt2 = (rawAlt2 && rawAlt2 !== displayName && rawAlt2 !== rawAlt1) ? rawAlt2 : '';
         const confEmoji = confidence === 'HIGH' ? '🟢' : confidence === 'MEDIUM' ? '🟡' : '🔴';
-
         const confNote = confidence === 'LOW'
           ? '\n⚠️ Low confidence — please confirm the correct model below.'
           : confidence === 'MEDIUM'
           ? '\n🟡 Medium confidence — please verify with the options below.'
           : '';
 
+        const isSpecDB = scanResult.notes?.includes('Spec DB');
+
         setMessages(prev => [...prev, {
           id: Date.now() + 1,
           role: 'assistant',
-          content: `📷 Identified: **${displayName}** (${category}) ${confEmoji} ${confidence || ''} confidence${confNote}`
+          content: `📷 Identified: **${displayName}** (${category}) ${confEmoji} ${confidence || ''} confidence${confNote}${isSpecDB ? '\n✅ Specs verified from database' : ''}`,
         }]);
 
         const cat = category?.toUpperCase();
-        setWizardState({ phase: 'confirm', scanResult, category: cat, displayName });
+
+        // Always show confirm card — user must click to confirm
+        // Hide alternatives when confidence is HIGH — only show the best match
+        const sanitizedScanResult = {
+          ...scanResult,
+          displayName,
+          alternative1: confidence === 'HIGH' ? '' : alt1,
+          alternative2: confidence === 'HIGH' ? '' : alt2,
+        };
+        setWizardState({ phase: 'confirm', scanResult: sanitizedScanResult, category: cat, displayName, confidence });
+
         setMessages(prev => {
           const all = prev.filter(m => m.role && m.content && m.id !== 0);
-          if (all.length >= 2) saveChat(`Image scan: ${displayName}`, all.map(m => ({ role: m.role, content: m.content })), savedChatIdRef.current).then(s => { if (s?.id) savedChatIdRef.current = s.id; });
+          if (all.length >= 2) {
+            saveChat(`Image scan: ${displayName}`, all.map(m => ({ role: m.role, content: m.content })), savedChatIdRef.current)
+              .then(s => { if (s?.id) savedChatIdRef.current = s.id; });
+          }
           return prev;
         });
         return;
       }
 
-      const apiMessages = [...messages.filter(m => !(m.role === 'assistant' && m.id === 0)), userMessage]
-        .map(m => ({ role: m.role, content: typeof m.content === 'string' ? m.content : JSON.stringify(m.content) }));
+      // ── Text chat path ──────────────────────────────────────────────────
+      const apiMessages = [
+        ...messages.filter(m => !(m.role === 'assistant' && m.id === 0)),
+        userMessage,
+      ].map(m => ({
+        role: m.role,
+        content: typeof m.content === 'string' ? m.content : JSON.stringify(m.content),
+      }));
+
       const streamingId = Date.now() + 1;
       streamingMsgIdRef.current = streamingId;
       setMessages(prev => [...prev, { id: streamingId, role: 'assistant', content: '', streaming: true }]);
-      setIsLoading(false); setIsStreaming(true);
-      cancelStreamRef.current = await askAIStream(apiMessages,
-        token => { setMessages(prev => prev.map(msg => msg.id === streamingId ? { ...msg, content: msg.content + token } : msg)); messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); },
+      setIsLoading(false);
+      setIsStreaming(true);
+
+      cancelStreamRef.current = await askAIStream(
+        apiMessages,
+        token => {
+          setMessages(prev => prev.map(msg =>
+            msg.id === streamingId ? { ...msg, content: msg.content + token } : msg
+          ));
+          messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        },
         () => {
           setMessages(prev => {
             const updated = prev.map(msg => msg.id === streamingId ? { ...msg, streaming: false } : msg);
             const all = updated.filter(m => m.role && m.content && m.id !== 0);
-            if (all.length >= 2) { const t = all.find(m => m.role === 'user'); saveChat(t ? t.content.slice(0, 60) : 'Chat', all.map(m => ({ role: m.role, content: m.content })), savedChatIdRef.current).then(s => { if (s?.id) savedChatIdRef.current = s.id; }); }
+            if (all.length >= 2) {
+              const t = all.find(m => m.role === 'user');
+              saveChat(
+                t ? t.content.slice(0, 60) : 'Chat',
+                all.map(m => ({ role: m.role, content: m.content })),
+                savedChatIdRef.current
+              ).then(s => { if (s?.id) savedChatIdRef.current = s.id; });
+            }
             return updated;
           });
-          setIsStreaming(false); cancelStreamRef.current = null;
+          setIsStreaming(false);
+          cancelStreamRef.current = null;
         },
-        err => { setModelStatus(''); setMessages(prev => prev.map(msg => msg.id === streamingId ? { ...msg, content: err.message || '⚠️ Something went wrong.', streaming: false } : msg)); setIsStreaming(false); cancelStreamRef.current = null; }
+        err => {
+          setModelStatus('');
+          setMessages(prev => prev.map(msg =>
+            msg.id === streamingId ? { ...msg, content: err.message || '⚠️ Something went wrong.', streaming: false } : msg
+          ));
+          setIsStreaming(false);
+          cancelStreamRef.current = null;
+        }
       );
     } catch (err) {
       console.error('Chat error:', err);
-      setModelStatus(''); setIsLoading(false); setIsStreaming(false);
-      setMessages(prev => [...prev, { id: Date.now() + 1, role: 'assistant', content: err.message || '⚠️ Something went wrong.' }]);
+      setModelStatus('');
+      setIsLoading(false);
+      setIsStreaming(false);
+      setMessages(prev => [...prev, { id: Date.now() + 1, role: 'assistant', content: err.message || '⚠️ Something went wrong. Please try again.' }]);
     }
   }, [input, messages]);
 
@@ -991,6 +1063,7 @@ export default function ChatPage({ onLogout }) {
     }
   }, [pendingAutoSend, messages, sendMessage]);
 
+  // ── Form submit ───────────────────────────────────────────────────────────
   const handleSubmit = async e => {
     e.preventDefault();
     if (!input.trim() && !uploadedFile) return;
@@ -1021,36 +1094,59 @@ export default function ChatPage({ onLogout }) {
     setIsStreaming(false);
   };
 
+  // ── Wizard renderer ───────────────────────────────────────────────────────
   const renderWizard = () => {
     if (!wizardState) return null;
     if (wizardState.phase === 'confirm') return (
       <ConfirmDeviceCard
-        displayName={wizardState.scanResult.displayName} alt1={wizardState.scanResult.alternative1} alt2={wizardState.scanResult.alternative2}
+        displayName={wizardState.displayName || wizardState.scanResult.displayName}
+        alt1={wizardState.scanResult.alternative1 || ''}
+        alt2={wizardState.scanResult.alternative2 || ''}
+        category={wizardState.category}
+        confidence={wizardState.confidence || wizardState.scanResult.confidence}
         onConfirm={(name) => confirmDevice(name, wizardState.category)}
         onHelpIdentify={() => startWizard(wizardState.scanResult, wizardState.category)}
         onUploadAgain={() => { setWizardState(null); fileRef.current?.click(); }}
         onSeeMore={() => openCatalog(wizardState.category)}
       />
     );
-    if (wizardState.phase === 'steps') return <WizardStepCard step={wizardState.steps[wizardState.stepIndex]} onSelect={handleWizardOption} onSkip={() => handleWizardOption('skipped', 'Skipped')} />;
+    if (wizardState.phase === 'steps') return (
+      <WizardStepCard
+        step={wizardState.steps[wizardState.stepIndex]}
+        onSelect={handleWizardOption}
+        onSkip={() => handleWizardOption('skipped', 'Skipped')}
+      />
+    );
     if (wizardState.phase === 'refined') return (
-      <RefinedResultsCard reasoning={wizardState.reasoning} suggestions={wizardState.suggestions}
+      <RefinedResultsCard
+        reasoning={wizardState.reasoning}
+        suggestions={wizardState.suggestions}
         onSelect={(name) => confirmDevice(name, wizardState.category)}
         onTypeMyself={() => { setWizardState(null); inputRef.current?.focus(); }}
         onSeeMore={() => openCatalog(wizardState.category)}
       />
     );
-    if (wizardState.phase === 'quick_actions') return <QuickActionCard deviceName={wizardState.deviceName} category={wizardState.category} onSelect={handleQuickAction} />;
+    if (wizardState.phase === 'quick_actions') return (
+      <QuickActionCard
+        deviceName={wizardState.deviceName}
+        category={wizardState.category}
+        onSelect={handleQuickAction}
+      />
+    );
     return null;
   };
 
+  // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div className="page" style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
       <style>{`
         @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
       `}</style>
+
       <Navbar onLogout={onLogout} />
+
+      {/* Top bar */}
       <div style={{ padding: '12px 24px 0', maxWidth: '800px', margin: '0 auto', width: '100%', display: 'flex', alignItems: 'center', gap: '12px' }}>
         <button onClick={() => navigate(-1)} className="btn btn-ghost" style={{ padding: '6px 14px', fontSize: '13px' }}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m15 18-6-6 6-6" /></svg>
@@ -1065,11 +1161,14 @@ export default function ChatPage({ onLogout }) {
         )}
       </div>
 
+      {/* Messages */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px 160px' }}>
         <div className="chat-messages">
           {messages.map(msg => (
             <div key={msg.id} className={`message ${msg.role === 'user' ? 'user' : 'ai'}`}>
-              <div className={`message-avatar ${msg.role === 'user' ? 'user-av' : 'ai'}`}>{msg.role === 'user' ? 'AM' : 'SS'}</div>
+              <div className={`message-avatar ${msg.role === 'user' ? 'user-av' : 'ai'}`}>
+                {msg.role === 'user' ? 'AM' : 'SS'}
+              </div>
               <div className="message-bubble">
                 {msg.image && (
                   <div style={{ marginBottom: '10px' }}>
@@ -1082,12 +1181,16 @@ export default function ChatPage({ onLogout }) {
                   </div>
                 )}
                 <div style={{ lineHeight: '1.6', fontSize: '14px' }}>
-                  {msg.content === '' && msg.streaming ? <StreamingCursor /> : <>{renderMessage(msg.content)}{msg.streaming && <StreamingCursor />}</>}
+                  {msg.content === '' && msg.streaming
+                    ? <StreamingCursor />
+                    : <>{renderMessage(msg.content)}{msg.streaming && <StreamingCursor />}</>
+                  }
                 </div>
               </div>
             </div>
           ))}
 
+          {/* Wizard cards */}
           {wizardState && !isLoading && !isStreaming && (
             <div className="message ai" style={{ alignItems: 'flex-start' }}>
               <div className="message-avatar ai">SS</div>
@@ -1095,12 +1198,15 @@ export default function ChatPage({ onLogout }) {
             </div>
           )}
 
+          {/* Loading dots */}
           {isLoading && (
             <div className="message ai">
               <div className="message-avatar ai">SS</div>
               <div className="message-bubble">
                 <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
-                  <div className="typing-dot" /><div className="typing-dot" /><div className="typing-dot" />
+                  <div className="typing-dot" />
+                  <div className="typing-dot" />
+                  <div className="typing-dot" />
                 </div>
               </div>
             </div>
@@ -1109,20 +1215,32 @@ export default function ChatPage({ onLogout }) {
         </div>
       </div>
 
+      {/* Input bar */}
       <div className="chat-wrapper">
         <div style={{ width: '100%', maxWidth: '760px' }}>
+          {/* Image preview */}
           {uploadedPreview && (
-            <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '10px 14px', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '10px 14px', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '12px' }} onClick={e => e.stopPropagation()}>
               <img src={uploadedPreview} alt="preview" style={{ width: '40px', height: '40px', objectFit: 'cover', borderRadius: '6px' }} />
               <div>
                 <div style={{ fontSize: '12px', fontWeight: '500', color: 'var(--text)' }}>{uploadedFile?.name}</div>
                 <div style={{ fontSize: '11px', color: 'var(--accent)' }}>🤖 Ready to analyze with Groq Vision AI</div>
               </div>
-              <button onClick={() => { setUploadedFile(null); setUploadedPreview(null); }} style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-3)' }}>
+              <button
+                type="button"
+                onClick={e => {
+                  e.stopPropagation();
+                  setUploadedFile(null);
+                  setUploadedPreview(null);
+                  if (fileRef.current) fileRef.current.value = '';
+                }}
+                style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-3)', padding: '4px', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
               </button>
             </div>
           )}
+
           <form className="chat-bar" onSubmit={handleSubmit} style={{ borderRadius: 'var(--radius)' }}>
             <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleFileChange} />
             <button type="button" className="upload-btn" onClick={() => fileRef.current.click()} title="Upload hardware image">
@@ -1131,24 +1249,35 @@ export default function ChatPage({ onLogout }) {
                 : <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" /></svg>
               }
             </button>
-            <input ref={inputRef} className="chat-input" type="text"
-              placeholder="Ask about CPUs, GPUs, phones, keyboards, mice... or upload a hardware image"
-              value={input} onChange={e => setInput(e.target.value)} disabled={isLoading || isStreaming} />
+            <input
+              ref={inputRef}
+              className="chat-input"
+              type="text"
+              placeholder="Ask about CPUs, GPUs, phones... or upload a hardware image for identification"
+              value={input}
+              onChange={e => setInput(e.target.value)}
+              disabled={isLoading || isStreaming}
+            />
             {isStreaming
-              ? <button type="button" className="chat-send" onClick={handleStopStream} style={{ background: 'var(--text-3)' }}>
+              ? (
+                <button type="button" className="chat-send" onClick={handleStopStream} style={{ background: 'var(--text-3)' }}>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="4" width="16" height="16" rx="2" /></svg>
                 </button>
-              : <button type="submit" className="chat-send" disabled={isLoading}>
+              )
+              : (
+                <button type="submit" className="chat-send" disabled={isLoading}>
                   {isLoading
                     ? <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ animation: 'spin 1s linear infinite' }}><circle cx="12" cy="12" r="10" strokeOpacity="0.2" /><path d="M22 12a10 10 0 0 1-10 10" /></svg>
                     : <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" /></svg>
                   }
                 </button>
+              )
             }
           </form>
         </div>
       </div>
 
+      {/* Catalog modal */}
       {catalogOpen && (
         <CatalogModal
           initialCategory={catalogCategory}

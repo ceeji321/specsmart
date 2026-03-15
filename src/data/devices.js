@@ -440,6 +440,12 @@ export const devices = [
     specs: 'Snapdragon 8 Gen 3, 24GB RAM', price: '₱65,990', brand: 'ASUS',
     details: { display: '6.78" AMOLED, 165Hz', processor: 'Snapdragon 8 Gen 3', ram: '24GB', storage: '1TB', mainCamera: '50MP + 13MP + 32MP', battery: '5500mAh, 65W', os: 'Android 14 / ROG UI' } },
 
+  { id: 73, category: 'Smartphone', name: 'Apple iPhone 12 Pro',
+    image: 'https://fdn2.gsmarena.com/vv/bigpic/apple-iphone-12-pro.jpg',
+    localImg: '/images/phone-iphone-12-pro.png',
+    specs: 'A14 Bionic, 6GB RAM, Triple Camera', price: '₱19,990 – ₱24,990', brand: 'Apple',
+    details: { display: '6.1" Super Retina XDR OLED, 60Hz', processor: 'Apple A14 Bionic (5nm)', ram: '6GB', storage: '128GB / 256GB / 512GB', mainCamera: '12MP (f/1.6 OIS) + 12MP Ultra Wide + 12MP 2x Telephoto', battery: '2815mAh, 20W wired, 15W MagSafe, Lightning', os: 'iOS 16 max (no iOS 17/18 support)' } },
+
 ];
 
 export const categories = ['All', 'CPU', 'GPU', 'RAM', 'NVMe SSD', 'SATA SSD', 'Motherboard', 'PSU', 'Smartphone'];
