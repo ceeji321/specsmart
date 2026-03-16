@@ -275,7 +275,7 @@ export const devices = [
     specs: 'SATA III, 500MB/s Read', price: '₱1,490', brand: 'Kingston',
     details: { capacity: '480GB', interface: 'SATA III', readSpeed: '500 MB/s', writeSpeed: '450 MB/s', tbw: '160 TBW', formFactor: '2.5"', cache: 'No DRAM' } },
 
-  // ── Motherboards ──────────────────────────────────────────────────────────
+  // ── Motherboards (ASUS / Gigabyte / MSI) ──────────────────────────────────
   { id: 46, category: 'Motherboard', name: 'ASUS ROG Maximus Z790 Hero',
     image: 'https://wsrv.nl/?url=https%3A%2F%2Fdlcdnets.asus.com%2Fpub%2FASUS%2Fmb%2FLGA1700%2FROG_MAXIMUS_Z790_HERO%2Foverview%2FROG-MAXIMUS-Z790-HERO_overview.jpg&w=300',
     localImg: '/images/mb-asus-rog-maximus-z790-hero.png',
@@ -324,135 +324,356 @@ export const devices = [
     specs: 'AM5, DDR5, ATX', price: '₱13,990', brand: 'Gigabyte',
     details: { socket: 'AM5', chipset: 'AMD B650', memType: 'DDR5', memSlots: '4 DIMM (128GB max)', pcie: 'PCIe 4.0 x16', m2Slots: '3x M.2', usbPorts: 'USB 3.2 Gen 2', formFactor: 'ATX' } },
 
+  // ── Motherboards (ASRock A320M series) ────────────────────────────────────
+  { id: 54, category: 'Motherboard', name: 'ASRock A320M Pro4',
+    image: '', localImg: '/images/A320M_Pro4_R2.0-1-thumbnail-300x300.png',
+    specs: 'AM4, DDR4, mATX', price: '₱3,990', brand: 'ASRock',
+    details: { socket: 'AM4', chipset: 'AMD A320', memType: 'DDR4', memSlots: '4 DIMM (64GB max)', pcie: 'PCIe 3.0 x16', m2Slots: '1x M.2', usbPorts: 'USB 3.1 Gen1', formFactor: 'mATX' } },
+
+  { id: 55, category: 'Motherboard', name: 'ASRock A320M-F',
+    image: '', localImg: '/images/A320M_Pro4-F-6-thumbnail-300x300.png',
+    specs: 'AM4, DDR4, mATX', price: '₱3,490', brand: 'ASRock',
+    details: { socket: 'AM4', chipset: 'AMD A320', memType: 'DDR4', memSlots: '2 DIMM (32GB max)', pcie: 'PCIe 3.0 x16', m2Slots: '1x M.2', usbPorts: 'USB 3.1 Gen1', formFactor: 'mATX' } },
+
+  { id: 56, category: 'Motherboard', name: 'ASRock A320M-DGS',
+    image: '', localImg: '/images/A320M-DGS-6-thumbnail-300x300.png',
+    specs: 'AM4, DDR4, mATX', price: '₱3,290', brand: 'ASRock',
+    details: { socket: 'AM4', chipset: 'AMD A320', memType: 'DDR4', memSlots: '2 DIMM (32GB max)', pcie: 'PCIe 3.0 x16', m2Slots: '1x M.2', usbPorts: 'USB 3.1 Gen1', formFactor: 'mATX' } },
+
+  { id: 57, category: 'Motherboard', name: 'ASRock A320M-DVS R3.0',
+    image: '', localImg: '/images/A320M-DVS_R3.0-1-thumbnail-300x300.png',
+    specs: 'AM4, DDR4, mATX', price: '₱2,990', brand: 'ASRock',
+    details: { socket: 'AM4', chipset: 'AMD A320', memType: 'DDR4', memSlots: '2 DIMM (32GB max)', pcie: 'PCIe 3.0 x16', m2Slots: '1x M.2', usbPorts: 'USB 3.0', formFactor: 'mATX' } },
+
+  { id: 58, category: 'Motherboard', name: 'ASRock A320M-DVS R4.0',
+    image: '', localImg: '/images/A320M-DVS_R4.0-1-thumbnail-300x300.png',
+    specs: 'AM4, DDR4, mATX', price: '₱2,990', brand: 'ASRock',
+    details: { socket: 'AM4', chipset: 'AMD A320', memType: 'DDR4', memSlots: '2 DIMM (32GB max)', pcie: 'PCIe 3.0 x16', m2Slots: '1x M.2', usbPorts: 'USB 3.0', formFactor: 'mATX' } },
+
+  { id: 59, category: 'Motherboard', name: 'ASRock A320M-HDV R3.0',
+    image: '', localImg: '/images/A320M-HDV_R3.0-1-thumbnail-300x300.png',
+    specs: 'AM4, DDR4, mATX', price: '₱3,190', brand: 'ASRock',
+    details: { socket: 'AM4', chipset: 'AMD A320', memType: 'DDR4', memSlots: '2 DIMM (32GB max)', pcie: 'PCIe 3.0 x16', m2Slots: '1x M.2', usbPorts: 'USB 3.1 Gen1', formFactor: 'mATX' } },
+
+  { id: 60, category: 'Motherboard', name: 'ASRock A320M-HDV R4.0',
+    image: '', localImg: '/images/A320M-HDV_R4.0-1-thumbnail-300x300.png',
+    specs: 'AM4, DDR4, mATX', price: '₱3,190', brand: 'ASRock',
+    details: { socket: 'AM4', chipset: 'AMD A320', memType: 'DDR4', memSlots: '2 DIMM (32GB max)', pcie: 'PCIe 3.0 x16', m2Slots: '1x M.2', usbPorts: 'USB 3.1 Gen1', formFactor: 'mATX' } },
+
+  { id: 61, category: 'Motherboard', name: 'ASRock A320M-HDV',
+    image: '', localImg: '/images/A320M-HDV-6-thumbnail-300x300.png',
+    specs: 'AM4, DDR4, mATX', price: '₱3,190', brand: 'ASRock',
+    details: { socket: 'AM4', chipset: 'AMD A320', memType: 'DDR4', memSlots: '2 DIMM (32GB max)', pcie: 'PCIe 3.0 x16', m2Slots: '1x M.2', usbPorts: 'USB 3.1 Gen1', formFactor: 'mATX' } },
+
+  { id: 62, category: 'Motherboard', name: 'ASRock A320M-ITX',
+    image: '', localImg: '/images/A320M-ITX-1-thumbnail-300x300.png',
+    specs: 'AM4, DDR4, Mini-ITX', price: '₱4,490', brand: 'ASRock',
+    details: { socket: 'AM4', chipset: 'AMD A320', memType: 'DDR4', memSlots: '2 DIMM (32GB max)', pcie: 'PCIe 3.0 x16', m2Slots: '1x M.2', usbPorts: 'USB 3.1 Gen1', formFactor: 'Mini-ITX' } },
+
+  // ── Motherboards (ASRock AB350M series) ───────────────────────────────────
+  { id: 63, category: 'Motherboard', name: 'ASRock AB350M Pro4',
+    image: '', localImg: '/images/AB350M_Pro4-6-thumbnail-300x300.png',
+    specs: 'AM4, DDR4, mATX', price: '₱4,990', brand: 'ASRock',
+    details: { socket: 'AM4', chipset: 'AMD B350', memType: 'DDR4', memSlots: '4 DIMM (64GB max)', pcie: 'PCIe 3.0 x16', m2Slots: '2x M.2', usbPorts: 'USB 3.1 Gen1', formFactor: 'mATX' } },
+
+  { id: 64, category: 'Motherboard', name: 'ASRock AB350M Pro4-12',
+    image: '', localImg: '/images/AB350M_Pro4-12-thumbnail-300x300.png',
+    specs: 'AM4, DDR4, mATX', price: '₱4,990', brand: 'ASRock',
+    details: { socket: 'AM4', chipset: 'AMD B350', memType: 'DDR4', memSlots: '4 DIMM (64GB max)', pcie: 'PCIe 3.0 x16', m2Slots: '2x M.2', usbPorts: 'USB 3.1 Gen1', formFactor: 'mATX' } },
+
+  { id: 65, category: 'Motherboard', name: 'ASRock AB350M Pro4-Dash',
+    image: '', localImg: '/images/AB350M_Pro4-Dash-1-thumbnail-300x300.png',
+    specs: 'AM4, DDR4, mATX', price: '₱4,790', brand: 'ASRock',
+    details: { socket: 'AM4', chipset: 'AMD B350', memType: 'DDR4', memSlots: '4 DIMM (64GB max)', pcie: 'PCIe 3.0 x16', m2Slots: '2x M.2', usbPorts: 'USB 3.1 Gen1', formFactor: 'mATX' } },
+
+  { id: 66, category: 'Motherboard', name: 'ASRock AB350M-HDV',
+    image: '', localImg: '/images/AB350M-HDV-11-thumbnail-300x300.png',
+    specs: 'AM4, DDR4, mATX', price: '₱3,990', brand: 'ASRock',
+    details: { socket: 'AM4', chipset: 'AMD B350', memType: 'DDR4', memSlots: '2 DIMM (32GB max)', pcie: 'PCIe 3.0 x16', m2Slots: '1x M.2', usbPorts: 'USB 3.1 Gen1', formFactor: 'mATX' } },
+
+  // ── Motherboards (ASRock B150 series) ─────────────────────────────────────
+  { id: 67, category: 'Motherboard', name: 'ASRock B150M Pro4-D3',
+    image: '', localImg: '/images/B150_Pro4-D3-1-thumbnail-300x300-70.jpg',
+    specs: 'LGA1151, DDR3, mATX', price: '₱3,290', brand: 'ASRock',
+    details: { socket: 'LGA1151', chipset: 'Intel B150', memType: 'DDR3', memSlots: '4 DIMM (32GB max)', pcie: 'PCIe 3.0 x16', m2Slots: '1x M.2', usbPorts: 'USB 3.0', formFactor: 'mATX' } },
+
+  { id: 68, category: 'Motherboard', name: 'ASRock B150A-X1',
+    image: '', localImg: '/images/B150A-X1-1-thumbnail-300x300.png',
+    specs: 'LGA1151, DDR4, ATX', price: '₱3,990', brand: 'ASRock',
+    details: { socket: 'LGA1151', chipset: 'Intel B150', memType: 'DDR4', memSlots: '4 DIMM (64GB max)', pcie: 'PCIe 3.0 x16', m2Slots: '1x M.2', usbPorts: 'USB 3.0', formFactor: 'ATX' } },
+
+  { id: 69, category: 'Motherboard', name: 'ASRock B150A-X1 Hyper',
+    image: '', localImg: '/images/B150A-X1-Hyper-1-thumbnail-300x300-7.jpg',
+    specs: 'LGA1151, DDR4, ATX', price: '₱4,190', brand: 'ASRock',
+    details: { socket: 'LGA1151', chipset: 'Intel B150', memType: 'DDR4', memSlots: '4 DIMM (64GB max)', pcie: 'PCIe 3.0 x16', m2Slots: '1x M.2', usbPorts: 'USB 3.1 Gen1', formFactor: 'ATX' } },
+
+  { id: 70, category: 'Motherboard', name: 'ASRock B150M Combo-G',
+    image: '', localImg: '/images/B150_Combo-1-thumbnail-300x300-70.jpg',
+    specs: 'LGA1151, DDR3/DDR4, mATX', price: '₱3,490', brand: 'ASRock',
+    details: { socket: 'LGA1151', chipset: 'Intel B150', memType: 'DDR3/DDR4', memSlots: '4 DIMM (32GB max)', pcie: 'PCIe 3.0 x16', m2Slots: '1x M.2', usbPorts: 'USB 3.0', formFactor: 'mATX' } },
+
+  { id: 71, category: 'Motherboard', name: 'ASRock B150M Pro4',
+    image: '', localImg: '/images/B150M_Pro4-1-thumbnail-300x300-70.jpg',
+    specs: 'LGA1151, DDR4, mATX', price: '₱3,490', brand: 'ASRock',
+    details: { socket: 'LGA1151', chipset: 'Intel B150', memType: 'DDR4', memSlots: '4 DIMM (64GB max)', pcie: 'PCIe 3.0 x16', m2Slots: '1x M.2', usbPorts: 'USB 3.0', formFactor: 'mATX' } },
+
+  { id: 72, category: 'Motherboard', name: 'ASRock B150M Pro4-Hyper',
+    image: '', localImg: '/images/B150M_Pro4-Hyper-1-thumbnail-300x300.jpg',
+    specs: 'LGA1151, DDR4, mATX', price: '₱3,690', brand: 'ASRock',
+    details: { socket: 'LGA1151', chipset: 'Intel B150', memType: 'DDR4', memSlots: '4 DIMM (64GB max)', pcie: 'PCIe 3.0 x16', m2Slots: '1x M.2', usbPorts: 'USB 3.0', formFactor: 'mATX' } },
+
+  // ── Motherboards (ASRock B450 series) ─────────────────────────────────────
+  { id: 73, category: 'Motherboard', name: 'ASRock B450 Pro4',
+    image: '', localImg: '/images/B450_Pro4-1-thumbnail-300x300.png',
+    specs: 'AM4, DDR4, ATX', price: '₱5,490', brand: 'ASRock',
+    details: { socket: 'AM4', chipset: 'AMD B450', memType: 'DDR4', memSlots: '4 DIMM (64GB max)', pcie: 'PCIe 3.0 x16', m2Slots: '2x M.2', usbPorts: 'USB 3.1 Gen1', formFactor: 'ATX' } },
+
+  { id: 74, category: 'Motherboard', name: 'ASRock B450 Steel Legend',
+    image: '', localImg: '/images/B450_Steel_Legend-1-thumbnail-300x300.png',
+    specs: 'AM4, DDR4, ATX', price: '₱6,490', brand: 'ASRock',
+    details: { socket: 'AM4', chipset: 'AMD B450', memType: 'DDR4', memSlots: '4 DIMM (64GB max)', pcie: 'PCIe 3.0 x16', m2Slots: '2x M.2', usbPorts: 'USB 3.1 Gen1', formFactor: 'ATX' } },
+
+  { id: 75, category: 'Motherboard', name: 'ASRock B450M Pro4-F',
+    image: '', localImg: '/images/B450M_Pro4-F-1-thumbnail-300x300.png',
+    specs: 'AM4, DDR4, mATX', price: '₱4,990', brand: 'ASRock',
+    details: { socket: 'AM4', chipset: 'AMD B450', memType: 'DDR4', memSlots: '4 DIMM (64GB max)', pcie: 'PCIe 3.0 x16', m2Slots: '2x M.2', usbPorts: 'USB 3.1 Gen1', formFactor: 'mATX' } },
+
+  { id: 76, category: 'Motherboard', name: 'ASRock B450M Steel Legend',
+    image: '', localImg: '/images/B450M_Steel_Legend-1-thumbnail-300x300.png',
+    specs: 'AM4, DDR4, mATX', price: '₱5,490', brand: 'ASRock',
+    details: { socket: 'AM4', chipset: 'AMD B450', memType: 'DDR4', memSlots: '4 DIMM (64GB max)', pcie: 'PCIe 3.0 x16', m2Slots: '2x M.2', usbPorts: 'USB 3.1 Gen1', formFactor: 'mATX' } },
+
+  { id: 77, category: 'Motherboard', name: 'ASRock B450M-HDV R4.0',
+    image: '', localImg: '/images/B450M-HDV_R4.0-1-thumbnail-300x300.png',
+    specs: 'AM4, DDR4, mATX', price: '₱3,990', brand: 'ASRock',
+    details: { socket: 'AM4', chipset: 'AMD B450', memType: 'DDR4', memSlots: '2 DIMM (32GB max)', pcie: 'PCIe 3.0 x16', m2Slots: '1x M.2', usbPorts: 'USB 3.1 Gen1', formFactor: 'mATX' } },
+
+  { id: 78, category: 'Motherboard', name: 'ASRock B450M-HDV',
+    image: '', localImg: '/images/B450M-HDV-1-thumbnail-300x300.png',
+    specs: 'AM4, DDR4, mATX', price: '₱3,990', brand: 'ASRock',
+    details: { socket: 'AM4', chipset: 'AMD B450', memType: 'DDR4', memSlots: '2 DIMM (32GB max)', pcie: 'PCIe 3.0 x16', m2Slots: '1x M.2', usbPorts: 'USB 3.1 Gen1', formFactor: 'mATX' } },
+
+  // ── Motherboards (ASRock B460 series) ─────────────────────────────────────
+  { id: 79, category: 'Motherboard', name: 'ASRock B460 Phantom Gaming 4',
+    image: '', localImg: '/images/B460_Phantom_Gaming_4-1-thumbnail-300x300.png',
+    specs: 'LGA1200, DDR4, ATX', price: '₱5,990', brand: 'ASRock',
+    details: { socket: 'LGA1200', chipset: 'Intel B460', memType: 'DDR4', memSlots: '4 DIMM (128GB max)', pcie: 'PCIe 3.0 x16', m2Slots: '2x M.2', usbPorts: 'USB 3.2 Gen1', formFactor: 'ATX' } },
+
+  { id: 80, category: 'Motherboard', name: 'ASRock B460 Pro4',
+    image: '', localImg: '/images/B460_Pro4-1-thumbnail-300x300.png',
+    specs: 'LGA1200, DDR4, ATX', price: '₱5,490', brand: 'ASRock',
+    details: { socket: 'LGA1200', chipset: 'Intel B460', memType: 'DDR4', memSlots: '4 DIMM (128GB max)', pcie: 'PCIe 3.0 x16', m2Slots: '2x M.2', usbPorts: 'USB 3.2 Gen1', formFactor: 'ATX' } },
+
+  { id: 81, category: 'Motherboard', name: 'ASRock B460 Steel Legend',
+    image: '', localImg: '/images/B460_Steel_Legend-1-thumbnail-300x300.png',
+    specs: 'LGA1200, DDR4, ATX', price: '₱6,490', brand: 'ASRock',
+    details: { socket: 'LGA1200', chipset: 'Intel B460', memType: 'DDR4', memSlots: '4 DIMM (128GB max)', pcie: 'PCIe 3.0 x16', m2Slots: '2x M.2', usbPorts: 'USB 3.2 Gen1', formFactor: 'ATX' } },
+
+  { id: 82, category: 'Motherboard', name: 'ASRock B460M Pro4',
+    image: '', localImg: '/images/B460M_Pro4-1-thumbnail-300x300.png',
+    specs: 'LGA1200, DDR4, mATX', price: '₱4,990', brand: 'ASRock',
+    details: { socket: 'LGA1200', chipset: 'Intel B460', memType: 'DDR4', memSlots: '4 DIMM (128GB max)', pcie: 'PCIe 3.0 x16', m2Slots: '2x M.2', usbPorts: 'USB 3.2 Gen1', formFactor: 'mATX' } },
+
+  { id: 83, category: 'Motherboard', name: 'ASRock B460M Steel Legend',
+    image: '', localImg: '/images/B460M_Steel_Legend-1-thumbnail-300x300.png',
+    specs: 'LGA1200, DDR4, mATX', price: '₱5,490', brand: 'ASRock',
+    details: { socket: 'LGA1200', chipset: 'Intel B460', memType: 'DDR4', memSlots: '4 DIMM (128GB max)', pcie: 'PCIe 3.0 x16', m2Slots: '2x M.2', usbPorts: 'USB 3.2 Gen1', formFactor: 'mATX' } },
+
+  { id: 84, category: 'Motherboard', name: 'ASRock B460M-HDV',
+    image: '', localImg: '/images/B460M-HDV-1-thumbnail-300x300.png',
+    specs: 'LGA1200, DDR4, mATX', price: '₱4,290', brand: 'ASRock',
+    details: { socket: 'LGA1200', chipset: 'Intel B460', memType: 'DDR4', memSlots: '2 DIMM (64GB max)', pcie: 'PCIe 3.0 x16', m2Slots: '1x M.2', usbPorts: 'USB 3.2 Gen1', formFactor: 'mATX' } },
+
+  { id: 85, category: 'Motherboard', name: 'ASRock B460M-ITX/ac',
+    image: '', localImg: '/images/B460M-ITX-ac-1-thumbnail-300x300.png',
+    specs: 'LGA1200, DDR4, Mini-ITX', price: '₱5,990', brand: 'ASRock',
+    details: { socket: 'LGA1200', chipset: 'Intel B460', memType: 'DDR4', memSlots: '2 DIMM (64GB max)', pcie: 'PCIe 3.0 x16', m2Slots: '1x M.2', usbPorts: 'USB 3.2 Gen1', formFactor: 'Mini-ITX' } },
+
+  // ── Motherboards (ASRock B550 series) ─────────────────────────────────────
+  { id: 86, category: 'Motherboard', name: 'ASRock B550 Extreme4',
+    image: '', localImg: '/images/B550_Extreme4-1-thumbnail-300x300.png',
+    specs: 'AM4, DDR4, ATX', price: '₱7,990', brand: 'ASRock',
+    details: { socket: 'AM4', chipset: 'AMD B550', memType: 'DDR4', memSlots: '4 DIMM (128GB max)', pcie: 'PCIe 4.0 x16', m2Slots: '3x M.2', usbPorts: 'USB 3.2 Gen2', formFactor: 'ATX' } },
+
+  { id: 87, category: 'Motherboard', name: 'ASRock B550 PG Velocita',
+    image: '', localImg: '/images/B550_PG_Velocita-1-thumbnail-300x300.png',
+    specs: 'AM4, DDR4, ATX', price: '₱8,990', brand: 'ASRock',
+    details: { socket: 'AM4', chipset: 'AMD B550', memType: 'DDR4', memSlots: '4 DIMM (128GB max)', pcie: 'PCIe 4.0 x16', m2Slots: '3x M.2', usbPorts: 'USB 3.2 Gen2', formFactor: 'ATX' } },
+
+  { id: 88, category: 'Motherboard', name: 'ASRock B550 Phantom Gaming 4',
+    image: '', localImg: '/images/B550_Phantom_Gaming_4-1-thumbnail-300x300.png',
+    specs: 'AM4, DDR4, ATX', price: '₱6,990', brand: 'ASRock',
+    details: { socket: 'AM4', chipset: 'AMD B550', memType: 'DDR4', memSlots: '4 DIMM (128GB max)', pcie: 'PCIe 4.0 x16', m2Slots: '2x M.2', usbPorts: 'USB 3.2 Gen1', formFactor: 'ATX' } },
+
+  { id: 89, category: 'Motherboard', name: 'ASRock B550 Phantom Gaming 4/ac',
+    image: '', localImg: '/images/B550_Phantom_Gaming_4-ac-1-thumbnail-300x300.png',
+    specs: 'AM4, DDR4, ATX', price: '₱7,490', brand: 'ASRock',
+    details: { socket: 'AM4', chipset: 'AMD B550', memType: 'DDR4', memSlots: '4 DIMM (128GB max)', pcie: 'PCIe 4.0 x16', m2Slots: '2x M.2', usbPorts: 'USB 3.2 Gen1', formFactor: 'ATX' } },
+
+  { id: 90, category: 'Motherboard', name: 'ASRock B550 Phantom Gaming ITX/ax',
+    image: '', localImg: '/images/B550_Phantom_Gaming_ITX-ax-1-thumbnail-300x300.png',
+    specs: 'AM4, DDR4, Mini-ITX', price: '₱8,490', brand: 'ASRock',
+    details: { socket: 'AM4', chipset: 'AMD B550', memType: 'DDR4', memSlots: '2 DIMM (64GB max)', pcie: 'PCIe 4.0 x16', m2Slots: '2x M.2', usbPorts: 'USB 3.2 Gen2', formFactor: 'Mini-ITX' } },
+
+  { id: 91, category: 'Motherboard', name: 'ASRock B550 Pro4',
+    image: '', localImg: '/images/B550_Pro4-1-thumbnail-300x300.png',
+    specs: 'AM4, DDR4, ATX', price: '₱6,490', brand: 'ASRock',
+    details: { socket: 'AM4', chipset: 'AMD B550', memType: 'DDR4', memSlots: '4 DIMM (128GB max)', pcie: 'PCIe 4.0 x16', m2Slots: '2x M.2', usbPorts: 'USB 3.2 Gen1', formFactor: 'ATX' } },
+
+  { id: 92, category: 'Motherboard', name: 'ASRock B550 Steel Legend',
+    image: '', localImg: '/images/B550_Steel_Legend-1-thumbnail-300x300.png',
+    specs: 'AM4, DDR4, ATX', price: '₱7,490', brand: 'ASRock',
+    details: { socket: 'AM4', chipset: 'AMD B550', memType: 'DDR4', memSlots: '4 DIMM (128GB max)', pcie: 'PCIe 4.0 x16', m2Slots: '3x M.2', usbPorts: 'USB 3.2 Gen2', formFactor: 'ATX' } },
+
+  { id: 93, category: 'Motherboard', name: 'ASRock B550 Taichi',
+    image: '', localImg: '/images/B550_Taichi-1-thumbnail-300x300.png',
+    specs: 'AM4, DDR4, ATX', price: '₱11,990', brand: 'ASRock',
+    details: { socket: 'AM4', chipset: 'AMD B550', memType: 'DDR4', memSlots: '4 DIMM (128GB max)', pcie: 'PCIe 4.0 x16', m2Slots: '3x M.2', usbPorts: 'USB 3.2 Gen2', formFactor: 'ATX' } },
+
+  { id: 94, category: 'Motherboard', name: 'ASRock B550M Pro4',
+    image: '', localImg: '/images/B550M_Pro4-1-thumbnail-300x300.png',
+    specs: 'AM4, DDR4, mATX', price: '₱5,990', brand: 'ASRock',
+    details: { socket: 'AM4', chipset: 'AMD B550', memType: 'DDR4', memSlots: '4 DIMM (128GB max)', pcie: 'PCIe 4.0 x16', m2Slots: '2x M.2', usbPorts: 'USB 3.2 Gen1', formFactor: 'mATX' } },
+
+  { id: 95, category: 'Motherboard', name: 'ASRock B550M Steel Legend',
+    image: '', localImg: '/images/B550M_Steel_Legend-1-thumbnail-300x300.png',
+    specs: 'AM4, DDR4, mATX', price: '₱6,990', brand: 'ASRock',
+    details: { socket: 'AM4', chipset: 'AMD B550', memType: 'DDR4', memSlots: '4 DIMM (128GB max)', pcie: 'PCIe 4.0 x16', m2Slots: '2x M.2', usbPorts: 'USB 3.2 Gen1', formFactor: 'mATX' } },
+
+  { id: 96, category: 'Motherboard', name: 'ASRock B550M-HDV',
+    image: '', localImg: '/images/B550M-HDV-1-thumbnail-300x300.png',
+    specs: 'AM4, DDR4, mATX', price: '₱4,490', brand: 'ASRock',
+    details: { socket: 'AM4', chipset: 'AMD B550', memType: 'DDR4', memSlots: '2 DIMM (64GB max)', pcie: 'PCIe 4.0 x16', m2Slots: '1x M.2', usbPorts: 'USB 3.2 Gen1', formFactor: 'mATX' } },
+
   // ── PSU ───────────────────────────────────────────────────────────────────
-  { id: 54, category: 'PSU', name: 'Corsair RM1000x 1000W',
+  { id: 97, category: 'PSU', name: 'Corsair RM1000x 1000W',
     image: 'https://www.corsair.com/medias/sys_master/images/images/h85/h01/9209531375646/-CP-9020201-NA-Gallery-RM1000x-01.png',
     localImg: '/images/psu-corsair-rm1000x.png',
     specs: '1000W, 80+ Gold, Fully Modular', price: '₱8,990', brand: 'Corsair',
     details: { wattage: '1000W', efficiency: '80+ Gold', modular: 'Fully Modular', fan: '135mm Rifle Bearing', pcie5: 'Yes (12VHPWR)', warranty: '10 Years', atx: 'ATX 3.0' } },
 
-  { id: 55, category: 'PSU', name: 'Corsair RM850x 850W',
+  { id: 98, category: 'PSU', name: 'Corsair RM850x 850W',
     image: 'https://www.corsair.com/medias/sys_master/images/images/h85/h01/9209531375646/-CP-9020201-NA-Gallery-RM1000x-01.png',
     localImg: '/images/psu-corsair-rm850x.png',
     specs: '850W, 80+ Gold, Fully Modular', price: '₱6,990', brand: 'Corsair',
     details: { wattage: '850W', efficiency: '80+ Gold', modular: 'Fully Modular', fan: '135mm Rifle Bearing', pcie5: 'Yes (12VHPWR)', warranty: '10 Years', atx: 'ATX 3.0' } },
 
-  { id: 56, category: 'PSU', name: 'Corsair RM750x 750W',
+  { id: 99, category: 'PSU', name: 'Corsair RM750x 750W',
     image: 'https://www.corsair.com/medias/sys_master/images/images/h85/h01/9209531375646/-CP-9020201-NA-Gallery-RM1000x-01.png',
     localImg: '/images/psu-corsair-rm750x.png',
     specs: '750W, 80+ Gold, Fully Modular', price: '₱5,490', brand: 'Corsair',
     details: { wattage: '750W', efficiency: '80+ Gold', modular: 'Fully Modular', fan: '135mm Rifle Bearing', pcie5: 'Yes', warranty: '10 Years', atx: 'ATX 3.0' } },
 
-  { id: 57, category: 'PSU', name: 'Seasonic Focus GX-1000',
+  { id: 100, category: 'PSU', name: 'Seasonic Focus GX-1000',
     image: 'https://seasonic.com/pub/media/catalog/product/f/o/focus-gx-1000-product-main.png',
     localImg: '/images/psu-seasonic-focus-gx-1000.png',
     specs: '1000W, 80+ Gold, Fully Modular', price: '₱9,490', brand: 'Seasonic',
     details: { wattage: '1000W', efficiency: '80+ Gold', modular: 'Fully Modular', fan: '120mm FDB', pcie5: 'Yes (12VHPWR)', warranty: '10 Years', atx: 'ATX 3.0' } },
 
-  { id: 58, category: 'PSU', name: 'Seasonic Focus GX-750',
+  { id: 101, category: 'PSU', name: 'Seasonic Focus GX-750',
     image: 'https://seasonic.com/pub/media/catalog/product/f/o/focus-gx-1000-product-main.png',
     localImg: '/images/psu-seasonic-focus-gx-750.png',
     specs: '750W, 80+ Gold, Fully Modular', price: '₱5,990', brand: 'Seasonic',
     details: { wattage: '750W', efficiency: '80+ Gold', modular: 'Fully Modular', fan: '120mm FDB', pcie5: 'No', warranty: '10 Years', atx: 'ATX 2.52' } },
 
-  { id: 59, category: 'PSU', name: 'be quiet! Dark Power 13 1000W',
+  { id: 102, category: 'PSU', name: 'be quiet! Dark Power 13 1000W',
     image: 'https://www.bequiet.com/files/be_quiet_component/2023/01/17/2134_a9/dark_power_13_1000w_specs_1920x1920.jpg',
     localImg: '/images/psu-bequiet-dark-power13-1000w.png',
     specs: '1000W, 80+ Titanium, Modular', price: '₱12,990', brand: 'be quiet!',
     details: { wattage: '1000W', efficiency: '80+ Titanium', modular: 'Fully Modular', fan: '135mm Silent Wings', pcie5: 'Yes (12VHPWR)', warranty: '10 Years', atx: 'ATX 3.0' } },
 
-  { id: 60, category: 'PSU', name: 'Corsair CV650 650W',
+  { id: 103, category: 'PSU', name: 'Corsair CV650 650W',
     image: 'https://www.corsair.com/medias/sys_master/images/images/h85/h01/9209531375646/-CP-9020201-NA-Gallery-RM1000x-01.png',
     localImg: '/images/psu-corsair-cv650.png',
     specs: '650W, 80+ Bronze, Non-Modular', price: '₱2,990', brand: 'Corsair',
     details: { wattage: '650W', efficiency: '80+ Bronze', modular: 'Non-Modular', fan: '120mm Rifle Bearing', pcie5: 'No', warranty: '3 Years', atx: 'ATX 2.4' } },
 
-  { id: 61, category: 'PSU', name: 'Thermaltake Toughpower GF3 850W',
+  { id: 104, category: 'PSU', name: 'Thermaltake Toughpower GF3 850W',
     image: 'https://www.thermaltake.com/uploads/Products/ps_000056/top_image/tt-toughpower-gf3-850w-gold-tt-premium-_-lf-top_800.jpg',
     localImg: '/images/psu-thermaltake-toughpower-gf3-850w.png',
     specs: '850W, 80+ Gold, Fully Modular', price: '₱6,490', brand: 'Thermaltake',
     details: { wattage: '850W', efficiency: '80+ Gold', modular: 'Fully Modular', fan: '140mm Hydraulic', pcie5: 'Yes (12VHPWR)', warranty: '10 Years', atx: 'ATX 3.0' } },
 
   // ── Smartphones ───────────────────────────────────────────────────────────
-  { id: 62, category: 'Smartphone', name: 'Samsung Galaxy S24 Ultra',
+  { id: 105, category: 'Smartphone', name: 'Samsung Galaxy S24 Ultra',
     image: 'https://wsrv.nl/?url=https%3A%2F%2Fimage-us.samsung.com%2FSamsungUS%2Fhome%2Fmobile%2Fgalaxy-s%2Fs24%2F06032024%2FGalaxy-S24-Ultra-Titanium-Violet.jpg&w=300',
     localImg: '/images/phone-samsung-s24-ultra.png',
     specs: 'Snapdragon 8 Gen 3, 12GB RAM', price: '₱74,990', brand: 'Samsung',
     details: { display: '6.8" QHD+ AMOLED, 120Hz', processor: 'Snapdragon 8 Gen 3', ram: '12GB', storage: '256GB / 512GB / 1TB', mainCamera: '200MP + 12MP + 10MP + 50MP', battery: '5000mAh, 45W', os: 'Android 14 / One UI 6.1' } },
 
-  { id: 63, category: 'Smartphone', name: 'Samsung Galaxy S24+',
+  { id: 106, category: 'Smartphone', name: 'Samsung Galaxy S24+',
     image: 'https://wsrv.nl/?url=https%3A%2F%2Fimage-us.samsung.com%2FSamsungUS%2Fhome%2Fmobile%2Fgalaxy-s%2Fs24%2F06032024%2FGalaxy-S24-Ultra-Titanium-Violet.jpg&w=300',
     localImg: '/images/phone-samsung-s24-plus.png',
     specs: 'Snapdragon 8 Gen 3, 12GB RAM', price: '₱54,990', brand: 'Samsung',
     details: { display: '6.7" QHD+ AMOLED, 120Hz', processor: 'Snapdragon 8 Gen 3', ram: '12GB', storage: '256GB / 512GB', mainCamera: '50MP + 12MP + 10MP', battery: '4900mAh, 45W', os: 'Android 14 / One UI 6.1' } },
 
-  { id: 64, category: 'Smartphone', name: 'Samsung Galaxy S24',
+  { id: 107, category: 'Smartphone', name: 'Samsung Galaxy S24',
     image: 'https://wsrv.nl/?url=https%3A%2F%2Fimage-us.samsung.com%2FSamsungUS%2Fhome%2Fmobile%2Fgalaxy-s%2Fs24%2F06032024%2FGalaxy-S24-Ultra-Titanium-Violet.jpg&w=300',
     localImg: '/images/phone-samsung-s24.png',
     specs: 'Snapdragon 8 Gen 3, 8GB RAM', price: '₱42,990', brand: 'Samsung',
     details: { display: '6.2" FHD+ AMOLED, 120Hz', processor: 'Snapdragon 8 Gen 3', ram: '8GB', storage: '128GB / 256GB', mainCamera: '50MP + 12MP + 10MP', battery: '4000mAh, 25W', os: 'Android 14 / One UI 6.1' } },
 
-  { id: 65, category: 'Smartphone', name: 'Samsung Galaxy A55',
+  { id: 108, category: 'Smartphone', name: 'Samsung Galaxy A55',
     image: 'https://wsrv.nl/?url=https%3A%2F%2Fimage-us.samsung.com%2FSamsungUS%2Fhome%2Fmobile%2Fgalaxy-s%2Fs24%2F06032024%2FGalaxy-S24-Ultra-Titanium-Violet.jpg&w=300',
     localImg: '/images/phone-samsung-a55.png',
     specs: 'Exynos 1480, 8GB RAM', price: '₱22,990', brand: 'Samsung',
     details: { display: '6.6" FHD+ AMOLED, 120Hz', processor: 'Exynos 1480', ram: '8GB', storage: '128GB / 256GB', mainCamera: '50MP + 12MP + 5MP', battery: '5000mAh, 25W', os: 'Android 14 / One UI 6.1' } },
 
-  { id: 66, category: 'Smartphone', name: 'iPhone 15 Pro Max',
+  { id: 109, category: 'Smartphone', name: 'iPhone 15 Pro Max',
     image: 'https://store.storeimages.cdn-apple.com/4982/as-images.apple.com/is/iphone-15-pro-max-black-titanium-select?wid=470&hei=556&fmt=png-alpha',
     localImg: '/images/phone-iphone-15-pro-max.png',
     specs: 'A17 Pro, 8GB RAM', price: '₱82,990', brand: 'Apple',
     details: { display: '6.7" Super Retina XDR, 120Hz', processor: 'Apple A17 Pro', ram: '8GB', storage: '256GB / 512GB / 1TB', mainCamera: '48MP + 12MP + 12MP', battery: '4422mAh, 27W', os: 'iOS 17' } },
 
-  { id: 67, category: 'Smartphone', name: 'iPhone 15 Pro',
+  { id: 110, category: 'Smartphone', name: 'iPhone 15 Pro',
     image: 'https://store.storeimages.cdn-apple.com/4982/as-images.apple.com/is/iphone-15-pro-max-black-titanium-select?wid=470&hei=556&fmt=png-alpha',
     localImg: '/images/phone-iphone-15-pro.png',
     specs: 'A17 Pro, 8GB RAM', price: '₱64,990', brand: 'Apple',
     details: { display: '6.1" Super Retina XDR, 120Hz', processor: 'Apple A17 Pro', ram: '8GB', storage: '128GB / 256GB / 512GB / 1TB', mainCamera: '48MP + 12MP + 12MP', battery: '3274mAh, 27W', os: 'iOS 17' } },
 
-  { id: 68, category: 'Smartphone', name: 'iPhone 15',
+  { id: 111, category: 'Smartphone', name: 'iPhone 15',
     image: 'https://store.storeimages.cdn-apple.com/4982/as-images.apple.com/is/iphone-15-pro-max-black-titanium-select?wid=470&hei=556&fmt=png-alpha',
     localImg: '/images/phone-iphone-15.png',
     specs: 'A16 Bionic, 6GB RAM', price: '₱50,990', brand: 'Apple',
     details: { display: '6.1" Super Retina XDR, 60Hz', processor: 'Apple A16 Bionic', ram: '6GB', storage: '128GB / 256GB / 512GB', mainCamera: '48MP + 12MP', battery: '3349mAh, 20W', os: 'iOS 17' } },
 
-  { id: 69, category: 'Smartphone', name: 'Google Pixel 8 Pro',
+  { id: 112, category: 'Smartphone', name: 'Google Pixel 8 Pro',
     image: 'https://lh3.googleusercontent.com/nu6FO7vGOSrCB_1sE9KVzKiVHRx8B8BZrplzw0cMWvSBbFMj7-WYrFh1I5z5A3C79x6E',
     localImg: '/images/phone-google-pixel-8-pro.png',
     specs: 'Tensor G3, 12GB RAM', price: '₱52,990', brand: 'Google',
     details: { display: '6.7" LTPO OLED, 120Hz', processor: 'Google Tensor G3', ram: '12GB', storage: '128GB / 256GB / 1TB', mainCamera: '50MP + 48MP + 48MP', battery: '5050mAh, 30W', os: 'Android 14' } },
 
-  { id: 70, category: 'Smartphone', name: 'Xiaomi 14 Ultra',
+  { id: 113, category: 'Smartphone', name: 'Xiaomi 14 Ultra',
     image: 'https://i01.appmifile.com/webfile/globalimg/products/pc/xiaomi-14-ultra/overview-v2/kv-img.png',
     localImg: '/images/phone-xiaomi-14-ultra.png',
     specs: 'Snapdragon 8 Gen 3, 16GB RAM', price: '₱62,990', brand: 'Xiaomi',
     details: { display: '6.73" LTPO AMOLED, 120Hz', processor: 'Snapdragon 8 Gen 3', ram: '16GB', storage: '512GB', mainCamera: '50MP Leica + 50MP + 50MP + 50MP', battery: '5000mAh, 90W', os: 'Android 14 / HyperOS' } },
 
-  { id: 71, category: 'Smartphone', name: 'OnePlus 12',
+  { id: 114, category: 'Smartphone', name: 'OnePlus 12',
     image: 'https://image01.oneplus.net/ebp/202312/26/1-m00-4d-35-rb8bwwwp84waap92aab8tsgn5d840117.png',
     localImg: '/images/phone-oneplus-12.png',
     specs: 'Snapdragon 8 Gen 3, 12GB RAM', price: '₱44,990', brand: 'OnePlus',
     details: { display: '6.82" LTPO AMOLED, 120Hz', processor: 'Snapdragon 8 Gen 3', ram: '12GB / 16GB', storage: '256GB / 512GB', mainCamera: '50MP Hasselblad + 48MP + 64MP', battery: '5400mAh, 100W', os: 'Android 14 / OxygenOS 14' } },
 
-  { id: 72, category: 'Smartphone', name: 'ASUS ROG Phone 8 Pro',
+  { id: 115, category: 'Smartphone', name: 'ASUS ROG Phone 8 Pro',
     image: 'https://wsrv.nl/?url=https%3A%2F%2Fwww.asus.com%2Fmedia%2Fglobal%2Fproducts%2F9TcRFCLOsMXBsZQR%2FP_500.png&w=300',
     localImg: '/images/phone-asus-rog-phone-8-pro.png',
     specs: 'Snapdragon 8 Gen 3, 24GB RAM', price: '₱65,990', brand: 'ASUS',
     details: { display: '6.78" AMOLED, 165Hz', processor: 'Snapdragon 8 Gen 3', ram: '24GB', storage: '1TB', mainCamera: '50MP + 13MP + 32MP', battery: '5500mAh, 65W', os: 'Android 14 / ROG UI' } },
 
-  { id: 73, category: 'Smartphone', name: 'Infinix Hot 30',
+  { id: 116, category: 'Smartphone', name: 'Infinix Hot 30',
     image: 'https://fdn2.gsmarena.com/vv/bigpic/infinix-hot-30.jpg',
     localImg: '/images/phone-infinix-hot-30.png',
     specs: 'Helio G88, 8GB RAM, 6.78" IPS', price: '₱6,490 – ₱7,990', brand: 'Infinix',
     details: { display: '6.78" IPS LCD, 2460×1080, 90Hz', processor: 'MediaTek Helio G88 (12nm)', ram: '8GB', storage: '128GB, microSD', mainCamera: '50MP (f/1.6) + AI lens + depth', battery: '5000mAh, 18W wired', os: 'Android 13, XOS 12' } },
 
-  { id: 74, category: 'Smartphone', name: 'Infinix Note 30 Pro',
+  { id: 117, category: 'Smartphone', name: 'Infinix Note 30 Pro',
     image: 'https://fdn2.gsmarena.com/vv/bigpic/infinix-note-30-pro.jpg',
     localImg: '/images/phone-infinix-note-30-pro.png',
     specs: 'Helio G99, 8GB RAM, 6.67" AMOLED', price: '₱10,990 – ₱12,990', brand: 'Infinix',
     details: { display: '6.67" AMOLED, 2400×1080, 120Hz, 1000 nits', processor: 'MediaTek Helio G99 (6nm)', ram: '8GB', storage: '256GB, microSD', mainCamera: '108MP (f/1.75) + 2MP depth + 2MP macro', battery: '5000mAh, 68W wired (0-100% in ~35 min)', os: 'Android 13, XOS 13' } },
 
-  { id: 75, category: 'Smartphone', name: 'Apple iPhone 12 Pro',
+  { id: 118, category: 'Smartphone', name: 'Apple iPhone 12 Pro',
     image: 'https://fdn2.gsmarena.com/vv/bigpic/apple-iphone-12-pro.jpg',
     localImg: '/images/phone-iphone-12-pro.png',
     specs: 'A14 Bionic, 6GB RAM, Triple Camera', price: '₱19,990 – ₱24,990', brand: 'Apple',
