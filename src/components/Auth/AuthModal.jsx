@@ -4,21 +4,15 @@ import { X, Eye, EyeOff, Check, Circle } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
-const API_BASE = import.meta.env.DEV
-  ? 'http://localhost:5000'
-  : 'https://specsmart-production.up.railway.app';
-
 // ─── Validation rules ──────────────────────────────────────────────────────────
-// Name: letters only (a-z, A-Z), no numbers, no spaces, no special chars
 const NAME_REGEX = /^[a-zA-Z]+$/;
 
-// Password requirements
 const PASSWORD_RULES = [
-  { id: 'length',    label: 'At least 8 characters',          test: (p) => p.length >= 8 },
-  { id: 'uppercase', label: 'At least 1 uppercase letter (A-Z)', test: (p) => /[A-Z]/.test(p) },
-  { id: 'number',    label: 'At least 1 number (0-9)',         test: (p) => /[0-9]/.test(p) },
+  { id: 'length',    label: 'At least 8 characters',               test: (p) => p.length >= 8 },
+  { id: 'uppercase', label: 'At least 1 uppercase letter (A-Z)',    test: (p) => /[A-Z]/.test(p) },
+  { id: 'number',    label: 'At least 1 number (0-9)',              test: (p) => /[0-9]/.test(p) },
   { id: 'special',   label: 'At least 1 special character (@!#$%^&*)',
-                                                                test: (p) => /[@!#$%^&*()\-_=+\[\]{};:'",.<>?/\\|`~]/.test(p) },
+                                                                     test: (p) => /[@!#$%^&*()\-_=+\[\]{};:'",.<>?/\\|`~]/.test(p) },
 ];
 
 function isPasswordValid(password) {
@@ -36,33 +30,22 @@ function PasswordStrengthMeter({ password }) {
 
   return (
     <div style={{ marginTop: 8 }}>
-      {/* Bar */}
       <div style={{ display: 'flex', gap: 4, marginBottom: 6 }}>
         {[1, 2, 3, 4].map((i) => (
-          <div
-            key={i}
-            style={{
-              flex: 1,
-              height: 3,
-              borderRadius: 99,
-              background: i <= passed ? color : 'var(--border, #2a2a3a)',
-              transition: 'background 0.3s',
-            }}
-          />
+          <div key={i} style={{
+            flex: 1, height: 3, borderRadius: 99,
+            background: i <= passed ? color : 'var(--border, #2a2a3a)',
+            transition: 'background 0.3s',
+          }} />
         ))}
       </div>
-      {/* Label */}
       <div style={{ fontSize: 11, color, fontWeight: 600, marginBottom: 8 }}>{label}</div>
-      {/* Rules checklist */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
         {PASSWORD_RULES.map((rule) => {
           const ok = rule.test(password);
           return (
             <div key={rule.id} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11 }}>
-              {ok
-                ? <Check size={11} color="#22c55e" />
-                : <Circle size={11} color="var(--text-3, #555)" />
-              }
+              {ok ? <Check size={11} color="#22c55e" /> : <Circle size={11} color="var(--text-3, #555)" />}
               <span style={{ color: ok ? '#22c55e' : 'var(--text-3, #555)' }}>{rule.label}</span>
             </div>
           );
@@ -74,17 +57,17 @@ function PasswordStrengthMeter({ password }) {
 
 // ─── Main component ────────────────────────────────────────────────────────────
 const AuthModal = ({ isOpen, onClose, defaultMode = 'login' }) => {
-  const [mode, setMode]           = useState(defaultMode);
-  const [formData, setFormData]   = useState({ email: '', password: '', firstName: '', lastName: '', confirmPassword: '' });
+  const [mode, setMode]                 = useState(defaultMode);
+  const [formData, setFormData]         = useState({ email: '', password: '', firstName: '', lastName: '', confirmPassword: '' });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm]   = useState(false);
-  const [error, setError]         = useState('');
-  const [success, setSuccess]     = useState('');
-  const [loading, setLoading]     = useState(false);
-  const [nameErrors, setNameErrors] = useState({ firstName: '', lastName: '' });
-  const [touched, setTouched]     = useState({});
+  const [error, setError]               = useState('');
+  const [success, setSuccess]           = useState('');
+  const [loading, setLoading]           = useState(false);
+  const [nameErrors, setNameErrors]     = useState({ firstName: '', lastName: '' });
+  const [touched, setTouched]           = useState({});
 
-  const { login, register } = useAuth();
+  const { login, register, supabase } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => { setMode(defaultMode); }, [defaultMode]);
@@ -103,43 +86,28 @@ const AuthModal = ({ isOpen, onClose, defaultMode = 'login' }) => {
 
   // ── Name change handler ────────────────────────────────────────────────────
   const handleNameChange = (field) => (e) => {
-    const raw   = e.target.value;
-    // Allow typing but flag invalid chars
+    const raw = e.target.value;
     setFormData((prev) => ({ ...prev, [field]: raw }));
     setError('');
-
-    if (raw === '') {
-      setNameErrors((prev) => ({ ...prev, [field]: '' }));
-      return;
-    }
+    if (raw === '') { setNameErrors((prev) => ({ ...prev, [field]: '' })); return; }
     if (!NAME_REGEX.test(raw)) {
-      setNameErrors((prev) => ({
-        ...prev,
-        [field]: 'Only letters allowed — no numbers, spaces, or special characters',
-      }));
+      setNameErrors((prev) => ({ ...prev, [field]: 'Only letters allowed — no numbers, spaces, or special characters' }));
     } else {
       setNameErrors((prev) => ({ ...prev, [field]: '' }));
     }
   };
 
-  // Prevent invalid key presses on name fields
   const handleNameKeyDown = (e) => {
-    // Allow control keys
     if (e.key.length > 1) return;
-    if (!/[a-zA-Z]/.test(e.key)) {
-      e.preventDefault();
-    }
+    if (!/[a-zA-Z]/.test(e.key)) e.preventDefault();
   };
 
-  // ── Generic change handler ─────────────────────────────────────────────────
   const handleChange = (e) => {
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
     setError('');
   };
 
-  const handleBlur = (field) => () => {
-    setTouched((prev) => ({ ...prev, [field]: true }));
-  };
+  const handleBlur = (field) => () => setTouched((prev) => ({ ...prev, [field]: true }));
 
   // ── Submit ─────────────────────────────────────────────────────────────────
   const handleSubmit = async (e) => {
@@ -149,95 +117,64 @@ const AuthModal = ({ isOpen, onClose, defaultMode = 'login' }) => {
 
     try {
       if (mode === 'register') {
-        // ── Name validation ──────────────────────────────────────────────
         const firstName = formData.firstName.trim();
         const lastName  = formData.lastName.trim();
 
-        if (!firstName) {
-          setError('First name is required'); setLoading(false); return;
-        }
-        if (!NAME_REGEX.test(firstName)) {
-          setError('First name must contain letters only — no numbers, spaces, or special characters');
-          setLoading(false); return;
-        }
-        if (firstName.length < 2) {
-          setError('First name must be at least 2 characters'); setLoading(false); return;
-        }
-        if (firstName.length > 50) {
-          setError('First name is too long (max 50 characters)'); setLoading(false); return;
-        }
+        if (!firstName) { setError('First name is required'); setLoading(false); return; }
+        if (!NAME_REGEX.test(firstName)) { setError('First name must contain letters only — no numbers, spaces, or special characters'); setLoading(false); return; }
+        if (firstName.length < 2) { setError('First name must be at least 2 characters'); setLoading(false); return; }
+        if (firstName.length > 50) { setError('First name is too long (max 50 characters)'); setLoading(false); return; }
 
-        if (!lastName) {
-          setError('Last name is required'); setLoading(false); return;
-        }
-        if (!NAME_REGEX.test(lastName)) {
-          setError('Last name must contain letters only — no numbers, spaces, or special characters');
-          setLoading(false); return;
-        }
-        if (lastName.length < 2) {
-          setError('Last name must be at least 2 characters'); setLoading(false); return;
-        }
-        if (lastName.length > 50) {
-          setError('Last name is too long (max 50 characters)'); setLoading(false); return;
-        }
+        if (!lastName) { setError('Last name is required'); setLoading(false); return; }
+        if (!NAME_REGEX.test(lastName)) { setError('Last name must contain letters only — no numbers, spaces, or special characters'); setLoading(false); return; }
+        if (lastName.length < 2) { setError('Last name must be at least 2 characters'); setLoading(false); return; }
+        if (lastName.length > 50) { setError('Last name is too long (max 50 characters)'); setLoading(false); return; }
 
-        // ── Email validation ─────────────────────────────────────────────
         const email = formData.email.trim();
-        if (!email) {
-          setError('Email is required'); setLoading(false); return;
-        }
-        if (email.length > 254) {
-          setError('Email address is too long'); setLoading(false); return;
-        }
+        if (!email) { setError('Email is required'); setLoading(false); return; }
+        if (email.length > 254) { setError('Email address is too long'); setLoading(false); return; }
 
-        // ── Password validation ──────────────────────────────────────────
         if (!isPasswordValid(formData.password)) {
-          if (formData.password.length < 8) {
-            setError('Password must be at least 8 characters');
-          } else if (!/[A-Z]/.test(formData.password)) {
-            setError('Password must include at least one uppercase letter (A-Z)');
-          } else if (!/[0-9]/.test(formData.password)) {
-            setError('Password must include at least one number (0-9)');
-          } else {
-            setError('Password must include at least one special character (@!#$%^&* etc.)');
-          }
+          if (formData.password.length < 8) setError('Password must be at least 8 characters');
+          else if (!/[A-Z]/.test(formData.password)) setError('Password must include at least one uppercase letter (A-Z)');
+          else if (!/[0-9]/.test(formData.password)) setError('Password must include at least one number (0-9)');
+          else setError('Password must include at least one special character (@!#$%^&* etc.)');
           setLoading(false); return;
         }
 
-        if (formData.password.length > 128) {
-          setError('Password is too long (max 128 characters)'); setLoading(false); return;
-        }
-
-        // ── Confirm password ─────────────────────────────────────────────
-        if (formData.password !== formData.confirmPassword) {
-          setError('Passwords do not match'); setLoading(false); return;
-        }
-
-        // ── Any lingering name errors ────────────────────────────────────
-        if (nameErrors.firstName || nameErrors.lastName) {
-          setError('Please fix the name fields before submitting'); setLoading(false); return;
-        }
+        if (formData.password.length > 128) { setError('Password is too long (max 128 characters)'); setLoading(false); return; }
+        if (formData.password !== formData.confirmPassword) { setError('Passwords do not match'); setLoading(false); return; }
+        if (nameErrors.firstName || nameErrors.lastName) { setError('Please fix the name fields before submitting'); setLoading(false); return; }
 
         const result = await register({
           email,
           password: formData.password,
           name: `${firstName} ${lastName}`,
         });
-        if (result.success) { onClose(); navigate('/dashboard'); }
-        else setError(result.error || 'Registration failed');
+
+        if (result.success) {
+          if (result.message) {
+            // Email confirmation required
+            setSuccess(result.message);
+          } else {
+            onClose();
+            navigate('/dashboard');
+          }
+        } else {
+          setError(result.error || 'Registration failed');
+        }
 
       } else if (mode === 'forgot') {
-        const res  = await fetch(`${API_BASE}/api/auth/forgot-password`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: formData.email }),
-        });
-        const data = await res.json();
-        if (!res.ok) setError(data.error || 'Failed to send reset email');
-        else setSuccess(data.message || 'Check your email for a password reset link!');
+        // ── Use Supabase directly for password reset ──
+        const { error: resetError } = await supabase.auth.resetPasswordForEmail(
+          formData.email.trim(),
+          { redirectTo: `${window.location.origin}/reset-password` }
+        );
+
+        if (resetError) setError(resetError.message || 'Failed to send reset email');
+        else setSuccess('Check your email for a password reset link!');
 
       } else {
-        // ── Login: basic presence check only ────────────────────────────
         if (!formData.email.trim() || !formData.password) {
           setError('Email and password are required'); setLoading(false); return;
         }
@@ -267,7 +204,6 @@ const AuthModal = ({ isOpen, onClose, defaultMode = 'login' }) => {
     forgot:   "Enter your email and we'll send you a reset link",
   };
 
-  // Show password strength meter only on register mode while typing
   const showStrength = mode === 'register' && formData.password.length > 0;
 
   return (
@@ -307,57 +243,30 @@ const AuthModal = ({ isOpen, onClose, defaultMode = 'login' }) => {
             {/* ── Register: first + last name ── */}
             {mode === 'register' && (
               <div style={{ display: 'flex', gap: 12 }}>
-                {/* First Name */}
                 <div className="form-group" style={{ flex: 1 }}>
                   <label className="form-label">First Name</label>
                   <input
-                    type="text"
-                    name="firstName"
-                    value={formData.firstName}
-                    onChange={handleNameChange('firstName')}
-                    onKeyDown={handleNameKeyDown}
-                    onBlur={handleBlur('firstName')}
-                    className="form-input"
-                    placeholder="John"
-                    required
-                    maxLength={50}
-                    style={{
-                      borderColor: nameErrors.firstName && touched.firstName
-                        ? 'rgba(248,113,113,0.6)'
-                        : undefined,
-                    }}
+                    type="text" name="firstName" value={formData.firstName}
+                    onChange={handleNameChange('firstName')} onKeyDown={handleNameKeyDown}
+                    onBlur={handleBlur('firstName')} className="form-input" placeholder="John"
+                    required maxLength={50}
+                    style={{ borderColor: nameErrors.firstName && touched.firstName ? 'rgba(248,113,113,0.6)' : undefined }}
                   />
                   {nameErrors.firstName && touched.firstName && (
-                    <p style={{ fontSize: 11, color: '#f87171', marginTop: 4, lineHeight: 1.4 }}>
-                      {nameErrors.firstName}
-                    </p>
+                    <p style={{ fontSize: 11, color: '#f87171', marginTop: 4, lineHeight: 1.4 }}>{nameErrors.firstName}</p>
                   )}
                 </div>
-
-                {/* Last Name */}
                 <div className="form-group" style={{ flex: 1 }}>
                   <label className="form-label">Last Name</label>
                   <input
-                    type="text"
-                    name="lastName"
-                    value={formData.lastName}
-                    onChange={handleNameChange('lastName')}
-                    onKeyDown={handleNameKeyDown}
-                    onBlur={handleBlur('lastName')}
-                    className="form-input"
-                    placeholder="Doe"
-                    required
-                    maxLength={50}
-                    style={{
-                      borderColor: nameErrors.lastName && touched.lastName
-                        ? 'rgba(248,113,113,0.6)'
-                        : undefined,
-                    }}
+                    type="text" name="lastName" value={formData.lastName}
+                    onChange={handleNameChange('lastName')} onKeyDown={handleNameKeyDown}
+                    onBlur={handleBlur('lastName')} className="form-input" placeholder="Doe"
+                    required maxLength={50}
+                    style={{ borderColor: nameErrors.lastName && touched.lastName ? 'rgba(248,113,113,0.6)' : undefined }}
                   />
                   {nameErrors.lastName && touched.lastName && (
-                    <p style={{ fontSize: 11, color: '#f87171', marginTop: 4, lineHeight: 1.4 }}>
-                      {nameErrors.lastName}
-                    </p>
+                    <p style={{ fontSize: 11, color: '#f87171', marginTop: 4, lineHeight: 1.4 }}>{nameErrors.lastName}</p>
                   )}
                 </div>
               </div>
@@ -367,14 +276,9 @@ const AuthModal = ({ isOpen, onClose, defaultMode = 'login' }) => {
             <div className="form-group">
               <label className="form-label">Email Address</label>
               <input
-                type="email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                className="form-input"
-                placeholder="you@example.com"
-                required
-                maxLength={254}
+                type="email" name="email" value={formData.email}
+                onChange={handleChange} className="form-input"
+                placeholder="you@example.com" required maxLength={254}
               />
             </div>
 
@@ -384,8 +288,7 @@ const AuthModal = ({ isOpen, onClose, defaultMode = 'login' }) => {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
                   <label className="form-label" style={{ margin: 0 }}>Password</label>
                   {mode === 'login' && (
-                    <button
-                      type="button"
+                    <button type="button"
                       onClick={() => { setMode('forgot'); setError(''); setSuccess(''); }}
                       style={{ background: 'none', border: 'none', color: 'var(--accent)', fontSize: 12, cursor: 'pointer', padding: 0 }}
                     >
@@ -395,34 +298,20 @@ const AuthModal = ({ isOpen, onClose, defaultMode = 'login' }) => {
                 </div>
                 <div style={{ position: 'relative' }}>
                   <input
-                    type={showPassword ? 'text' : 'password'}
-                    name="password"
-                    value={formData.password}
-                    onChange={handleChange}
-                    onBlur={handleBlur('password')}
-                    className="form-input"
-                    placeholder="••••••••"
-                    style={{ paddingRight: 44 }}
-                    required
-                    maxLength={128}
+                    type={showPassword ? 'text' : 'password'} name="password"
+                    value={formData.password} onChange={handleChange}
+                    onBlur={handleBlur('password')} className="form-input"
+                    placeholder="••••••••" style={{ paddingRight: 44 }} required maxLength={128}
                   />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
+                  <button type="button" onClick={() => setShowPassword(!showPassword)}
                     style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer' }}
                   >
                     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
                 </div>
-
-                {/* Password strength — register only */}
                 {showStrength && <PasswordStrengthMeter password={formData.password} />}
-
-                {/* Hint for login */}
                 {mode === 'login' && (
-                  <p style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 4 }}>
-                    Password is case-sensitive
-                  </p>
+                  <p style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 4 }}>Password is case-sensitive</p>
                 )}
               </div>
             )}
@@ -433,12 +322,9 @@ const AuthModal = ({ isOpen, onClose, defaultMode = 'login' }) => {
                 <label className="form-label">Confirm Password</label>
                 <div style={{ position: 'relative' }}>
                   <input
-                    type={showConfirm ? 'text' : 'password'}
-                    name="confirmPassword"
-                    value={formData.confirmPassword}
-                    onChange={handleChange}
-                    onBlur={handleBlur('confirmPassword')}
-                    className="form-input"
+                    type={showConfirm ? 'text' : 'password'} name="confirmPassword"
+                    value={formData.confirmPassword} onChange={handleChange}
+                    onBlur={handleBlur('confirmPassword')} className="form-input"
                     placeholder="••••••••"
                     style={{
                       paddingRight: 44,
@@ -449,18 +335,14 @@ const AuthModal = ({ isOpen, onClose, defaultMode = 'login' }) => {
                           ? 'rgba(74,222,128,0.5)'
                           : undefined,
                     }}
-                    required
-                    maxLength={128}
+                    required maxLength={128}
                   />
-                  <button
-                    type="button"
-                    onClick={() => setShowConfirm(!showConfirm)}
+                  <button type="button" onClick={() => setShowConfirm(!showConfirm)}
                     style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer' }}
                   >
                     {showConfirm ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
                 </div>
-                {/* Match feedback */}
                 {touched.confirmPassword && formData.confirmPassword && (
                   <p style={{ fontSize: 11, marginTop: 4, color: formData.password === formData.confirmPassword ? '#22c55e' : '#f87171' }}>
                     {formData.password === formData.confirmPassword ? '✓ Passwords match' : '✗ Passwords do not match'}
@@ -470,16 +352,12 @@ const AuthModal = ({ isOpen, onClose, defaultMode = 'login' }) => {
             )}
 
             {/* ── Submit ── */}
-            <button
-              type="submit"
-              disabled={loading}
-              className="btn btn-primary"
+            <button type="submit" disabled={loading} className="btn btn-primary"
               style={{ width: '100%', justifyContent: 'center', marginTop: 8, padding: 12, opacity: loading ? 0.6 : 1 }}
             >
-              {loading
-                ? 'Please wait...'
-                : mode === 'login'   ? 'Sign In'
-                : mode === 'forgot'  ? 'Send Reset Link'
+              {loading ? 'Please wait...'
+                : mode === 'login'  ? 'Sign In'
+                : mode === 'forgot' ? 'Send Reset Link'
                 : 'Create Account'}
             </button>
           </form>

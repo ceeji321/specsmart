@@ -202,18 +202,14 @@ function DeviceImage({ device, category }) {
 
   const localSrc = device.localImg || null;
   const remoteSrc = device.img || device.image || null;
-  // Use wsrv.nl as a free image proxy to bypass hotlink blocking on GSMArena
   const proxiedSrc = remoteSrc
     ? `https://wsrv.nl/?url=${encodeURIComponent(remoteSrc)}&w=300&output=webp`
     : null;
 
-  // Try local first (fastest, always works if file exists)
   if (localSrc && !localFailed)
     return <img src={localSrc} alt={device.name} onError={() => setLocalFailed(true)} style={imgStyle} />;
-  // Try proxied remote (bypasses hotlink protection)
   if (proxiedSrc && !remoteFailed)
     return <img src={proxiedSrc} alt={device.name} referrerPolicy="no-referrer" onError={() => setRemoteFailed(true)} style={imgStyle} />;
-  // Final fallback: SVG thumbnail
   return <CategoryThumbnail category={category} brand={device.brand} name={device.name} />;
 }
 
@@ -265,7 +261,6 @@ const DEVICE_CATALOG = {
     { name: 'Motorola Edge 50 Ultra', brand: 'Motorola', img: 'https://fdn2.gsmarena.com/vv/bigpic/motorola-edge-50-ultra.jpg', localImg: '/images/phone-motorola-edge-50-ultra.png' },
     { name: 'Infinix Hot 30', brand: 'Infinix', img: 'https://fdn2.gsmarena.com/vv/bigpic/infinix-hot-30.jpg', localImg: '/images/phone-infinix-hot-30.png' },
     { name: 'Infinix Note 30 Pro', brand: 'Infinix', img: 'https://fdn2.gsmarena.com/vv/bigpic/infinix-note-30-pro.jpg', localImg: '/images/phone-infinix-note-30-pro.png' },
-    { name: 'Apple iPhone 12 Pro', brand: 'Apple', img: 'https://fdn2.gsmarena.com/vv/bigpic/apple-iphone-12-pro.jpg', localImg: '/images/phone-iphone-12-pro.png' },
   ],
   GPU: [
     { name: 'NVIDIA GeForce RTX 4090', brand: 'NVIDIA', localImg: '/images/gpu-nvidia-rtx-4090.png' },
@@ -313,11 +308,67 @@ const DEVICE_CATALOG = {
     { name: 'Seagate FireCuda 530 2TB NVMe', brand: 'Seagate', localImg: '/images/ssd-seagate-firecuda530-2tb.png' },
   ],
   MOTHERBOARD: [
+    // ── ASUS / Gigabyte / MSI ──
     { name: 'ASUS ROG Strix Z790-E Gaming', brand: 'ASUS', localImg: '/images/mb-asus-rog-strix-z790e.png' },
     { name: 'ASUS TUF Gaming Z790-Plus', brand: 'ASUS', localImg: '/images/mb-asus-rog-strix-z790e.png' },
     { name: 'MSI MAG Z790 Tomahawk', brand: 'MSI', localImg: '/images/mb-msi-mag-z790-tomahawk.png' },
     { name: 'Gigabyte B650 Aorus Elite AX', brand: 'Gigabyte', localImg: '/images/mb-gigabyte-b650-aorus-elite.png' },
     { name: 'Gigabyte Z790 Aorus Elite AX', brand: 'Gigabyte', localImg: '/images/mb-gigabyte-z790-aorus-elite.png' },
+
+    // ── ASRock A320M ──
+    { name: 'ASRock A320M Pro4', brand: 'ASRock', localImg: '/images/A320M_Pro4_R2.0-1-thumbnail-300x300.png' },
+    { name: 'ASRock A320M-F', brand: 'ASRock', localImg: '/images/A320M_Pro4-F-6-thumbnail-300x300.png' },
+    { name: 'ASRock A320M-DGS', brand: 'ASRock', localImg: '/images/A320M-DGS-6-thumbnail-300x300.png' },
+    { name: 'ASRock A320M-DVS R3.0', brand: 'ASRock', localImg: '/images/A320M-DVS_R3.0-1-thumbnail-300x300.png' },
+    { name: 'ASRock A320M-DVS R4.0', brand: 'ASRock', localImg: '/images/A320M-DVS_R4.0-1-thumbnail-300x300.png' },
+    { name: 'ASRock A320M-HDV R3.0', brand: 'ASRock', localImg: '/images/A320M-HDV_R3.0-1-thumbnail-300x300.png' },
+    { name: 'ASRock A320M-HDV R4.0', brand: 'ASRock', localImg: '/images/A320M-HDV_R4.0-1-thumbnail-300x300.png' },
+    { name: 'ASRock A320M-HDV', brand: 'ASRock', localImg: '/images/A320M-HDV-6-thumbnail-300x300.png' },
+    { name: 'ASRock A320M-ITX', brand: 'ASRock', localImg: '/images/A320M-ITX-1-thumbnail-300x300.png' },
+
+    // ── ASRock AB350M ──
+    { name: 'ASRock AB350M Pro4', brand: 'ASRock', localImg: '/images/AB350M_Pro4-6-thumbnail-300x300.png' },
+    { name: 'ASRock AB350M Pro4-12', brand: 'ASRock', localImg: '/images/AB350M_Pro4-12-thumbnail-300x300.png' },
+    { name: 'ASRock AB350M Pro4-Dash', brand: 'ASRock', localImg: '/images/AB350M_Pro4-Dash-1-thumbnail-300x300.png' },
+    { name: 'ASRock AB350M-HDV', brand: 'ASRock', localImg: '/images/AB350M-HDV-11-thumbnail-300x300.png' },
+
+    // ── ASRock B150 ──
+    { name: 'ASRock B150M Pro4-D3', brand: 'ASRock', localImg: '/images/B150_Pro4-D3-1-thumbnail-300x300-70.jpg' },
+    { name: 'ASRock B150A-X1', brand: 'ASRock', localImg: '/images/B150A-X1-1-thumbnail-300x300.png' },
+    { name: 'ASRock B150A-X1 Hyper', brand: 'ASRock', localImg: '/images/B150A-X1-Hyper-1-thumbnail-300x300-7.jpg' },
+    { name: 'ASRock B150M Combo-G', brand: 'ASRock', localImg: '/images/B150_Combo-1-thumbnail-300x300-70.jpg' },
+    { name: 'ASRock B150M Pro4', brand: 'ASRock', localImg: '/images/B150M_Pro4-1-thumbnail-300x300-70.jpg' },
+    { name: 'ASRock B150M Pro4-Hyper', brand: 'ASRock', localImg: '/images/B150M_Pro4-Hyper-1-thumbnail-300x300.jpg' },
+
+    // ── ASRock B450 ──
+    { name: 'ASRock B450 Pro4', brand: 'ASRock', localImg: '/images/B450_Pro4-1-thumbnail-300x300.png' },
+    { name: 'ASRock B450 Steel Legend', brand: 'ASRock', localImg: '/images/B450_Steel_Legend-1-thumbnail-300x300.png' },
+    { name: 'ASRock B450M Pro4-F', brand: 'ASRock', localImg: '/images/B450M_Pro4-F-1-thumbnail-300x300.png' },
+    { name: 'ASRock B450M Steel Legend', brand: 'ASRock', localImg: '/images/B450M_Steel_Legend-1-thumbnail-300x300.png' },
+    { name: 'ASRock B450M-HDV R4.0', brand: 'ASRock', localImg: '/images/B450M-HDV_R4.0-1-thumbnail-300x300.png' },
+    { name: 'ASRock B450M-HDV', brand: 'ASRock', localImg: '/images/B450M-HDV-1-thumbnail-300x300.png' },
+
+    // ── ASRock B460 ──
+    { name: 'ASRock B460 Phantom Gaming 4', brand: 'ASRock', localImg: '/images/B460_Phantom_Gaming_4-1-thumbnail-300x300.png' },
+    { name: 'ASRock B460 Pro4', brand: 'ASRock', localImg: '/images/B460_Pro4-1-thumbnail-300x300.png' },
+    { name: 'ASRock B460 Steel Legend', brand: 'ASRock', localImg: '/images/B460_Steel_Legend-1-thumbnail-300x300.png' },
+    { name: 'ASRock B460M Pro4', brand: 'ASRock', localImg: '/images/B460M_Pro4-1-thumbnail-300x300.png' },
+    { name: 'ASRock B460M Steel Legend', brand: 'ASRock', localImg: '/images/B460M_Steel_Legend-1-thumbnail-300x300.png' },
+    { name: 'ASRock B460M-HDV', brand: 'ASRock', localImg: '/images/B460M-HDV-1-thumbnail-300x300.png' },
+    { name: 'ASRock B460M-ITX/ac', brand: 'ASRock', localImg: '/images/B460M-ITX-ac-1-thumbnail-300x300.png' },
+
+    // ── ASRock B550 ──
+    { name: 'ASRock B550 Extreme4', brand: 'ASRock', localImg: '/images/B550_Extreme4-1-thumbnail-300x300.png' },
+    { name: 'ASRock B550 PG Velocita', brand: 'ASRock', localImg: '/images/B550_PG_Velocita-1-thumbnail-300x300.png' },
+    { name: 'ASRock B550 Phantom Gaming 4', brand: 'ASRock', localImg: '/images/B550_Phantom_Gaming_4-1-thumbnail-300x300.png' },
+    { name: 'ASRock B550 Phantom Gaming 4/ac', brand: 'ASRock', localImg: '/images/B550_Phantom_Gaming_4-ac-1-thumbnail-300x300.png' },
+    { name: 'ASRock B550 Phantom Gaming ITX/ax', brand: 'ASRock', localImg: '/images/B550_Phantom_Gaming_ITX-ax-1-thumbnail-300x300.png' },
+    { name: 'ASRock B550 Pro4', brand: 'ASRock', localImg: '/images/B550_Pro4-1-thumbnail-300x300.png' },
+    { name: 'ASRock B550 Steel Legend', brand: 'ASRock', localImg: '/images/B550_Steel_Legend-1-thumbnail-300x300.png' },
+    { name: 'ASRock B550 Taichi', brand: 'ASRock', localImg: '/images/B550_Taichi-1-thumbnail-300x300.png' },
+    { name: 'ASRock B550M Pro4', brand: 'ASRock', localImg: '/images/B550M_Pro4-1-thumbnail-300x300.png' },
+    { name: 'ASRock B550M Steel Legend', brand: 'ASRock', localImg: '/images/B550M_Steel_Legend-1-thumbnail-300x300.png' },
+    { name: 'ASRock B550M-HDV', brand: 'ASRock', localImg: '/images/B550M-HDV-1-thumbnail-300x300.png' },
   ],
   PSU: [
     { name: 'Corsair RM1000x 1000W Gold', brand: 'Corsair', localImg: '/images/psu-corsair-rm1000x.png' },
@@ -555,7 +606,6 @@ function CatalogModal({ initialCategory, onSelect, onClose }) {
   );
 }
 
-// ─── UI cards ─────────────────────────────────────────────────────────────────
 // ─── Helper: find a device entry from catalog by name ─────────────────────────
 function findCatalogDevice(name) {
   if (!name) return null;
@@ -587,35 +637,21 @@ function DeviceOptionButton({ name, isPrimary, category, onClick }) {
       style={{
         background: isPrimary ? 'var(--accent)' : 'var(--bg-3)',
         border: isPrimary ? '2px solid var(--accent)' : '1px solid var(--border)',
-        borderRadius: '12px',
-        padding: '0',
-        cursor: 'pointer',
-        textAlign: 'left',
-        transition: 'all 0.15s',
-        overflow: 'hidden',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '0',
-        width: '100%',
+        borderRadius: '12px', padding: '0', cursor: 'pointer', textAlign: 'left',
+        transition: 'all 0.15s', overflow: 'hidden', display: 'flex',
+        alignItems: 'center', gap: '0', width: '100%',
       }}
       onMouseEnter={e => {
-        if (!isPrimary) {
-          e.currentTarget.style.borderColor = 'var(--accent)';
-          e.currentTarget.style.background = 'var(--bg-2)';
-        }
+        if (!isPrimary) { e.currentTarget.style.borderColor = 'var(--accent)'; e.currentTarget.style.background = 'var(--bg-2)'; }
         e.currentTarget.style.transform = 'translateY(-1px)';
         e.currentTarget.style.boxShadow = '0 4px 16px rgba(99,102,241,0.2)';
       }}
       onMouseLeave={e => {
-        if (!isPrimary) {
-          e.currentTarget.style.borderColor = 'var(--border)';
-          e.currentTarget.style.background = 'var(--bg-3)';
-        }
+        if (!isPrimary) { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.background = 'var(--bg-3)'; }
         e.currentTarget.style.transform = 'none';
         e.currentTarget.style.boxShadow = 'none';
       }}
     >
-      {/* Device image thumbnail */}
       <div style={{
         width: '72px', height: '72px', flexShrink: 0,
         background: isPrimary ? 'rgba(255,255,255,0.15)' : 'var(--bg-2)',
@@ -632,7 +668,6 @@ function DeviceOptionButton({ name, isPrimary, category, onClick }) {
           <CategoryThumbnail category={category || 'SMARTPHONE'} brand={brand} />
         )}
       </div>
-      {/* Device name */}
       <div style={{ padding: '10px 14px', flex: 1 }}>
         {isPrimary && (
           <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.7)', fontWeight: 600, marginBottom: '3px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
@@ -649,7 +684,6 @@ function DeviceOptionButton({ name, isPrimary, category, onClick }) {
           {name}
         </div>
       </div>
-      {/* Arrow */}
       <div style={{ paddingRight: '14px', color: isPrimary ? 'rgba(255,255,255,0.7)' : 'var(--text-3)' }}>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="m9 18 6-6-6-6"/></svg>
       </div>
@@ -767,7 +801,7 @@ export default function ChatPage({ onLogout }) {
   const { id } = useParams();
   const navigate = useNavigate();
   const [messages, setMessages] = useState([]);
-  const messagesRef = useRef([]); // always up-to-date messages for sendMessage callback
+  const messagesRef = useRef([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isStreaming, setIsStreaming] = useState(false);
@@ -786,7 +820,6 @@ export default function ChatPage({ onLogout }) {
   const streamingMsgIdRef = useRef(null);
   const savedChatIdRef = useRef(null);
 
-  // ── Load chat history or pending message ──────────────────────────────────
   const WELCOME_MESSAGE = "👋 Hi! I'm SpecSmart AI, your specialized tech advisor for the Philippine market.\n\nI can help with:\n• PC Components (CPU, GPU, RAM, Storage, Motherboards, PSU)\n• Smartphones\n• Laptops\n\nAsk me anything, or upload a hardware image for AI identification! Prices are in Philippine Peso (₱).";
 
   useEffect(() => {
@@ -831,7 +864,6 @@ export default function ChatPage({ onLogout }) {
   }, [messages, wizardState]);
   useEffect(() => { return () => { if (cancelStreamRef.current) cancelStreamRef.current(); }; }, []);
 
-  // ── Confirm device and fetch specs ────────────────────────────────────────
   const confirmDevice = useCallback(async (deviceName, category) => {
     setWizardState(null);
     setCatalogOpen(false);
@@ -862,7 +894,6 @@ export default function ChatPage({ onLogout }) {
     }
   }, []);
 
-  // ── Wizard ────────────────────────────────────────────────────────────────
   const startWizard = useCallback((scanResult, category) => {
     const steps = category === 'SMARTPHONE' ? SMARTPHONE_STEPS : PC_STEPS;
     setWizardState({ phase: 'steps', scanResult, category, steps, stepIndex: 0, answers: {} });
@@ -922,7 +953,6 @@ export default function ChatPage({ onLogout }) {
     setCatalogOpen(true);
   }, []);
 
-  // ── Send message ──────────────────────────────────────────────────────────
   const sendMessage = useCallback(async (messageContent, imageData, imageMime) => {
     const textContent = messageContent || input;
     if (!textContent && !imageData) return;
@@ -930,11 +960,8 @@ export default function ChatPage({ onLogout }) {
     setCatalogOpen(false);
 
     const userMessage = {
-      id: Date.now(),
-      role: 'user',
-      content: textContent,
-      image: imageData,
-      imageMime: imageMime || 'image/jpeg',
+      id: Date.now(), role: 'user', content: textContent,
+      image: imageData, imageMime: imageMime || 'image/jpeg',
     };
 
     setMessages(prev => [...prev, userMessage]);
@@ -945,7 +972,6 @@ export default function ChatPage({ onLogout }) {
     setIsLoading(true);
 
     try {
-      // ── Image analysis path ─────────────────────────────────────────────
       if (imageData) {
         setModelStatus('🔍 Analyzing with Groq Vision AI...');
         let scanResult;
@@ -962,28 +988,22 @@ export default function ChatPage({ onLogout }) {
           return;
         }
 
-        // Sanitize ALL model names — strip any "X or Y" combined answers the AI might return
         const sanitizeName = (name) => {
           if (!name || name === 'null') return '';
           return name.includes(' or ') ? name.split(' or ')[0].trim() : name;
         };
 
         const rawDisplayName = scanResult.displayName || 'Unknown Device';
-        // Fix duplicate brand prefix e.g. "Infinix Infinix Note 30 Pro" → "Infinix Note 30 Pro"
         const dedupedName = (() => {
           const words = rawDisplayName.split(' ');
-          if (words.length >= 2 && words[0] === words[1]) {
-            return words.slice(1).join(' ');
-          }
+          if (words.length >= 2 && words[0] === words[1]) return words.slice(1).join(' ');
           return rawDisplayName;
         })();
         const displayName = sanitizeName(dedupedName) || dedupedName;
         const { category, confidence } = scanResult;
 
-        // Sanitize alternatives — also hide them if confidence is HIGH (no need to show alternatives)
         const rawAlt1 = sanitizeName(scanResult.alternative1 || '');
         const rawAlt2 = sanitizeName(scanResult.alternative2 || '');
-        // Don't show alts that are the same as displayName, or if HIGH confidence auto-confirmed
         const alt1 = (rawAlt1 && rawAlt1 !== displayName) ? rawAlt1 : '';
         const alt2 = (rawAlt2 && rawAlt2 !== displayName && rawAlt2 !== rawAlt1) ? rawAlt2 : '';
         const confEmoji = confidence === 'HIGH' ? '🟢' : confidence === 'MEDIUM' ? '🟡' : '🔴';
@@ -996,18 +1016,13 @@ export default function ChatPage({ onLogout }) {
         const isSpecDB = scanResult.notes?.includes('Spec DB');
 
         setMessages(prev => [...prev, {
-          id: Date.now() + 1,
-          role: 'assistant',
+          id: Date.now() + 1, role: 'assistant',
           content: `📷 Identified: **${displayName}** (${category}) ${confEmoji} ${confidence || ''} confidence${confNote}${isSpecDB ? '\n✅ Specs verified from database' : ''}`,
         }]);
 
         const cat = category?.toUpperCase();
-
-        // Always show confirm card — user must click to confirm
-        // Hide alternatives when confidence is HIGH — only show the best match
         const sanitizedScanResult = {
-          ...scanResult,
-          displayName,
+          ...scanResult, displayName,
           alternative1: confidence === 'HIGH' ? '' : alt1,
           alternative2: confidence === 'HIGH' ? '' : alt2,
         };
@@ -1024,7 +1039,6 @@ export default function ChatPage({ onLogout }) {
         return;
       }
 
-      // ── Text chat path ──────────────────────────────────────────────────
       const apiMessages = [
         ...messagesRef.current.filter(m => !(m.role === 'assistant' && m.id === 0)),
         userMessage,
@@ -1085,13 +1099,12 @@ export default function ChatPage({ onLogout }) {
   useEffect(() => {
     if (pendingAutoSend && messages.length > 0) {
       const msg = pendingAutoSend;
-      setPendingAutoSend(null); // clear immediately to prevent re-firing
+      setPendingAutoSend(null);
       const timer = setTimeout(() => { sendMessage(msg); }, 300);
       return () => clearTimeout(timer);
     }
   }, [pendingAutoSend]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Form submit ───────────────────────────────────────────────────────────
   const handleSubmit = async e => {
     e.preventDefault();
     if (!input.trim() && !uploadedFile) return;
@@ -1122,7 +1135,6 @@ export default function ChatPage({ onLogout }) {
     setIsStreaming(false);
   };
 
-  // ── Wizard renderer ───────────────────────────────────────────────────────
   const renderWizard = () => {
     if (!wizardState) return null;
     if (wizardState.phase === 'confirm') return (
@@ -1164,7 +1176,6 @@ export default function ChatPage({ onLogout }) {
     return null;
   };
 
-  // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div className="page" style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
       <style>{`
@@ -1174,7 +1185,6 @@ export default function ChatPage({ onLogout }) {
 
       <Navbar onLogout={onLogout} />
 
-      {/* Top bar */}
       <div style={{ padding: '12px 24px 0', maxWidth: '800px', margin: '0 auto', width: '100%', display: 'flex', alignItems: 'center', gap: '12px' }}>
         <button onClick={() => navigate(-1)} className="btn btn-ghost" style={{ padding: '6px 14px', fontSize: '13px' }}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m15 18-6-6 6-6" /></svg>
@@ -1189,7 +1199,6 @@ export default function ChatPage({ onLogout }) {
         )}
       </div>
 
-      {/* Messages */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px 160px' }}>
         <div className="chat-messages">
           {messages.map(msg => (
@@ -1218,7 +1227,6 @@ export default function ChatPage({ onLogout }) {
             </div>
           ))}
 
-          {/* Wizard cards */}
           {wizardState && !isLoading && !isStreaming && (
             <div className="message ai" style={{ alignItems: 'flex-start' }}>
               <div className="message-avatar ai">SS</div>
@@ -1226,7 +1234,6 @@ export default function ChatPage({ onLogout }) {
             </div>
           )}
 
-          {/* Loading dots */}
           {isLoading && (
             <div className="message ai">
               <div className="message-avatar ai">SS</div>
@@ -1243,10 +1250,8 @@ export default function ChatPage({ onLogout }) {
         </div>
       </div>
 
-      {/* Input bar */}
       <div className="chat-wrapper">
         <div style={{ width: '100%', maxWidth: '760px' }}>
-          {/* Image preview */}
           {uploadedPreview && (
             <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '10px 14px', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '12px' }} onClick={e => e.stopPropagation()}>
               <img src={uploadedPreview} alt="preview" style={{ width: '40px', height: '40px', objectFit: 'cover', borderRadius: '6px' }} />
@@ -1305,7 +1310,6 @@ export default function ChatPage({ onLogout }) {
         </div>
       </div>
 
-      {/* Catalog modal */}
       {catalogOpen && (
         <CatalogModal
           initialCategory={catalogCategory}
