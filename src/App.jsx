@@ -1,4 +1,3 @@
-// src/App.jsx
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './contexts/AuthContext';
 import LandingPage from './pages/LandingPage';
@@ -11,27 +10,34 @@ import ArchiveHistory from './pages/ArchiveHistory';
 import DeletedHistory from './pages/DeletedHistory';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 
+const LoadingScreen = () => (
+  <div style={{ background: '#0a0a0f', height: '100vh' }} />
+);
+
+// Regular users only — admins get redirected to /admin
 function PrivateRoute({ children }) {
-  const { isAuthenticated, isAdmin, loading } = useAuth();
-  if (loading) return <div style={{ background: '#0a0a0f', height: '100vh' }} />;
-  if (!isAuthenticated) return <Navigate to="/" />;
-  if (isAdmin) return <Navigate to="/admin" />;
+  const { isAuthenticated, isManager, loading } = useAuth();
+  if (loading) return <LoadingScreen />;
+  if (!isAuthenticated) return <Navigate to="/" replace />;
+  if (isManager) return <Navigate to="/admin" replace />;
   return children;
 }
 
+// Admin/manager only — regular users get redirected to /dashboard
 function AdminRoute({ children }) {
   const { isAuthenticated, isManager, loading } = useAuth();
-  if (loading) return <div style={{ background: '#0a0a0f', height: '100vh' }} />;
-  if (!isAuthenticated) return <Navigate to="/" />;
-  if (!isManager) return <Navigate to="/dashboard" />;
+  if (loading) return <LoadingScreen />;
+  if (!isAuthenticated) return <Navigate to="/" replace />;
+  if (!isManager) return <Navigate to="/dashboard" replace />;
   return children;
 }
 
+// Public pages — logged-in users get redirected based on role
 function PublicRoute({ children }) {
-  const { isAuthenticated, isAdmin, loading } = useAuth();
-  if (loading) return <div style={{ background: '#0a0a0f', height: '100vh' }} />;
+  const { isAuthenticated, isManager, loading } = useAuth();
+  if (loading) return <LoadingScreen />;
   if (!isAuthenticated) return children;
-  return isAdmin ? <Navigate to="/admin" /> : <Navigate to="/dashboard" />;
+  return isManager ? <Navigate to="/admin" replace /> : <Navigate to="/dashboard" replace />;
 }
 
 function App() {
@@ -41,9 +47,11 @@ function App() {
         <Route path="/" element={
           <PublicRoute><LandingPage /></PublicRoute>
         } />
-        {/* ── Public reset password route (no auth required) ── */}
+
+        {/* Public — no auth required */}
         <Route path="/reset-password" element={<ResetPasswordPage />} />
 
+        {/* Regular user routes */}
         <Route path="/dashboard" element={
           <PrivateRoute><Dashboard /></PrivateRoute>
         } />
@@ -56,6 +64,8 @@ function App() {
         <Route path="/chat/:id?" element={
           <PrivateRoute><ChatPage /></PrivateRoute>
         } />
+
+        {/* Admin/manager routes */}
         <Route path="/admin" element={
           <AdminRoute><AdminPanel /></AdminRoute>
         } />
@@ -65,7 +75,8 @@ function App() {
         <Route path="/admin/deleted" element={
           <AdminRoute><DeletedHistory /></AdminRoute>
         } />
-        <Route path="*" element={<Navigate to="/" />} />
+
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Router>
   );

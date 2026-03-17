@@ -5,6 +5,22 @@ import pool from '../config/database.js';
 
 const router = express.Router();
 
+// ── Ensure comparisons table supports UUID user_id ────────────────────────────
+async function ensureComparisonsTable() {
+  const client = await pool.connect();
+  try {
+    await client.query(`
+      ALTER TABLE comparisons 
+      ALTER COLUMN user_id TYPE TEXT USING user_id::TEXT
+    `);
+  } catch (e) {
+    // Already TEXT — ignore
+  } finally {
+    client.release();
+  }
+}
+ensureComparisonsTable().catch(console.error);
+
 // GET /api/comparisons — get user's comparison history
 router.get('/', authenticateToken, async (req, res) => {
   try {
@@ -14,7 +30,7 @@ router.get('/', authenticateToken, async (req, res) => {
        WHERE user_id = $1
        ORDER BY created_at DESC
        LIMIT 50`,
-      [req.user.userId]
+      [String(req.user.userId)]
     );
 
     const now = new Date();
@@ -60,7 +76,7 @@ router.post('/', authenticateToken, async (req, res) => {
       `SELECT id FROM comparisons 
        WHERE user_id = $1 AND device1_name = $2 AND device2_name = $3
        AND created_at > NOW() - INTERVAL '1 hour'`,
-      [req.user.userId, device1_name, device2_name]
+      [String(req.user.userId), device1_name, device2_name]
     );
 
     if (existing.rows.length > 0) {
@@ -71,7 +87,7 @@ router.post('/', authenticateToken, async (req, res) => {
       `INSERT INTO comparisons (user_id, device1_name, device2_name, device1_id, device2_id, created_at)
        VALUES ($1, $2, $3, $4, $5, NOW())
        RETURNING id, device1_name, device2_name, created_at`,
-      [req.user.userId, device1_name, device2_name, device1_id || null, device2_id || null]
+      [String(req.user.userId), device1_name, device2_name, device1_id || null, device2_id || null]
     );
 
     res.status(201).json({ comparison: result.rows[0] });

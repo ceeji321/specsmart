@@ -1,4 +1,17 @@
-import jwt from 'jsonwebtoken';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import dotenv from 'dotenv';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+dotenv.config({ path: path.join(__dirname, '../.env') });
+
+import { createClient } from '@supabase/supabase-js';
+
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_KEY
+);
 
 export function authenticateToken(req, res, next) {
   const authHeader = req.headers['authorization'];
@@ -8,13 +21,20 @@ export function authenticateToken(req, res, next) {
     return res.status(401).json({ error: 'Access token required' });
   }
 
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded;
+  supabase.auth.getUser(token).then(({ data: { user }, error }) => {
+    if (error || !user) {
+      return res.status(403).json({ error: 'Invalid or expired token' });
+    }
+
+    req.user = {
+      userId: user.id,
+      id:     user.id,
+      email:  user.email,
+      role:   user.user_metadata?.role || 'user',
+    };
+
     next();
-  } catch (error) {
-    return res.status(403).json({ error: 'Invalid or expired token' });
-  }
+  });
 }
 
 export function optionalAuth(req, res, next) {
@@ -26,14 +46,19 @@ export function optionalAuth(req, res, next) {
     return next();
   }
 
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded;
-  } catch (error) {
-    req.user = null;
-  }
-
-  next();
+  supabase.auth.getUser(token).then(({ data: { user }, error }) => {
+    if (!error && user) {
+      req.user = {
+        userId: user.id,
+        id:     user.id,
+        email:  user.email,
+        role:   user.user_metadata?.role || 'user',
+      };
+    } else {
+      req.user = null;
+    }
+    next();
+  });
 }
 
 export function authorizeRole(...roles) {

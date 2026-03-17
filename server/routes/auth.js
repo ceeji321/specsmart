@@ -1,19 +1,19 @@
-// server/routes/auth.js
 import express from 'express';
-import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
+import { createClient } from '@supabase/supabase-js';
 import pool from '../config/database.js';
 import { authenticateToken } from '../middleware/auth.js';
 
 const router = express.Router();
 
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_KEY
+);
+
 // ─── Validation helpers ────────────────────────────────────────────────────────
 
-// Name: letters only, no numbers, no spaces, no special characters
 const NAME_REGEX = /^[a-zA-Z]+$/;
-
-// Password: min 8 chars, 1 uppercase, 1 number, 1 special character
 const PASSWORD_UPPER_REGEX   = /[A-Z]/;
 const PASSWORD_NUMBER_REGEX  = /[0-9]/;
 const PASSWORD_SPECIAL_REGEX = /[@!#$%^&*()\-_=+\[\]{};:'",.<>?/\\|`~]/;
@@ -47,7 +47,7 @@ function validatePassword(password) {
   return null;
 }
 
-// ─── Send email via Brevo HTTP API ────────────────────────────────────────────
+// ─── Send email via Brevo ──────────────────────────────────────────────────────
 const sendBrevoEmail = async ({ to, toName, subject, html }) => {
   const response = await fetch('https://api.brevo.com/v3/smtp/email', {
     method: 'POST',
@@ -71,32 +71,27 @@ const sendBrevoEmail = async ({ to, toName, subject, html }) => {
   return response.json();
 };
 
-// ─── Register new user ─────────────────────────────────────────────────────────
+// ─── Register ─────────────────────────────────────────────────────────────────
 router.post('/register', async (req, res) => {
   try {
     const { email, password, name } = req.body;
 
-    // ── Required fields ──────────────────────────────────────────────────────
     if (!email || !password || !name)
       return res.status(400).json({ error: 'Email, password, and name are required' });
 
-    // ── Email validation ─────────────────────────────────────────────────────
     const trimmedEmail = email.trim().toLowerCase();
     if (trimmedEmail.length > 254)
       return res.status(400).json({ error: 'Email address is too long' });
-    // Basic format check (supplement browser validation)
     const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!EMAIL_REGEX.test(trimmedEmail))
       return res.status(400).json({ error: 'Invalid email address format' });
 
-    // ── Name validation ──────────────────────────────────────────────────────
-    // The frontend sends name as "FirstName LastName" — split and validate each part
     const parts = name.trim().split(' ');
     if (parts.length < 2)
       return res.status(400).json({ error: 'Full name must include both first and last name' });
 
     const firstName = parts[0];
-    const lastName  = parts.slice(1).join(' '); // handle edge case of multi-part last name
+    const lastName  = parts.slice(1).join(' ');
 
     const firstNameError = validateName(firstName, 'First name');
     if (firstNameError) return res.status(400).json({ error: firstNameError });
@@ -104,40 +99,71 @@ router.post('/register', async (req, res) => {
     const lastNameError = validateName(lastName, 'Last name');
     if (lastNameError) return res.status(400).json({ error: lastNameError });
 
-    // ── Password validation ──────────────────────────────────────────────────
     const passwordError = validatePassword(password);
     if (passwordError) return res.status(400).json({ error: passwordError });
 
-    // ── Duplicate email check ────────────────────────────────────────────────
-    const existingUser = await pool.query(
-      'SELECT id FROM users WHERE email = $1',
-      [trimmedEmail]
-    );
-    if (existingUser.rows.length > 0)
-      return res.status(409).json({ error: 'Email already registered' });
+    const fullName = `${firstName} ${lastName}`;
 
-    // ── Create user ──────────────────────────────────────────────────────────
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const result = await pool.query(
-      `INSERT INTO users (email, password, name, created_at)
-       VALUES ($1, $2, $3, NOW())
-       RETURNING id, email, name, role, created_at`,
-      [trimmedEmail, hashedPassword, `${firstName} ${lastName}`]
-    );
+    // ── Create in Supabase Auth (auto-confirmed, no email needed) ─────────────
+    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+      email: trimmedEmail,
+      password,
+      email_confirm: true,
+      user_metadata: {
+        name: fullName,
+        role: 'user',
+      },
+    });
 
-    const user  = result.rows[0];
-    const token = jwt.sign(
-      { userId: user.id, email: user.email, role: user.role },
-      process.env.JWT_SECRET,
-      { expiresIn: '7d' }
-    );
+    if (authError) {
+      if (authError.message.includes('already registered') || authError.code === 'email_exists') {
+        return res.status(409).json({ error: 'Email already registered' });
+      }
+      console.error('Supabase register error:', authError);
+      return res.status(400).json({ error: authError.message });
+    }
+
+    const supabaseUser = authData.user;
+
+    // ── Sync to your PostgreSQL users table ───────────────────────────────────
+    try {
+      await pool.query(
+        `INSERT INTO users (id, email, name, role, created_at)
+         VALUES ($1, $2, $3, 'user', NOW())
+         ON CONFLICT (email) DO NOTHING`,
+        [supabaseUser.id, trimmedEmail, fullName]
+      );
+    } catch (dbError) {
+      console.error('DB sync error (non-fatal):', dbError.message);
+    }
+
+    // ── Sign in to get a session token ────────────────────────────────────────
+    const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+      email: trimmedEmail,
+      password,
+    });
+
+    if (signInError) {
+      return res.status(201).json({
+        message: 'User registered successfully. Please log in.',
+        user: {
+          id: supabaseUser.id,
+          email: trimmedEmail,
+          name: fullName,
+          role: 'user',
+        },
+      });
+    }
 
     res.status(201).json({
       message: 'User registered successfully',
-      token,
+      token: signInData.session.access_token,
       user: {
-        id: user.id, email: user.email, name: user.name,
-        role: user.role, createdAt: user.created_at,
+        id: supabaseUser.id,
+        email: trimmedEmail,
+        name: fullName,
+        role: 'user',
+        createdAt: supabaseUser.created_at,
       },
     });
   } catch (error) {
@@ -146,7 +172,7 @@ router.post('/register', async (req, res) => {
   }
 });
 
-// ─── Login user ────────────────────────────────────────────────────────────────
+// ─── Login ─────────────────────────────────────────────────────────────────────
 router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -154,35 +180,38 @@ router.post('/login', async (req, res) => {
     if (!email || !password)
       return res.status(400).json({ error: 'Email and password are required' });
 
-    const result = await pool.query(
-      'SELECT * FROM users WHERE email = $1',
-      [email.trim().toLowerCase()]
-    );
-    if (result.rows.length === 0)
+    const trimmedEmail = email.trim().toLowerCase();
+
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: trimmedEmail,
+      password,
+    });
+
+    if (error) {
       return res.status(401).json({ error: 'Invalid email or password' });
+    }
 
-    const user = result.rows[0];
-    const isValidPassword = await bcrypt.compare(password, user.password);
-    if (!isValidPassword)
-      return res.status(401).json({ error: 'Invalid email or password' });
+    const supabaseUser = data.user;
+    const role = supabaseUser.user_metadata?.role || 'user';
+    const name = supabaseUser.user_metadata?.name || trimmedEmail.split('@')[0];
 
-    await pool.query(
-      'UPDATE users SET last_login = NOW(), updated_at = NOW() WHERE id = $1',
-      [user.id]
-    );
-
-    const token = jwt.sign(
-      { userId: user.id, email: user.email, role: user.role },
-      process.env.JWT_SECRET,
-      { expiresIn: '7d' }
-    );
+    // ── Update last_login in PostgreSQL (non-fatal) ───────────────────────────
+    try {
+      await pool.query(
+        `UPDATE users SET last_login = NOW(), updated_at = NOW() WHERE email = $1`,
+        [trimmedEmail]
+      );
+    } catch (_) {}
 
     res.json({
       message: 'Login successful',
-      token,
+      token: data.session.access_token,
       user: {
-        id: user.id, email: user.email, name: user.name,
-        role: user.role, createdAt: user.created_at,
+        id:        supabaseUser.id,
+        email:     trimmedEmail,
+        name,
+        role,
+        createdAt: supabaseUser.created_at,
       },
     });
   } catch (error) {
@@ -191,21 +220,38 @@ router.post('/login', async (req, res) => {
   }
 });
 
-// ─── Get current user info ─────────────────────────────────────────────────────
+// ─── Get current user (/me) ───────────────────────────────────────────────────
 router.get('/me', authenticateToken, async (req, res) => {
   try {
+    // Try PostgreSQL first for extra profile fields
     const result = await pool.query(
-      'SELECT id, email, name, role, created_at, updated_at, last_login FROM users WHERE id = $1',
-      [req.user.userId]
+      'SELECT id, email, name, role, created_at, updated_at, last_login FROM users WHERE email = $1',
+      [req.user.email]
     );
-    if (result.rows.length === 0)
-      return res.status(404).json({ error: 'User not found' });
 
-    const user = result.rows[0];
+    if (result.rows.length > 0) {
+      const user = result.rows[0];
+      // Always trust Supabase for the role
+      return res.json({
+        user: {
+          id:        user.id,
+          email:     user.email,
+          name:      user.name,
+          role:      req.user.role,
+          createdAt: user.created_at,
+          updatedAt: user.updated_at,
+          lastLogin: user.last_login,
+        },
+      });
+    }
+
+    // Fallback: return from Supabase token data
     res.json({
       user: {
-        id: user.id, email: user.email, name: user.name, role: user.role,
-        createdAt: user.created_at, updatedAt: user.updated_at, lastLogin: user.last_login,
+        id:    req.user.userId,
+        email: req.user.email,
+        name:  req.user.email.split('@')[0],
+        role:  req.user.role,
       },
     });
   } catch (error) {
@@ -214,7 +260,7 @@ router.get('/me', authenticateToken, async (req, res) => {
   }
 });
 
-// ─── Change password (logged-in user) ─────────────────────────────────────────
+// ─── Change password ──────────────────────────────────────────────────────────
 router.put('/change-password', authenticateToken, async (req, res) => {
   try {
     const { currentPassword, newPassword } = req.body;
@@ -222,26 +268,28 @@ router.put('/change-password', authenticateToken, async (req, res) => {
     if (!currentPassword || !newPassword)
       return res.status(400).json({ error: 'Current password and new password are required' });
 
-    // Validate new password with the same rules
     const passwordError = validatePassword(newPassword);
     if (passwordError) return res.status(400).json({ error: passwordError });
 
-    const result = await pool.query(
-      'SELECT password FROM users WHERE id = $1',
-      [req.user.userId]
-    );
-    if (result.rows.length === 0)
-      return res.status(404).json({ error: 'User not found' });
+    // Verify current password by attempting a sign-in
+    const { error: verifyError } = await supabase.auth.signInWithPassword({
+      email: req.user.email,
+      password: currentPassword,
+    });
 
-    const isValid = await bcrypt.compare(currentPassword, result.rows[0].password);
-    if (!isValid)
+    if (verifyError) {
       return res.status(401).json({ error: 'Current password is incorrect' });
+    }
 
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
-    await pool.query(
-      'UPDATE users SET password = $1, updated_at = NOW() WHERE id = $2',
-      [hashedPassword, req.user.userId]
+    // Update password in Supabase
+    const { error: updateError } = await supabase.auth.admin.updateUserById(
+      req.user.userId,
+      { password: newPassword }
     );
+
+    if (updateError) {
+      return res.status(400).json({ error: updateError.message });
+    }
 
     res.json({ message: 'Password changed successfully' });
   } catch (error) {
@@ -250,45 +298,49 @@ router.put('/change-password', authenticateToken, async (req, res) => {
   }
 });
 
-// ─── Forgot password: send reset email ────────────────────────────────────────
+// ─── Forgot password ──────────────────────────────────────────────────────────
 router.post('/forgot-password', async (req, res) => {
   try {
     const { email } = req.body;
     if (!email)
       return res.status(400).json({ error: 'Email is required' });
 
-    const result = await pool.query(
-      'SELECT id, name FROM users WHERE email = $1',
-      [email.trim().toLowerCase()]
-    );
+    const trimmedEmail = email.trim().toLowerCase();
 
-    // Always return the same message to prevent user enumeration
-    if (result.rows.length === 0)
+    // Check if user exists in Supabase
+    const { data: { users }, error: listError } = await supabase.auth.admin.listUsers();
+    if (listError) throw listError;
+
+    const supabaseUser = users.find(u => u.email === trimmedEmail);
+
+    // Always return same message to prevent enumeration
+    if (!supabaseUser) {
       return res.json({ message: 'If that email is registered, a reset link has been sent.' });
+    }
 
-    const user = result.rows[0];
-
-    await pool.query('DELETE FROM password_reset_tokens WHERE user_id = $1', [user.id]);
+    // Store token in PostgreSQL for custom email flow
+    await pool.query('DELETE FROM password_reset_tokens WHERE user_id = $1', [supabaseUser.id]).catch(() => {});
 
     const resetToken = crypto.randomBytes(32).toString('hex');
-    const expiresAt  = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+    const expiresAt  = new Date(Date.now() + 60 * 60 * 1000);
 
     await pool.query(
       'INSERT INTO password_reset_tokens (user_id, token, expires_at) VALUES ($1, $2, $3)',
-      [user.id, resetToken, expiresAt]
+      [supabaseUser.id, resetToken, expiresAt]
     );
 
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
     const resetLink   = `${frontendUrl}/reset-password?token=${resetToken}`;
+    const userName    = supabaseUser.user_metadata?.name || trimmedEmail;
 
     await sendBrevoEmail({
-      to: email,
-      toName: user.name,
+      to: trimmedEmail,
+      toName: userName,
       subject: 'Reset Your SpecSmart Password',
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 480px; margin: 0 auto; background: #0f0f0f; color: #e0e0e0; padding: 32px; border-radius: 12px;">
           <h2 style="color: #ffffff; margin-bottom: 8px;">Reset Your Password</h2>
-          <p style="color: #aaa; margin-bottom: 24px;">Hi ${user.name}, we received a request to reset your SpecSmart password.</p>
+          <p style="color: #aaa; margin-bottom: 24px;">Hi ${userName}, we received a request to reset your SpecSmart password.</p>
           <a href="${resetLink}"
              style="display: inline-block; background: #3b82f6; color: #fff; text-decoration: none;
                     padding: 12px 28px; border-radius: 8px; font-weight: bold; margin-bottom: 24px;">
@@ -302,7 +354,7 @@ router.post('/forgot-password', async (req, res) => {
       `,
     });
 
-    console.log(`✅ Password reset email sent to ${email}`);
+    console.log(`✅ Password reset email sent to ${trimmedEmail}`);
     res.json({ message: 'If that email is registered, a reset link has been sent.' });
   } catch (error) {
     console.error('Forgot password error:', error);
@@ -310,7 +362,7 @@ router.post('/forgot-password', async (req, res) => {
   }
 });
 
-// ─── Reset password: validate token & set new password ────────────────────────
+// ─── Reset password ───────────────────────────────────────────────────────────
 router.post('/reset-password', async (req, res) => {
   try {
     const { token, newPassword } = req.body;
@@ -318,14 +370,13 @@ router.post('/reset-password', async (req, res) => {
     if (!token || !newPassword)
       return res.status(400).json({ error: 'Token and new password are required' });
 
-    // Validate new password with the same rules
     const passwordError = validatePassword(newPassword);
     if (passwordError) return res.status(400).json({ error: passwordError });
 
     const result = await pool.query(
-      `SELECT prt.*, u.email, u.name
+      `SELECT prt.*, u.email
        FROM password_reset_tokens prt
-       JOIN users u ON u.id = prt.user_id
+       JOIN users u ON CAST(u.id AS TEXT) = prt.user_id
        WHERE prt.token = $1 AND prt.used = FALSE AND prt.expires_at > NOW()`,
       [token]
     );
@@ -333,13 +384,17 @@ router.post('/reset-password', async (req, res) => {
     if (result.rows.length === 0)
       return res.status(400).json({ error: 'Invalid or expired reset link. Please request a new one.' });
 
-    const resetRecord    = result.rows[0];
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    const resetRecord = result.rows[0];
 
-    await pool.query(
-      'UPDATE users SET password = $1, updated_at = NOW() WHERE id = $2',
-      [hashedPassword, resetRecord.user_id]
+    // Update password in Supabase
+    const { error: updateError } = await supabase.auth.admin.updateUserById(
+      resetRecord.user_id,
+      { password: newPassword }
     );
+
+    if (updateError) {
+      return res.status(400).json({ error: 'Failed to reset password. Please try again.' });
+    }
 
     await pool.query(
       'UPDATE password_reset_tokens SET used = TRUE WHERE id = $1',
@@ -354,7 +409,7 @@ router.post('/reset-password', async (req, res) => {
   }
 });
 
-// ─── Verify token: check if reset token is still valid ────────────────────────
+// ─── Verify reset token ───────────────────────────────────────────────────────
 router.get('/verify-reset-token/:token', async (req, res) => {
   try {
     const { token } = req.params;
@@ -373,7 +428,7 @@ router.get('/verify-reset-token/:token', async (req, res) => {
 });
 
 // ─── Logout ───────────────────────────────────────────────────────────────────
-router.post('/logout', authenticateToken, (req, res) => {
+router.post('/logout', authenticateToken, async (req, res) => {
   res.json({ message: 'Logged out successfully' });
 });
 

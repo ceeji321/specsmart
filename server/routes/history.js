@@ -5,21 +5,37 @@ import pool from '../config/database.js';
 
 const router = express.Router();
 
+// ── Ensure chat_history table supports UUID user_id ───────────────────────────
+async function ensureHistoryTable() {
+  const client = await pool.connect();
+  try {
+    // Alter user_id column from INTEGER to TEXT to support Supabase UUIDs
+    await client.query(`
+      ALTER TABLE chat_history 
+      ALTER COLUMN user_id TYPE TEXT USING user_id::TEXT
+    `);
+  } catch (e) {
+    // Column might already be TEXT — ignore
+  } finally {
+    client.release();
+  }
+}
+ensureHistoryTable().catch(console.error);
+
 // GET /api/history — get current user's chat history
 router.get('/', authenticateToken, async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT id, title, messages, created_at, is_archived
        FROM chat_history
-       WHERE user_id = $1
+       WHERE user_id = $1 AND (is_archived = FALSE OR is_archived IS NULL)
        ORDER BY created_at DESC`,
-      [req.user.userId]
+      [String(req.user.userId)]
     );
 
     const now = new Date();
     const todayStart = new Date(now); todayStart.setHours(0,0,0,0);
     const yesterdayStart = new Date(todayStart); yesterdayStart.setDate(yesterdayStart.getDate() - 1);
-    const last7Start = new Date(todayStart); last7Start.setDate(last7Start.getDate() - 7);
 
     const items = result.rows.map(row => {
       const createdAt = new Date(row.created_at);
@@ -44,20 +60,35 @@ router.get('/', authenticateToken, async (req, res) => {
   }
 });
 
-// POST /api/history — save a new chat session
+// POST /api/history — save or update a chat session
 router.post('/', authenticateToken, async (req, res) => {
   try {
-    const { title, messages } = req.body;
+    const { title, messages, chatId } = req.body;
     if (!title || !messages) {
       return res.status(400).json({ error: 'title and messages are required' });
     }
 
-    const result = await pool.query(
-      `INSERT INTO chat_history (user_id, title, messages, created_at)
-       VALUES ($1, $2, $3, NOW())
-       RETURNING id, title, created_at`,
-      [req.user.userId, title, JSON.stringify(messages)]
-    );
+    let result;
+    if (chatId) {
+      // Update existing chat
+      result = await pool.query(
+        `UPDATE chat_history 
+         SET title = $1, messages = $2
+         WHERE id = $3 AND user_id = $4
+         RETURNING id, title, created_at`,
+        [title, JSON.stringify(messages), chatId, String(req.user.userId)]
+      );
+    }
+
+    if (!chatId || result.rows.length === 0) {
+      // Insert new chat
+      result = await pool.query(
+        `INSERT INTO chat_history (user_id, title, messages, created_at)
+         VALUES ($1, $2, $3, NOW())
+         RETURNING id, title, created_at`,
+        [String(req.user.userId), title, JSON.stringify(messages)]
+      );
+    }
 
     res.status(201).json({ history: result.rows[0] });
   } catch (error) {
@@ -71,7 +102,7 @@ router.delete('/:id', authenticateToken, async (req, res) => {
   try {
     await pool.query(
       'DELETE FROM chat_history WHERE id = $1 AND user_id = $2',
-      [req.params.id, req.user.userId]
+      [req.params.id, String(req.user.userId)]
     );
     res.json({ message: 'Deleted successfully' });
   } catch (error) {
@@ -84,10 +115,9 @@ router.delete('/', authenticateToken, async (req, res) => {
   try {
     const { ids } = req.body;
     if (!ids || !ids.length) return res.status(400).json({ error: 'ids required' });
-
     await pool.query(
       'DELETE FROM chat_history WHERE id = ANY($1) AND user_id = $2',
-      [ids, req.user.userId]
+      [ids, String(req.user.userId)]
     );
     res.json({ message: 'Deleted successfully' });
   } catch (error) {
@@ -100,10 +130,9 @@ router.patch('/archive', authenticateToken, async (req, res) => {
   try {
     const { ids } = req.body;
     if (!ids || !ids.length) return res.status(400).json({ error: 'ids required' });
-
     await pool.query(
       'UPDATE chat_history SET is_archived = true WHERE id = ANY($1) AND user_id = $2',
-      [ids, req.user.userId]
+      [ids, String(req.user.userId)]
     );
     res.json({ message: 'Archived successfully' });
   } catch (error) {

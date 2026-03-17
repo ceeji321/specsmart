@@ -1,11 +1,21 @@
-// server/routes/manager.js
 import express from 'express';
-import bcrypt from 'bcryptjs';
+import { createClient } from '@supabase/supabase-js';
 import pool from '../config/database.js';
 import { authenticateToken, authorizeRole } from '../middleware/auth.js';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import dotenv from 'dotenv';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+dotenv.config({ path: path.join(__dirname, '../.env') });
+
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_KEY
+);
 
 const router = express.Router();
-const SALT_ROUNDS = 10;
 const isManagerRole = authorizeRole('manager', 'admin');
 const isAdminRole = authorizeRole('admin');
 
@@ -29,7 +39,7 @@ router.get('/stream', authenticateToken, isAdminRole, (req, res) => {
   req.on('close', () => sseClients.delete(res));
 });
 
-// ── Ensure tables exist ───────────────────────────────────────────────────────
+// ── Ensure audit tables exist ─────────────────────────────────────────────────
 async function ensureAuditTables() {
   const client = await pool.connect();
   try {
@@ -58,6 +68,8 @@ async function ensureAuditTables() {
         reason TEXT
       )
     `);
+    await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS name TEXT`);
+    await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS role TEXT DEFAULT 'user'`);
     await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS is_archived BOOLEAN DEFAULT FALSE`);
     await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS is_disabled BOOLEAN DEFAULT FALSE`);
     await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login TIMESTAMPTZ`);
@@ -67,7 +79,7 @@ async function ensureAuditTables() {
 }
 ensureAuditTables().catch(console.error);
 
-// ── GET /users  (active users only) ──────────────────────────────────────────
+// ── GET /users (active users only) ───────────────────────────────────────────
 router.get('/users', authenticateToken, isManagerRole, async (req, res) => {
   const client = await pool.connect();
   try {
@@ -86,7 +98,8 @@ router.get('/users', authenticateToken, isManagerRole, async (req, res) => {
       params.push(role);
     }
     if (search) {
-      conditions.push(`(email ILIKE $${i} OR name ILIKE $${i})`);
+      // ✅ FIX: Use COALESCE instead of referencing 'username' directly in WHERE
+      conditions.push(`(email ILIKE $${i} OR COALESCE(name, email) ILIKE $${i})`);
       params.push(`%${search}%`);
       i++;
     }
@@ -96,7 +109,7 @@ router.get('/users', authenticateToken, isManagerRole, async (req, res) => {
     const total = parseInt(countRes.rows[0].count);
 
     const result = await client.query(
-      `SELECT id, email, name, role, created_at, last_login
+      `SELECT id, email, COALESCE(name, email) AS name, role, created_at, last_login
        FROM users ${where}
        ORDER BY created_at DESC
        LIMIT $${i} OFFSET $${i + 1}`,
@@ -121,15 +134,14 @@ router.get('/users', authenticateToken, isManagerRole, async (req, res) => {
   } finally { client.release(); }
 });
 
-// ── GET /users/disabled  ⚠️ MUST be before /users/:id ─────────────────────────
+// ── GET /users/disabled ───────────────────────────────────────────────────────
 router.get('/users/disabled', authenticateToken, isAdminRole, async (req, res) => {
   const client = await pool.connect();
   try {
     const result = await client.query(
-      `SELECT id, email, name, role, created_at, last_login
-       FROM users
-       WHERE is_disabled = TRUE
-       ORDER BY name ASC`
+      `SELECT id, email, COALESCE(name, email) AS name, role, created_at, last_login
+       FROM users WHERE is_disabled = TRUE
+       ORDER BY COALESCE(name, email) ASC`
     );
     res.json({ success: true, data: { users: result.rows } });
   } catch (error) {
@@ -138,17 +150,17 @@ router.get('/users/disabled', authenticateToken, isAdminRole, async (req, res) =
   } finally { client.release(); }
 });
 
-// ── GET /users/archived  ⚠️ MUST be before /users/:id ─────────────────────────
+// ── GET /users/archived ───────────────────────────────────────────────────────
 router.get('/users/archived', authenticateToken, isAdminRole, async (req, res) => {
   const client = await pool.connect();
   try {
     const result = await client.query(
-      `SELECT u.id, u.email, u.name, u.role, u.created_at, u.last_login,
+      `SELECT u.id, u.email, COALESCE(u.name, u.email) AS name, u.role, u.created_at, u.last_login,
               a.archived_at, a.reason AS archive_reason
        FROM users u
        LEFT JOIN archived_users a ON a.user_id = CAST(u.id AS TEXT)
        WHERE u.is_archived = TRUE
-       ORDER BY u.name ASC`
+       ORDER BY COALESCE(u.name, u.email) ASC`
     );
     res.json({ success: true, data: { users: result.rows } });
   } catch (error) {
@@ -162,7 +174,8 @@ router.get('/users/:id', authenticateToken, isManagerRole, async (req, res) => {
   const client = await pool.connect();
   try {
     const result = await client.query(
-      'SELECT id, email, name, role, created_at, last_login FROM users WHERE id = $1',
+      `SELECT id, email, COALESCE(name, email) AS name, role, created_at, last_login
+       FROM users WHERE id = $1`,
       [req.params.id]
     );
     if (result.rows.length === 0)
@@ -173,25 +186,41 @@ router.get('/users/:id', authenticateToken, isManagerRole, async (req, res) => {
   } finally { client.release(); }
 });
 
-// ── POST /users (create) ──────────────────────────────────────────────────────
+// ── POST /users (create via Supabase) ────────────────────────────────────────
 router.post('/users', authenticateToken, isManagerRole, async (req, res) => {
   const client = await pool.connect();
   try {
-    const { email, password, name, role = 'user' } = req.body;
+    const { email, password, name, role = 'admin' } = req.body;
     if (!email || !password || !name)
       return res.status(400).json({ success: false, message: 'Email, password, and name are required.' });
     if (role === 'admin' && req.user.role !== 'admin')
       return res.status(403).json({ success: false, message: 'Only admins can create admin accounts.' });
-    const existing = await client.query('SELECT id FROM users WHERE email = $1', [email.toLowerCase()]);
-    if (existing.rows.length > 0)
-      return res.status(409).json({ success: false, message: 'Email already registered.' });
-    const hashed = await bcrypt.hash(password, SALT_ROUNDS);
+
+    // Create in Supabase Auth
+    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+      email: email.toLowerCase(),
+      password,
+      email_confirm: true,
+      user_metadata: { name, role }
+    });
+
+    if (authError) {
+      if (authError.message.includes('already registered') || authError.code === 'email_exists')
+        return res.status(409).json({ success: false, message: 'Email already registered.' });
+      return res.status(400).json({ success: false, message: authError.message });
+    }
+
+    const supabaseUser = authData.user;
+
+    // Sync to PostgreSQL
     const result = await client.query(
-      `INSERT INTO users (email, password, name, role, created_at)
-       VALUES ($1,$2,$3,$4,NOW())
-       RETURNING id, email, name, role, created_at`,
-      [email.toLowerCase(), hashed, name, role]
+      `INSERT INTO users (id, email, name, role, password_hash, created_at)
+       VALUES ($1, $2, $3, $4, 'supabase_managed', NOW())
+       ON CONFLICT (email) DO UPDATE SET name = EXCLUDED.name, role = EXCLUDED.role
+       RETURNING id, email, COALESCE(name, email) AS name, role, created_at`,
+      [supabaseUser.id, email.toLowerCase(), name, role]
     );
+
     const newUser = result.rows[0];
     broadcastUserEvent('user_created', newUser);
     res.status(201).json({ success: true, message: 'User created successfully.', data: newUser });
@@ -212,15 +241,23 @@ router.put('/users/:id', authenticateToken, isManagerRole, async (req, res) => {
       return res.status(404).json({ success: false, message: 'User not found.' });
     if (req.user.role !== 'admin' && role && role !== current.rows[0].role)
       return res.status(403).json({ success: false, message: 'Only admins can change user roles.' });
+
     const updates = []; const params = []; let i = 1;
     if (name) { updates.push(`name = $${i++}`); params.push(name); }
-    if (role && ['user', 'admin'].includes(role)) { updates.push(`role = $${i++}`); params.push(role); }
+    if (role && ['user', 'admin'].includes(role)) {
+      updates.push(`role = $${i++}`);
+      params.push(role);
+      // Also update role in Supabase metadata
+      await supabase.auth.admin.updateUserById(id, {
+        user_metadata: { role }
+      }).catch(console.error);
+    }
     if (updates.length === 0)
       return res.status(400).json({ success: false, message: 'No valid fields to update.' });
     params.push(id);
     const result = await client.query(
       `UPDATE users SET ${updates.join(', ')} WHERE id = $${i}
-       RETURNING id, email, name, role, created_at, last_login`,
+       RETURNING id, email, COALESCE(name, email) AS name, role, created_at, last_login`,
       params
     );
     const updated = result.rows[0];
@@ -239,7 +276,9 @@ router.delete('/users/:id', authenticateToken, isAdminRole, async (req, res) => 
     const { id } = req.params;
     if (id === String(req.user.userId))
       return res.status(400).json({ success: false, message: 'You cannot delete your own account.' });
-    const userRes = await client.query('SELECT id, email, name, role FROM users WHERE id = $1', [id]);
+    const userRes = await client.query(
+      `SELECT id, email, COALESCE(name, email) AS name, role FROM users WHERE id = $1`, [id]
+    );
     if (userRes.rows.length === 0)
       return res.status(404).json({ success: false, message: 'User not found.' });
     const u = userRes.rows[0];
@@ -249,6 +288,8 @@ router.delete('/users/:id', authenticateToken, isAdminRole, async (req, res) => 
       [String(u.id), u.email, u.name, u.role, String(req.user.userId), req.user.email]
     );
     await client.query('DELETE FROM users WHERE id = $1', [id]);
+    // Also delete from Supabase Auth
+    await supabase.auth.admin.deleteUser(id).catch(console.error);
     broadcastUserEvent('user_deleted', { id });
     res.json({ success: true, message: 'User deleted successfully.' });
   } catch (error) {
@@ -268,6 +309,8 @@ router.post('/users/:id/disable', authenticateToken, isAdminRole, async (req, re
     if (userRes.rows.length === 0)
       return res.status(404).json({ success: false, message: 'User not found.' });
     await client.query('UPDATE users SET is_disabled = TRUE WHERE id = $1', [id]);
+    // Ban in Supabase too
+    await supabase.auth.admin.updateUserById(id, { ban_duration: '876600h' }).catch(console.error);
     broadcastUserEvent('user_disabled', { id });
     res.json({ success: true, message: 'User disabled successfully.' });
   } catch (error) {
@@ -281,6 +324,8 @@ router.post('/users/:id/enable', authenticateToken, isAdminRole, async (req, res
   const client = await pool.connect();
   try {
     await client.query('UPDATE users SET is_disabled = FALSE WHERE id = $1', [req.params.id]);
+    // Unban in Supabase too
+    await supabase.auth.admin.updateUserById(req.params.id, { ban_duration: 'none' }).catch(console.error);
     broadcastUserEvent('user_enabled', { id: req.params.id });
     res.json({ success: true, message: 'User enabled successfully.' });
   } catch (error) {
@@ -297,7 +342,9 @@ router.post('/users/:id/archive', authenticateToken, isAdminRole, async (req, re
     const { reason } = req.body;
     if (id === String(req.user.userId))
       return res.status(400).json({ success: false, message: 'You cannot archive your own account.' });
-    const userRes = await client.query('SELECT id, email, name, role FROM users WHERE id = $1', [id]);
+    const userRes = await client.query(
+      `SELECT id, email, COALESCE(name, email) AS name, role FROM users WHERE id = $1`, [id]
+    );
     if (userRes.rows.length === 0)
       return res.status(404).json({ success: false, message: 'User not found.' });
     const u = userRes.rows[0];
@@ -352,23 +399,24 @@ router.get('/statistics', authenticateToken, isManagerRole, async (req, res) => 
     `);
     res.json({ success: true, data: stats.rows[0] });
   } catch (error) {
+    console.error('Stats error:', error);
     res.status(500).json({ success: false, message: 'Failed to retrieve statistics.' });
   } finally { client.release(); }
 });
 
 // ── POST /users/:id/reset-password ───────────────────────────────────────────
 router.post('/users/:id/reset-password', authenticateToken, isAdminRole, async (req, res) => {
-  const client = await pool.connect();
   try {
     const { new_password } = req.body;
     if (!new_password || new_password.length < 6)
       return res.status(400).json({ success: false, message: 'Password must be at least 6 characters.' });
-    const hashed = await bcrypt.hash(new_password, SALT_ROUNDS);
-    await client.query('UPDATE users SET password = $1 WHERE id = $2', [hashed, req.params.id]);
+    // Reset via Supabase instead of bcrypt
+    const { error } = await supabase.auth.admin.updateUserById(req.params.id, { password: new_password });
+    if (error) return res.status(400).json({ success: false, message: error.message });
     res.json({ success: true, message: 'Password reset successfully.' });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Failed to reset password.' });
-  } finally { client.release(); }
+  }
 });
 
 export default router;

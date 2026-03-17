@@ -5,7 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import EditProfileModal from './EditProfileModal';
 
 export default function Navbar() {
-  const { user, logout, isAdmin } = useAuth();
+  const { user, logout, isAdmin, userName, userEmail } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -17,14 +17,18 @@ export default function Navbar() {
     setDropdownOpen(false);
   };
 
-  const initials = (user?.name || '?')
+  // ✅ FIX: Use userName from AuthContext which reads user_metadata.name
+  const displayName = userName || user?.user_metadata?.name || user?.email?.split('@')[0] || '?';
+  const displayEmail = userEmail || user?.email || '';
+
+  const initials = displayName
     .split(' ')
     .map(w => w[0])
     .join('')
     .slice(0, 2)
     .toUpperCase();
 
-  const hue = (user?.name || '').charCodeAt(0) * 7 % 360;
+  const hue = displayName.charCodeAt(0) * 7 % 360;
   const isActive = (path) => location.pathname === path;
 
   const navLinkStyle = (path) => ({
@@ -45,7 +49,7 @@ export default function Navbar() {
         padding: '0 24px', height: 60,
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       }}>
-        <Link to="/dashboard" style={{ textDecoration: 'none' }}>
+        <Link to={isAdmin ? '/admin' : '/dashboard'} style={{ textDecoration: 'none' }}>
           <span style={{ fontFamily: 'Syne, sans-serif', fontWeight: 800, fontSize: 20, color: 'var(--text)' }}>
             Spec<span style={{ color: 'var(--accent)' }}>Smart</span>
           </span>
@@ -104,8 +108,13 @@ export default function Navbar() {
                 }}>
                   {/* Profile info */}
                   <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)' }}>
-                    <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--text)' }}>{user?.name}</div>
-                    <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>{user?.email}</div>
+                    <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--text)' }}>{displayName}</div>
+                    <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>{displayEmail}</div>
+                    {isAdmin && (
+                      <div style={{ fontSize: 10, color: '#f87171', fontWeight: 700, textTransform: 'uppercase', marginTop: 4, letterSpacing: '0.5px' }}>
+                        Admin
+                      </div>
+                    )}
                   </div>
 
                   <div style={{ padding: '6px 0' }}>

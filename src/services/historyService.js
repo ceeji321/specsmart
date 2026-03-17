@@ -1,13 +1,17 @@
 // src/services/historyService.js
+import axios from 'axios';
+
 const API_BASE = import.meta.env.DEV
   ? 'http://localhost:5000'
   : 'https://specsmart-production.up.railway.app';
 
+// ✅ FIX: Get token from axios default header (set by AuthContext on login)
+// Old code used localStorage.getItem('token') which was the JWT key — Supabase doesn't use that
 function getHeaders() {
-  const token = localStorage.getItem('token');
+  const authHeader = axios.defaults.headers.common['Authorization'];
   return {
     'Content-Type': 'application/json',
-    ...(token && { Authorization: `Bearer ${token}` }),
+    ...(authHeader && { Authorization: authHeader }),
   };
 }
 
@@ -25,14 +29,13 @@ export async function fetchHistory() {
 }
 
 // Save or update a chat session in DB
-// Pass chatId to update an existing session, omit to create new
 export async function saveChat(title, messages, chatId = null) {
   try {
     const cleanMessages = messages
       .filter(m => m.role && m.content)
       .map(m => ({ role: m.role, content: m.content }));
 
-    if (cleanMessages.length < 2) return null; // don't save empty chats
+    if (cleanMessages.length < 2) return null;
 
     const res = await fetch(`${API_BASE}/api/history`, {
       method: 'POST',

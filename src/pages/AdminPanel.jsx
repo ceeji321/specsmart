@@ -63,242 +63,14 @@ const LiveBadge = ({ connected }) => (
   </div>
 );
 
-// ── HoverButton ───────────────────────────────────────────────────────────────
-const HoverButton = ({ onClick, hoverBg, hoverColor, defaultColor, children }) => {
-  const ref = useRef(null);
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const enter = () => {
-      el.style.setProperty('background', hoverBg, 'important');
-      el.style.setProperty('color', hoverColor, 'important');
-    };
-    const leave = () => {
-      el.style.setProperty('background', 'rgba(0,0,0,0)', 'important');
-      el.style.setProperty('color', defaultColor, 'important');
-    };
-    el.addEventListener('mouseenter', enter);
-    el.addEventListener('mouseleave', leave);
-    return () => {
-      el.removeEventListener('mouseenter', enter);
-      el.removeEventListener('mouseleave', leave);
-    };
-  }, [hoverBg, hoverColor, defaultColor]);
-  return (
-    <button
-      ref={ref}
-      onClick={onClick}
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 8,
-        width: '100%',
-        padding: '10px 16px',
-        background: 'rgba(0,0,0,0)',
-        border: 'none',
-        cursor: 'pointer',
-        fontSize: 13,
-        fontWeight: 500,
-        fontFamily: "'DM Sans', sans-serif",
-        color: defaultColor,
-        transition: 'background 0.15s, color 0.15s',
-        textAlign: 'left',
-        lineHeight: 1.4,
-      }}
-    >
-      {children}
-    </button>
-  );
-};
-
-// ── Modals ────────────────────────────────────────────────────────────────────
-const DisableModal = ({ user, onClose, onDisabled }) => {
-  const [loading, setLoading] = useState(false);
-  const [err, setErr] = useState('');
-
-  const handleDisable = async () => {
-    setLoading(true); setErr('');
-    try {
-      await axios.post(`${API_URL}/api/manager/users/${user.id}/disable`);
-      onDisabled(user.id);
-      onClose();
-    } catch (e) {
-      setErr(e.response?.data?.message || 'Disable failed');
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 380 }}>
-        <div style={{ width: 48, height: 48, borderRadius: 12, background: 'rgba(251,191,36,0.1)', border: '1px solid rgba(251,191,36,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fbbf24', marginBottom: 16 }}>
-          <Ban size={22} />
-        </div>
-        <div className="modal-title" style={{ fontSize: 18 }}>Disable User?</div>
-        <p className="modal-sub">Disable <strong style={{ color: 'var(--text)' }}>{user.name}</strong> ({user.email}). They will not be able to log in until re-enabled.</p>
-        {err && <div style={{ color: 'var(--red)', fontSize: 13, marginBottom: 12 }}>{err}</div>}
-        <div style={{ display: 'flex', gap: 10 }}>
-          <button className="btn btn-ghost" onClick={onClose} style={{ flex: 1 }}>Cancel</button>
-          <button onClick={handleDisable} disabled={loading} style={{ flex: 1, padding: '9px 16px', borderRadius: 8, background: 'rgba(251,191,36,0.15)', color: '#fbbf24', border: '1px solid rgba(251,191,36,0.3)', cursor: loading ? 'not-allowed' : 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, opacity: loading ? 0.7 : 1 }}>
-            {loading ? 'Disabling…' : <><Ban size={14} /> Disable</>}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-const DeleteModal = ({ user, onClose, onDeleted }) => {
-  const [loading, setLoading] = useState(false);
-  const [err, setErr] = useState('');
-
-  const handleDelete = async () => {
-    setLoading(true); setErr('');
-    try {
-      await axios.delete(`${API_URL}/api/manager/users/${user.id}`);
-      onDeleted(user.id);
-      onClose();
-    } catch (e) {
-      setErr(e.response?.data?.message || 'Delete failed');
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 380 }}>
-        <div style={{ width: 48, height: 48, borderRadius: 12, background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--red)', marginBottom: 16 }}>
-          <AlertTriangle size={22} />
-        </div>
-        <div className="modal-title" style={{ fontSize: 18 }}>Delete User?</div>
-        <p className="modal-sub">Permanently delete <strong style={{ color: 'var(--text)' }}>{user.name}</strong> ({user.email}). This cannot be undone.</p>
-        {err && <div style={{ color: 'var(--red)', fontSize: 13, marginBottom: 12 }}>{err}</div>}
-        <div style={{ display: 'flex', gap: 10 }}>
-          <button className="btn btn-ghost" onClick={onClose} style={{ flex: 1 }}>Cancel</button>
-          <button className="btn btn-danger" onClick={handleDelete} disabled={loading} style={{ flex: 1 }}>
-            {loading ? 'Deleting…' : <><Trash2 size={14} /> Delete</>}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-const ArchiveModal = ({ user, onClose, onArchived }) => {
-  const PRESET_REASONS = [
-    'Inactive account',
-    'Duplicate account',
-    'User requested removal',
-    'Violation of terms',
-  ];
-
-  const [reason, setReason] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [err, setErr] = useState('');
-
-  const handleArchive = async () => {
-    setLoading(true); setErr('');
-    try {
-      await axios.post(`${API_URL}/api/manager/users/${user.id}/archive`, { reason });
-      onArchived(user.id);
-      onClose();
-    } catch (e) {
-      setErr(e.response?.data?.message || 'Archive failed');
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 380 }}>
-        <div style={{ width: 48, height: 48, borderRadius: 12, background: 'rgba(154,160,176,0.1)', border: '1px solid rgba(154,160,176,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-2)', marginBottom: 16 }}>
-          <Archive size={22} />
-        </div>
-        <div className="modal-title" style={{ fontSize: 18 }}>Archive User?</div>
-        <p className="modal-sub"><strong style={{ color: 'var(--text)' }}>{user.name}</strong> will be hidden from the active list. Their record is kept and can be restored.</p>
-        <div className="form-group">
-          <label className="form-label">Reason (optional)</label>
-          <select
-            value={reason}
-            onChange={e => setReason(e.target.value)}
-            style={{
-              width: '100%', padding: '9px 12px', borderRadius: 8, fontSize: 13,
-              fontFamily: "'DM Sans', sans-serif", fontWeight: 500,
-              background: 'var(--bg-3)', border: '1px solid var(--border)',
-              color: reason ? 'var(--text)' : 'var(--text-3)',
-              cursor: 'pointer', outline: 'none', appearance: 'none',
-              backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239aa0b0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E")`,
-              backgroundRepeat: 'no-repeat',
-              backgroundPosition: 'right 12px center',
-              paddingRight: 36,
-            }}
-          >
-            <option value="">Select a reason…</option>
-            {PRESET_REASONS.map(r => (
-              <option key={r} value={r}>{r}</option>
-            ))}
-          </select>
-        </div>
-        {err && <div style={{ color: 'var(--red)', fontSize: 13, marginBottom: 12 }}>{err}</div>}
-        <div style={{ display: 'flex', gap: 10 }}>
-          <button className="btn btn-ghost" onClick={onClose} style={{ flex: 1 }}>Cancel</button>
-          <button onClick={handleArchive} disabled={loading} style={{ flex: 1, padding: '9px 16px', borderRadius: 8, background: 'rgba(154,160,176,0.1)', color: 'var(--text-2)', border: '1px solid rgba(154,160,176,0.25)', cursor: loading ? 'not-allowed' : 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, opacity: loading ? 0.7 : 1 }}>
-            {loading ? 'Archiving…' : <><Archive size={14} /> Archive</>}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-const CreateModal = ({ onClose, onCreated }) => {
-  const [form, setForm] = useState({ email: '', name: '', password: '', role: 'admin' });
-  const [saving, setSaving] = useState(false);
-  const [err, setErr] = useState('');
-  const update = (k, v) => setForm(f => ({ ...f, [k]: v }));
-
-  const handleCreate = async () => {
-    if (!form.email || !form.name || !form.password) { setErr('All fields are required'); return; }
-    setSaving(true); setErr('');
-    try {
-      const res = await axios.post(`${API_URL}/api/manager/users`, form);
-      onCreated(res.data.data);
-      onClose();
-    } catch (e) {
-      setErr(e.response?.data?.message || 'Create failed');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal" onClick={e => e.stopPropagation()}>
-        <button onClick={onClose} style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer' }}><X size={18} /></button>
-        <div className="modal-title" style={{ fontSize: 18 }}>Create Admin</div>
-        <p className="modal-sub">Add a new admin to SpecSmart</p>
-        {['name', 'email', 'password'].map(k => (
-          <div className="form-group" key={k}>
-            <label className="form-label">{k.charAt(0).toUpperCase() + k.slice(1)}</label>
-            <input className="form-input" type={k === 'password' ? 'password' : 'text'} placeholder={k === 'password' ? 'Min. 6 characters' : ''} value={form[k]} onChange={e => update(k, e.target.value)} />
-          </div>
-        ))}
-        <div className="form-group">
-          <label className="form-label">Role</label>
-          <div className="form-input" style={{ color: 'var(--text-2)', display: 'flex', alignItems: 'center', gap: 6 }}>
-            <Crown size={14} style={{ color: '#f87171' }} /> Admin
-          </div>
-        </div>
-        {err && <div style={{ color: 'var(--red)', fontSize: 13, marginBottom: 12 }}>{err}</div>}
-        <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
-          <button className="btn btn-ghost" onClick={onClose} style={{ flex: 1 }}>Cancel</button>
-          <button className="btn btn-primary" onClick={handleCreate} disabled={saving} style={{ flex: 1 }}>
-            {saving ? 'Creating…' : <><UserPlus size={14} /> Create</>}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
+// ── Get Supabase session token (from axios header set by AuthContext) ──────────
+const getSupabaseToken = () => {
+  // AuthContext sets this header on every login/session refresh
+  const authHeader = axios.defaults.headers.common['Authorization'];
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    return authHeader.replace('Bearer ', '');
+  }
+  return null;
 };
 
 // ── Row Actions ───────────────────────────────────────────────────────────────
@@ -327,6 +99,156 @@ const RowActions = ({ user, onDisable, onArchive, currentId }) => {
         style={{ ...btnBase, color: archiveHover ? '#fff' : '#a78bfa', background: archiveHover ? 'rgba(167,139,250,0.25)' : 'rgba(167,139,250,0.12)', border: '1px solid rgba(167,139,250,0.35)' }}
       >
         <Archive size={11} /> Archive
+      </div>
+    </div>
+  );
+};
+
+// ── Modals ────────────────────────────────────────────────────────────────────
+const DisableModal = ({ user, onClose, onDisabled }) => {
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState('');
+  const handleDisable = async () => {
+    setLoading(true); setErr('');
+    try {
+      await axios.post(`${API_URL}/api/manager/users/${user.id}/disable`);
+      onDisabled(user.id); onClose();
+    } catch (e) { setErr(e.response?.data?.message || 'Disable failed'); setLoading(false); }
+  };
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 380 }}>
+        <div style={{ width: 48, height: 48, borderRadius: 12, background: 'rgba(251,191,36,0.1)', border: '1px solid rgba(251,191,36,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fbbf24', marginBottom: 16 }}>
+          <Ban size={22} />
+        </div>
+        <div className="modal-title" style={{ fontSize: 18 }}>Disable User?</div>
+        <p className="modal-sub">Disable <strong style={{ color: 'var(--text)' }}>{user.name}</strong> ({user.email}). They will not be able to log in until re-enabled.</p>
+        {err && <div style={{ color: 'var(--red)', fontSize: 13, marginBottom: 12 }}>{err}</div>}
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button className="btn btn-ghost" onClick={onClose} style={{ flex: 1 }}>Cancel</button>
+          <button onClick={handleDisable} disabled={loading} style={{ flex: 1, padding: '9px 16px', borderRadius: 8, background: 'rgba(251,191,36,0.15)', color: '#fbbf24', border: '1px solid rgba(251,191,36,0.3)', cursor: loading ? 'not-allowed' : 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, opacity: loading ? 0.7 : 1 }}>
+            {loading ? 'Disabling…' : <><Ban size={14} /> Disable</>}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const DeleteModal = ({ user, onClose, onDeleted }) => {
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState('');
+  const handleDelete = async () => {
+    setLoading(true); setErr('');
+    try {
+      await axios.delete(`${API_URL}/api/manager/users/${user.id}`);
+      onDeleted(user.id); onClose();
+    } catch (e) { setErr(e.response?.data?.message || 'Delete failed'); setLoading(false); }
+  };
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 380 }}>
+        <div style={{ width: 48, height: 48, borderRadius: 12, background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--red)', marginBottom: 16 }}>
+          <AlertTriangle size={22} />
+        </div>
+        <div className="modal-title" style={{ fontSize: 18 }}>Delete User?</div>
+        <p className="modal-sub">Permanently delete <strong style={{ color: 'var(--text)' }}>{user.name}</strong> ({user.email}). This cannot be undone.</p>
+        {err && <div style={{ color: 'var(--red)', fontSize: 13, marginBottom: 12 }}>{err}</div>}
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button className="btn btn-ghost" onClick={onClose} style={{ flex: 1 }}>Cancel</button>
+          <button className="btn btn-danger" onClick={handleDelete} disabled={loading} style={{ flex: 1 }}>
+            {loading ? 'Deleting…' : <><Trash2 size={14} /> Delete</>}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const ArchiveModal = ({ user, onClose, onArchived }) => {
+  const PRESET_REASONS = ['Inactive account', 'Duplicate account', 'User requested removal', 'Violation of terms'];
+  const [reason, setReason] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState('');
+  const handleArchive = async () => {
+    setLoading(true); setErr('');
+    try {
+      await axios.post(`${API_URL}/api/manager/users/${user.id}/archive`, { reason });
+      onArchived(user.id); onClose();
+    } catch (e) { setErr(e.response?.data?.message || 'Archive failed'); setLoading(false); }
+  };
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 380 }}>
+        <div style={{ width: 48, height: 48, borderRadius: 12, background: 'rgba(154,160,176,0.1)', border: '1px solid rgba(154,160,176,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-2)', marginBottom: 16 }}>
+          <Archive size={22} />
+        </div>
+        <div className="modal-title" style={{ fontSize: 18 }}>Archive User?</div>
+        <p className="modal-sub"><strong style={{ color: 'var(--text)' }}>{user.name}</strong> will be hidden from the active list. Their record is kept and can be restored.</p>
+        <div className="form-group">
+          <label className="form-label">Reason (optional)</label>
+          <select value={reason} onChange={e => setReason(e.target.value)}
+            style={{ width: '100%', padding: '9px 12px', borderRadius: 8, fontSize: 13, fontFamily: "'DM Sans', sans-serif", fontWeight: 500, background: 'var(--bg-3)', border: '1px solid var(--border)', color: reason ? 'var(--text)' : 'var(--text-3)', cursor: 'pointer', outline: 'none', appearance: 'none', backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239aa0b0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 12px center', paddingRight: 36 }}>
+            <option value="">Select a reason…</option>
+            {PRESET_REASONS.map(r => <option key={r} value={r}>{r}</option>)}
+          </select>
+        </div>
+        {err && <div style={{ color: 'var(--red)', fontSize: 13, marginBottom: 12 }}>{err}</div>}
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button className="btn btn-ghost" onClick={onClose} style={{ flex: 1 }}>Cancel</button>
+          <button onClick={handleArchive} disabled={loading} style={{ flex: 1, padding: '9px 16px', borderRadius: 8, background: 'rgba(154,160,176,0.1)', color: 'var(--text-2)', border: '1px solid rgba(154,160,176,0.25)', cursor: loading ? 'not-allowed' : 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, opacity: loading ? 0.7 : 1 }}>
+            {loading ? 'Archiving…' : <><Archive size={14} /> Archive</>}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const CreateModal = ({ onClose, onCreated }) => {
+  const [form, setForm] = useState({ email: '', name: '', password: '', role: 'admin' });
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState('');
+  const update = (k, v) => setForm(f => ({ ...f, [k]: v }));
+
+  const handleCreate = async () => {
+    if (!form.email || !form.name || !form.password) { setErr('All fields are required'); return; }
+    setSaving(true); setErr('');
+    try {
+      // Create via backend which will use Supabase admin API
+      const res = await axios.post(`${API_URL}/api/manager/users`, form);
+      onCreated(res.data.data);
+      onClose();
+    } catch (e) {
+      setErr(e.response?.data?.message || 'Create failed');
+    } finally { setSaving(false); }
+  };
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal" onClick={e => e.stopPropagation()}>
+        <button onClick={onClose} style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer' }}><X size={18} /></button>
+        <div className="modal-title" style={{ fontSize: 18 }}>Create Admin</div>
+        <p className="modal-sub">Add a new admin to SpecSmart</p>
+        {['name', 'email', 'password'].map(k => (
+          <div className="form-group" key={k}>
+            <label className="form-label">{k.charAt(0).toUpperCase() + k.slice(1)}</label>
+            <input className="form-input" type={k === 'password' ? 'password' : 'text'} placeholder={k === 'password' ? 'Min. 8 characters' : ''} value={form[k]} onChange={e => update(k, e.target.value)} />
+          </div>
+        ))}
+        <div className="form-group">
+          <label className="form-label">Role</label>
+          <div className="form-input" style={{ color: 'var(--text-2)', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <Crown size={14} style={{ color: '#f87171' }} /> Admin
+          </div>
+        </div>
+        {err && <div style={{ color: 'var(--red)', fontSize: 13, marginBottom: 12 }}>{err}</div>}
+        <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
+          <button className="btn btn-ghost" onClick={onClose} style={{ flex: 1 }}>Cancel</button>
+          <button className="btn btn-primary" onClick={handleCreate} disabled={saving} style={{ flex: 1 }}>
+            {saving ? 'Creating…' : <><UserPlus size={14} /> Create</>}
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -395,11 +317,7 @@ const DisabledUsersTab = () => {
                 <tr key={u.id} style={{ borderBottom: i < users.length - 1 ? '1px solid var(--border)' : 'none' }}
                   onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.02)'}
                   onMouseLeave={e => e.currentTarget.style.background = 'none'}>
-                  <td style={{ padding: '14px 20px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <Avatar name={u.name} /><span style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-2)' }}>{u.name}</span>
-                    </div>
-                  </td>
+                  <td style={{ padding: '14px 20px' }}><div style={{ display: 'flex', alignItems: 'center', gap: 10 }}><Avatar name={u.name} /><span style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-2)' }}>{u.name}</span></div></td>
                   <td style={{ padding: '14px 20px', fontSize: 13, color: 'var(--text-2)' }}>{u.email}</td>
                   <td style={{ padding: '14px 20px' }}><RoleBadge role={u.role} /></td>
                   <td style={{ padding: '14px 20px', fontSize: 13, color: 'var(--text-2)' }}>{fmt(u.created_at)}</td>
@@ -482,17 +400,11 @@ const ArchivedUsersTab = () => {
                 <tr key={u.id} style={{ borderBottom: i < users.length - 1 ? '1px solid var(--border)' : 'none' }}
                   onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.02)'}
                   onMouseLeave={e => e.currentTarget.style.background = 'none'}>
-                  <td style={{ padding: '14px 20px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <Avatar name={u.name} /><span style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-2)' }}>{u.name}</span>
-                    </div>
-                  </td>
+                  <td style={{ padding: '14px 20px' }}><div style={{ display: 'flex', alignItems: 'center', gap: 10 }}><Avatar name={u.name} /><span style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-2)' }}>{u.name}</span></div></td>
                   <td style={{ padding: '14px 20px', fontSize: 13, color: 'var(--text-2)' }}>{u.email}</td>
                   <td style={{ padding: '14px 20px' }}><RoleBadge role={u.role} /></td>
                   <td style={{ padding: '14px 20px', fontSize: 13, color: 'var(--text-2)' }}>{fmt(u.archived_at)}</td>
-                  <td style={{ padding: '14px 20px', fontSize: 13, color: u.archive_reason ? 'var(--text-2)' : 'var(--text-3)', fontStyle: u.archive_reason ? 'normal' : 'italic' }}>
-                    {u.archive_reason || 'No reason given'}
-                  </td>
+                  <td style={{ padding: '14px 20px', fontSize: 13, color: u.archive_reason ? 'var(--text-2)' : 'var(--text-3)', fontStyle: u.archive_reason ? 'normal' : 'italic' }}>{u.archive_reason || 'No reason given'}</td>
                   <td style={{ padding: '14px 20px' }}>
                     <button onClick={() => handleRestore(u.id)} disabled={restoringId === u.id}
                       style={{ padding: '6px 14px', borderRadius: 8, background: 'rgba(74,222,128,0.1)', color: '#4ade80', border: '1px solid rgba(74,222,128,0.3)', cursor: 'pointer', fontSize: 12, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -511,9 +423,13 @@ const ArchivedUsersTab = () => {
 
 // ── Main AdminPanel ───────────────────────────────────────────────────────────
 export default function AdminPanel() {
-  const { user } = useAuth();
+  const { user, isManager } = useAuth();
   const navigate = useNavigate();
-  const isAdmin = user?.role === 'admin';
+
+  // ✅ FIX: Read role from user_metadata (Supabase), not user.role
+  const currentUserRole = user?.user_metadata?.role || user?.app_metadata?.role || 'user';
+  const isAdmin = currentUserRole === 'admin';
+  const currentUserId = user?.id;
 
   const [activeTab, setActiveTab] = useState('users');
   const [users, setUsers] = useState([]);
@@ -532,12 +448,16 @@ export default function AdminPanel() {
   const [showCreate, setShowCreate] = useState(false);
   const sseRef = useRef(null);
 
-  useEffect(() => { if (!isAdmin) navigate('/dashboard'); }, [isAdmin]);
-
   useEffect(() => {
-    if (!isAdmin) return;
+    if (!isManager) navigate('/dashboard');
+  }, [isManager]);
+
+  // ✅ FIX: Get token from Supabase localStorage key, not old JWT token key
+  useEffect(() => {
+    if (!isManager) return;
     const connect = () => {
-      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+      const token = getSupabaseToken();
+      if (!token) return;
       const es = new EventSource(`${API_URL}/api/manager/stream?token=${token}`);
       sseRef.current = es;
       es.onopen = () => setSseConnected(true);
@@ -560,7 +480,7 @@ export default function AdminPanel() {
     };
     connect();
     return () => { sseRef.current?.close(); setSseConnected(false); };
-  }, [isAdmin]);
+  }, [isManager]);
 
   const fetchStats = () =>
     axios.get(`${API_URL}/api/manager/statistics`).then(r => setStats(r.data.data)).catch(() => {});
@@ -624,14 +544,17 @@ export default function AdminPanel() {
                 <Shield size={18} />
               </div>
               <h1 style={{ fontFamily: 'Syne, sans-serif', fontSize: 24, fontWeight: 800, margin: 0 }}>Admin Panel</h1>
-              <RoleBadge role={user?.role} />
+              {/* ✅ FIX: Show role from user_metadata */}
+              <RoleBadge role={currentUserRole} />
               <LiveBadge connected={sseConnected} />
             </div>
             <p style={{ color: 'var(--text-2)', fontSize: 14, margin: 0 }}>Manage users and monitor activity. New registrations appear instantly.</p>
           </div>
-          <button className="btn btn-primary" onClick={() => setShowCreate(true)}>
-            <UserPlus size={15} /> New Admin
-          </button>
+          {isAdmin && (
+            <button className="btn btn-primary" onClick={() => setShowCreate(true)}>
+              <UserPlus size={15} /> New Admin
+            </button>
+          )}
         </div>
 
         {/* Stats */}
@@ -698,7 +621,7 @@ export default function AdminPanel() {
                           <Avatar name={u.name} />
                           <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--text)' }}>
                             {u.name}
-                            {String(u.id) === String(user?.id) && (
+                            {String(u.id) === String(currentUserId) && (
                               <span style={{ marginLeft: 6, fontSize: 10, color: 'var(--accent)', background: 'var(--accent-glow)', padding: '1px 6px', borderRadius: 4 }}>You</span>
                             )}
                           </div>
@@ -709,7 +632,7 @@ export default function AdminPanel() {
                       <td style={{ padding: '14px 20px', fontSize: 13, color: 'var(--text-2)', whiteSpace: 'nowrap' }}>{fmt(u.created_at)}</td>
                       <td style={{ padding: '14px 20px', fontSize: 13, color: 'var(--text-2)', whiteSpace: 'nowrap' }}>{fmt(u.last_login)}</td>
                       <td style={{ padding: '14px 20px' }}>
-                        <RowActions user={u} currentId={user?.id} onDisable={() => setDisableUser(u)} onArchive={() => setArchiveUser(u)} />
+                        <RowActions user={u} currentId={currentUserId} onDisable={() => setDisableUser(u)} onArchive={() => setArchiveUser(u)} />
                       </td>
                     </tr>
                   ))}
