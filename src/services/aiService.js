@@ -1,6 +1,6 @@
 const API_BASE = import.meta.env.DEV
   ? 'http://localhost:5000'
-  : 'https://specsmart-production.up.railway.app';
+  : 'https://specsmart-production-ed74.up.railway.app';
 
 // ─── Streaming chat ────────────────────────────────────────────────────────────
 export async function askAIStream(messages, onToken, onDone, onError) {
