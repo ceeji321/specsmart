@@ -12,7 +12,7 @@ import {
 
 const API_URL = import.meta.env.DEV
   ? 'http://localhost:5000'
-  : 'https://specsmart-production.up.railway.app';
+  : 'https://specsmart-production-ed74.up.railway.app';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const roleColor = (role) => {

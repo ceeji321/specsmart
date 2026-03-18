@@ -5,7 +5,7 @@ import { X, Check, User, Mail } from 'lucide-react';
 
 const API_BASE = import.meta.env.DEV
   ? 'http://localhost:5000'
-  : 'https://specsmart-production.up.railway.app';
+  : 'https://specsmart-production-ed74.up.railway.app';
 
 function getHeaders() {
   const token = localStorage.getItem('token');
