@@ -1,4 +1,4 @@
-import path from 'path';
+﻿import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 
@@ -30,8 +30,8 @@ console.log('');
 
 app.use(cors({
   origin: [
-    'https://specsmart-zeta.vercel.app',  // ✅ your actual frontend
-    'https://specsmart-n2jd.vercel.app',  // old frontend (keep for safety)
+    'https://specsmart-zeta.vercel.app',
+    'https://specsmart-n2jd.vercel.app',
     process.env.FRONTEND_URL || 'http://localhost:5173',
     'http://localhost:5173'
   ],
