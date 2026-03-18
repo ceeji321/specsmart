@@ -645,7 +645,6 @@ export default function ChatPage({ onLogout }) {
   const [uploadedFile, setUploadedFile] = useState(null);
   const [uploadedPreview, setUploadedPreview] = useState(null);
   const [modelStatus, setModelStatus] = useState('');
-  const [pendingAutoSend, setPendingAutoSend] = useState(null);
   const [wizardState, setWizardState] = useState(null);
   const [catalogOpen, setCatalogOpen] = useState(false);
   const [catalogCategory, setCatalogCategory] = useState('SMARTPHONE');
@@ -656,134 +655,9 @@ export default function ChatPage({ onLogout }) {
   const cancelStreamRef = useRef(null);
   const streamingMsgIdRef = useRef(null);
   const savedChatIdRef = useRef(null);
+  const sendMessageRef = useRef(null);
 
   const WELCOME_MESSAGE = "👋 Hi! I'm SpecSmart AI, your specialized tech advisor for the Philippine market.\n\nI can help with:\n• PC Components (CPU, GPU, RAM, Storage, Motherboards, PSU)\n• Smartphones\n• Laptops\n\nAsk me anything, or upload a hardware image for AI identification! Prices are in Philippine Peso (₱).";
-
-  useEffect(() => {
-    const loadHistory = async () => {
-      if (id) {
-        try {
-          const token = await getToken(); // ✅ Fixed: use Supabase token
-          const res = await fetch(`${API_BASE}/api/history`, {
-            headers: { Authorization: `Bearer ${token}` },
-          });
-          const data = await res.json();
-          const historyItem = data.history?.find(h => h.id === parseInt(id));
-          if (historyItem?.messages?.length) {
-            savedChatIdRef.current = historyItem.id;
-            setMessages(historyItem.messages.map(m => ({ ...m, id: Math.random() })));
-            return;
-          }
-        } catch (err) { console.warn('Could not load history:', err); }
-      }
-
-      const pending = sessionStorage.getItem('pendingMessage');
-      if (pending) {
-        sessionStorage.removeItem('pendingMessage');
-        const { content, imageData, imageMime } = JSON.parse(pending);
-        setMessages([{ id: 0, role: 'assistant', content: WELCOME_MESSAGE }]);
-        if (imageData) {
-          setTimeout(() => sendMessage(content || 'What is this hardware?', imageData, imageMime || 'image/jpeg'), 300);
-        } else if (content) {
-          setPendingAutoSend(content);
-        }
-        return;
-      }
-
-      setMessages([{ id: 0, role: 'assistant', content: WELCOME_MESSAGE }]);
-    };
-    loadHistory();
-  }, [id]); // eslint-disable-line
-
-  useEffect(() => {
-    messagesRef.current = messages;
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, wizardState]);
-
-  useEffect(() => { return () => { if (cancelStreamRef.current) cancelStreamRef.current(); }; }, []);
-
-  const confirmDevice = useCallback(async (deviceName, category) => {
-    setWizardState(null);
-    setCatalogOpen(false);
-    setIsLoading(true);
-    setMessages(prev => [...prev, { id: Date.now(), role: 'user', content: `✅ That's the ${deviceName}` }]);
-
-    try {
-      const token = await getToken(); // ✅ Fixed
-      const res = await fetch(`${API_BASE}/api/ai/chat`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...(token && { Authorization: `Bearer ${token}` }) },
-        body: JSON.stringify({
-          messages: [{ role: 'user', content: `I confirmed this device: ${deviceName}.\n\nProvide full specs, Philippine price (PHP, as of 2025), where to buy in the Philippines, and a brief verdict.` }],
-        }),
-      });
-      const data = await res.json();
-      setMessages(prev => [...prev, { id: Date.now() + 1, role: 'assistant', content: data.content || 'Could not fetch specs.' }]);
-      setIsLoading(false);
-      const cat = category?.toUpperCase();
-      if (QUICK_ACTIONS[cat]) setWizardState({ phase: 'quick_actions', deviceName, category: cat });
-    } catch {
-      setIsLoading(false);
-      setMessages(prev => [...prev, { id: Date.now() + 1, role: 'assistant', content: '⚠️ Could not fetch specs. Please try again.' }]);
-    }
-  }, []);
-
-  const startWizard = useCallback((scanResult, category) => {
-    const steps = category === 'SMARTPHONE' ? SMARTPHONE_STEPS : PC_STEPS;
-    setWizardState({ phase: 'steps', scanResult, category, steps, stepIndex: 0, answers: {} });
-  }, []);
-
-  const handleWizardOption = useCallback((optionId, optionLabel) => {
-    setWizardState(prev => {
-      if (!prev || prev.phase !== 'steps') return prev;
-      const newAnswers = { ...prev.answers, [prev.steps[prev.stepIndex].id]: { id: optionId, label: optionLabel } };
-      const nextIndex = prev.stepIndex + 1;
-      if (nextIndex < prev.steps.length) return { ...prev, stepIndex: nextIndex, answers: newAnswers };
-      return { ...prev, phase: 'refining', answers: newAnswers };
-    });
-  }, []);
-
-  useEffect(() => {
-    if (!wizardState || wizardState.phase !== 'refining') return;
-    const { scanResult, category, answers } = wizardState;
-    const answerSummary = Object.entries(answers).map(([k, v]) => `${k}: ${v.label}`).join(', ');
-    const prompt = `A device was scanned. Clues: ${answerSummary}. AI identified: "${scanResult.displayName}". List 3 most likely exact models. Respond ONLY with JSON: { "reasoning": "one sentence", "suggestions": ["Model 1", "Model 2", "Model 3"] }`;
-
-    setIsLoading(true);
-    getToken().then(token => { // ✅ Fixed
-      fetch(`${API_BASE}/api/ai/chat`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...(token && { Authorization: `Bearer ${token}` }) },
-        body: JSON.stringify({ messages: [{ role: 'user', content: prompt }] }),
-      })
-        .then(r => r.json())
-        .then(data => {
-          setIsLoading(false);
-          try {
-            const parsed = JSON.parse((data.content || '').replace(/```json|```/g, '').trim());
-            setWizardState(prev => ({ ...prev, phase: 'refined', reasoning: parsed.reasoning || '', suggestions: parsed.suggestions || [scanResult.displayName] }));
-          } catch {
-            setWizardState(prev => ({ ...prev, phase: 'refined', reasoning: '', suggestions: [scanResult.displayName] }));
-          }
-        })
-        .catch(() => {
-          setIsLoading(false);
-          setWizardState(prev => ({ ...prev, phase: 'refined', reasoning: '', suggestions: [scanResult.displayName] }));
-        });
-    });
-  }, [wizardState?.phase]); // eslint-disable-line
-
-  const handleQuickAction = useCallback((questionId) => {
-    if (!wizardState || wizardState.phase !== 'quick_actions') return;
-    const query = getQuickActionQuery(questionId, wizardState.deviceName);
-    setWizardState(null);
-    sendMessage(query);
-  }, [wizardState]); // eslint-disable-line
-
-  const openCatalog = useCallback((category) => {
-    setCatalogCategory(category || 'SMARTPHONE');
-    setCatalogOpen(true);
-  }, []);
 
   const sendMessage = useCallback(async (messageContent, imageData, imageMime) => {
     const textContent = messageContent || input;
@@ -804,7 +678,7 @@ export default function ChatPage({ onLogout }) {
     setIsLoading(true);
 
     try {
-      const token = await getToken(); // ✅ Fixed
+      const token = await getToken();
 
       if (imageData) {
         setModelStatus('🔍 Analyzing with Groq Vision AI...');
@@ -906,14 +780,137 @@ export default function ChatPage({ onLogout }) {
     }
   }, [input]); // eslint-disable-line
 
+  // Keep ref in sync so loadHistory can call sendMessage safely
   useEffect(() => {
-    if (pendingAutoSend && messages.length > 0) {
-      const msg = pendingAutoSend;
-      setPendingAutoSend(null);
-      const timer = setTimeout(() => { sendMessage(msg); }, 300);
-      return () => clearTimeout(timer);
+    sendMessageRef.current = sendMessage;
+  }, [sendMessage]);
+
+  useEffect(() => {
+    const loadHistory = async () => {
+      if (id) {
+        try {
+          const token = await getToken();
+          const res = await fetch(`${API_BASE}/api/history`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          const data = await res.json();
+          const historyItem = data.history?.find(h => h.id === parseInt(id));
+          if (historyItem?.messages?.length) {
+            savedChatIdRef.current = historyItem.id;
+            setMessages(historyItem.messages.map(m => ({ ...m, id: Math.random() })));
+            return;
+          }
+        } catch (err) { console.warn('Could not load history:', err); }
+      }
+
+      // ✅ FIX: Read pendingMessage and send it after welcome message is set
+      const pending = sessionStorage.getItem('pendingMessage');
+      if (pending) {
+        sessionStorage.removeItem('pendingMessage');
+        const { content, imageData, imageMime } = JSON.parse(pending);
+        setMessages([{ id: 0, role: 'assistant', content: WELCOME_MESSAGE }]);
+        if (imageData) {
+          setTimeout(() => sendMessageRef.current(content || 'What is this hardware?', imageData, imageMime || 'image/jpeg'), 500);
+        } else if (content) {
+          setTimeout(() => sendMessageRef.current(content), 500);
+        }
+        return;
+      }
+
+      setMessages([{ id: 0, role: 'assistant', content: WELCOME_MESSAGE }]);
+    };
+    loadHistory();
+  }, [id]); // eslint-disable-line
+
+  useEffect(() => {
+    messagesRef.current = messages;
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, wizardState]);
+
+  useEffect(() => { return () => { if (cancelStreamRef.current) cancelStreamRef.current(); }; }, []);
+
+  const confirmDevice = useCallback(async (deviceName, category) => {
+    setWizardState(null);
+    setCatalogOpen(false);
+    setIsLoading(true);
+    setMessages(prev => [...prev, { id: Date.now(), role: 'user', content: `✅ That's the ${deviceName}` }]);
+
+    try {
+      const token = await getToken();
+      const res = await fetch(`${API_BASE}/api/ai/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(token && { Authorization: `Bearer ${token}` }) },
+        body: JSON.stringify({
+          messages: [{ role: 'user', content: `I confirmed this device: ${deviceName}.\n\nProvide full specs, Philippine price (PHP, as of 2025), where to buy in the Philippines, and a brief verdict.` }],
+        }),
+      });
+      const data = await res.json();
+      setMessages(prev => [...prev, { id: Date.now() + 1, role: 'assistant', content: data.content || 'Could not fetch specs.' }]);
+      setIsLoading(false);
+      const cat = category?.toUpperCase();
+      if (QUICK_ACTIONS[cat]) setWizardState({ phase: 'quick_actions', deviceName, category: cat });
+    } catch {
+      setIsLoading(false);
+      setMessages(prev => [...prev, { id: Date.now() + 1, role: 'assistant', content: '⚠️ Could not fetch specs. Please try again.' }]);
     }
-  }, [pendingAutoSend]); // eslint-disable-line
+  }, []);
+
+  const startWizard = useCallback((scanResult, category) => {
+    const steps = category === 'SMARTPHONE' ? SMARTPHONE_STEPS : PC_STEPS;
+    setWizardState({ phase: 'steps', scanResult, category, steps, stepIndex: 0, answers: {} });
+  }, []);
+
+  const handleWizardOption = useCallback((optionId, optionLabel) => {
+    setWizardState(prev => {
+      if (!prev || prev.phase !== 'steps') return prev;
+      const newAnswers = { ...prev.answers, [prev.steps[prev.stepIndex].id]: { id: optionId, label: optionLabel } };
+      const nextIndex = prev.stepIndex + 1;
+      if (nextIndex < prev.steps.length) return { ...prev, stepIndex: nextIndex, answers: newAnswers };
+      return { ...prev, phase: 'refining', answers: newAnswers };
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!wizardState || wizardState.phase !== 'refining') return;
+    const { scanResult, category, answers } = wizardState;
+    const answerSummary = Object.entries(answers).map(([k, v]) => `${k}: ${v.label}`).join(', ');
+    const prompt = `A device was scanned. Clues: ${answerSummary}. AI identified: "${scanResult.displayName}". List 3 most likely exact models. Respond ONLY with JSON: { "reasoning": "one sentence", "suggestions": ["Model 1", "Model 2", "Model 3"] }`;
+
+    setIsLoading(true);
+    getToken().then(token => {
+      fetch(`${API_BASE}/api/ai/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(token && { Authorization: `Bearer ${token}` }) },
+        body: JSON.stringify({ messages: [{ role: 'user', content: prompt }] }),
+      })
+        .then(r => r.json())
+        .then(data => {
+          setIsLoading(false);
+          try {
+            const parsed = JSON.parse((data.content || '').replace(/```json|```/g, '').trim());
+            setWizardState(prev => ({ ...prev, phase: 'refined', reasoning: parsed.reasoning || '', suggestions: parsed.suggestions || [scanResult.displayName] }));
+          } catch {
+            setWizardState(prev => ({ ...prev, phase: 'refined', reasoning: '', suggestions: [scanResult.displayName] }));
+          }
+        })
+        .catch(() => {
+          setIsLoading(false);
+          setWizardState(prev => ({ ...prev, phase: 'refined', reasoning: '', suggestions: [scanResult.displayName] }));
+        });
+    });
+  }, [wizardState?.phase]); // eslint-disable-line
+
+  const handleQuickAction = useCallback((questionId) => {
+    if (!wizardState || wizardState.phase !== 'quick_actions') return;
+    const query = getQuickActionQuery(questionId, wizardState.deviceName);
+    setWizardState(null);
+    sendMessage(query);
+  }, [wizardState, sendMessage]);
+
+  const openCatalog = useCallback((category) => {
+    setCatalogCategory(category || 'SMARTPHONE');
+    setCatalogOpen(true);
+  }, []);
 
   const handleSubmit = async e => {
     e.preventDefault();
