@@ -1,119 +1,79 @@
-// src/services/historyService.js
-import axios from 'axios';
+import { createClient } from '@supabase/supabase-js';
+
+const supabase = createClient(
+  import.meta.env.VITE_SUPABASE_URL,
+  import.meta.env.VITE_SUPABASE_ANON_KEY
+);
 
 const API_BASE = import.meta.env.DEV
   ? 'http://localhost:5000'
-  : 'https://specsmart-production.up.railway.app';
+  : 'https://specsmart-production-ed74.up.railway.app';
 
-// ✅ FIX: Get token from axios default header (set by AuthContext on login)
-// Old code used localStorage.getItem('token') which was the JWT key — Supabase doesn't use that
-function getHeaders() {
-  const authHeader = axios.defaults.headers.common['Authorization'];
+async function getHeaders() {
+  const { data: { session } } = await supabase.auth.getSession();
+  const token = session?.access_token;
   return {
     'Content-Type': 'application/json',
-    ...(authHeader && { Authorization: authHeader }),
+    ...(token && { Authorization: `Bearer ${token}` }),
   };
 }
 
-// Fetch all chat history from DB
 export async function fetchHistory() {
   try {
-    const res = await fetch(`${API_BASE}/api/history`, { headers: getHeaders() });
+    const headers = await getHeaders();
+    const res = await fetch(`${API_BASE}/api/history`, { headers });
     if (!res.ok) throw new Error('Failed to fetch history');
     const data = await res.json();
     return data.history || [];
-  } catch (err) {
-    console.error('fetchHistory error:', err);
-    return [];
-  }
+  } catch (err) { console.error('fetchHistory error:', err); return []; }
 }
 
-// Save or update a chat session in DB
 export async function saveChat(title, messages, chatId = null) {
   try {
-    const cleanMessages = messages
-      .filter(m => m.role && m.content)
-      .map(m => ({ role: m.role, content: m.content }));
-
+    const cleanMessages = messages.filter(m => m.role && m.content).map(m => ({ role: m.role, content: m.content }));
     if (cleanMessages.length < 2) return null;
-
+    const headers = await getHeaders();
     const res = await fetch(`${API_BASE}/api/history`, {
-      method: 'POST',
-      headers: getHeaders(),
-      body: JSON.stringify({
-        title: title.slice(0, 100),
-        messages: cleanMessages,
-        chatId,
-      }),
+      method: 'POST', headers,
+      body: JSON.stringify({ title: title.slice(0, 100), messages: cleanMessages, chatId }),
     });
     if (!res.ok) return null;
-    const data = await res.json();
-    return data.history;
-  } catch (err) {
-    console.error('saveChat error:', err);
-    return null;
-  }
+    return (await res.json()).history;
+  } catch (err) { console.error('saveChat error:', err); return null; }
 }
 
-// Delete multiple history items
 export async function deleteHistory(ids) {
   try {
-    const res = await fetch(`${API_BASE}/api/history`, {
-      method: 'DELETE',
-      headers: getHeaders(),
-      body: JSON.stringify({ ids }),
-    });
+    const headers = await getHeaders();
+    const res = await fetch(`${API_BASE}/api/history`, { method: 'DELETE', headers, body: JSON.stringify({ ids }) });
     return res.ok;
-  } catch (err) {
-    console.error('deleteHistory error:', err);
-    return false;
-  }
+  } catch (err) { return false; }
 }
 
-// Archive multiple history items
 export async function archiveHistory(ids) {
   try {
-    const res = await fetch(`${API_BASE}/api/history/archive`, {
-      method: 'PATCH',
-      headers: getHeaders(),
-      body: JSON.stringify({ ids }),
-    });
+    const headers = await getHeaders();
+    const res = await fetch(`${API_BASE}/api/history/archive`, { method: 'PATCH', headers, body: JSON.stringify({ ids }) });
     return res.ok;
-  } catch (err) {
-    console.error('archiveHistory error:', err);
-    return false;
-  }
+  } catch (err) { return false; }
 }
 
-// Save a comparison to DB
 export async function saveComparison(device1, device2) {
   try {
+    const headers = await getHeaders();
     const res = await fetch(`${API_BASE}/api/comparisons`, {
-      method: 'POST',
-      headers: getHeaders(),
-      body: JSON.stringify({
-        device1_name: device1.name,
-        device2_name: device2.name,
-        device1_id: device1.id,
-        device2_id: device2.id,
-      }),
+      method: 'POST', headers,
+      body: JSON.stringify({ device1_name: device1.name, device2_name: device2.name, device1_id: device1.id, device2_id: device2.id }),
     });
     return res.ok;
-  } catch (err) {
-    console.error('saveComparison error:', err);
-    return false;
-  }
+  } catch (err) { return false; }
 }
 
-// Fetch comparisons (for history page)
 export async function fetchComparisons() {
   try {
-    const res = await fetch(`${API_BASE}/api/comparisons`, { headers: getHeaders() });
+    const headers = await getHeaders();
+    const res = await fetch(`${API_BASE}/api/comparisons`, { headers });
     if (!res.ok) return [];
-    const data = await res.json();
-    return data.comparisons || [];
-  } catch (err) {
-    console.error('fetchComparisons error:', err);
-    return [];
-  }
+    return (await res.json()).comparisons || [];
+  } catch (err) { return []; }
 }
