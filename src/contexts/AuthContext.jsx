@@ -1,12 +1,7 @@
 // src/contexts/AuthContext.jsx
 import { createContext, useContext, useState, useEffect } from 'react';
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from '../lib/supabase';
 import axios from 'axios';
-
-const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_ANON_KEY
-);
 
 const AuthContext = createContext(null);
 
@@ -20,7 +15,6 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // ── Always fetch fresh user from Supabase to get latest metadata/role ────────
   const refreshUser = async (accessToken) => {
     const { data: { user: freshUser } } = await supabase.auth.getUser();
     if (freshUser) {
@@ -32,7 +26,6 @@ export const AuthProvider = ({ children }) => {
   };
 
   useEffect(() => {
-    // Get session on initial load
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
         refreshUser(session.access_token);
@@ -40,7 +33,6 @@ export const AuthProvider = ({ children }) => {
       setLoading(false);
     });
 
-    // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session) {
         refreshUser(session.access_token);
@@ -53,8 +45,6 @@ export const AuthProvider = ({ children }) => {
     return () => subscription.unsubscribe();
   }, []);
 
-  // ─── Register ─────────────────────────────────────────────────────────────────
-  // NOTE: Do NOT set role here — role is always managed server-side via Supabase admin
   const register = async ({ email, password, name }) => {
     try {
       const { data, error } = await supabase.auth.signUp({
@@ -64,15 +54,12 @@ export const AuthProvider = ({ children }) => {
           data: {
             name,
             username: email.split('@')[0],
-            // role is intentionally NOT set here — defaults to 'user' on the server
           }
         }
       });
 
       if (error) return { success: false, error: error.message };
-
       if (data.session) return { success: true, user: data.user };
-
       return {
         success: true,
         user: data.user,
@@ -83,7 +70,6 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // ─── Login ────────────────────────────────────────────────────────────────────
   const login = async (email, password) => {
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -103,19 +89,16 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // ─── Logout ───────────────────────────────────────────────────────────────────
   const logout = async () => {
     await supabase.auth.signOut();
   };
 
-  // ─── Update user metadata ─────────────────────────────────────────────────────
   const updateUser = async (userData) => {
     const { data, error } = await supabase.auth.updateUser({ data: userData });
     if (!error && data.user) setUser(data.user);
     return { success: !error, error: error?.message };
   };
 
-  // Read role — check both user_metadata and app_metadata for safety
   const role = user?.user_metadata?.role || user?.app_metadata?.role || 'user';
 
   const value = {
