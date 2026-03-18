@@ -1,14 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { createClient } from '@supabase/supabase-js';
 import Navbar from '../components/Navbar';
 import { askAIStream, analyzeImageWithGroq } from '../services/aiService';
 import { saveChat } from '../services/historyService';
-
-const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_ANON_KEY
-);
+import { supabase } from '../lib/supabase';
 
 async function getToken() {
   const { data: { session } } = await supabase.auth.getSession();
