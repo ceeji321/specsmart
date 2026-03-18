@@ -127,12 +127,12 @@ router.post('/register', async (req, res) => {
 
     // ── Sync to your PostgreSQL users table ───────────────────────────────────
     try {
-      await pool.query(
-        `INSERT INTO users (id, email, name, role, created_at)
-         VALUES ($1, $2, $3, 'user', NOW())
-         ON CONFLICT (email) DO NOTHING`,
-        [supabaseUser.id, trimmedEmail, fullName]
-      );
+  await pool.query(
+  `INSERT INTO users (id, username, email, name, role, password_hash, created_at)
+   VALUES ($1, $2, $3, $4, 'user', 'supabase_managed', NOW())
+   ON CONFLICT (email) DO NOTHING`,
+  [supabaseUser.id, trimmedEmail, trimmedEmail, fullName]
+);
     } catch (dbError) {
       console.error('DB sync error (non-fatal):', dbError.message);
     }
