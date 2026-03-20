@@ -1,23 +1,28 @@
-// src/components/EditProfileModal.jsx
+// src/components/Auth/EditProfileModal.jsx
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { supabase } from '../lib/supabase';
 import { X, Check, User, Mail } from 'lucide-react';
 
 const API_BASE = import.meta.env.DEV
   ? 'http://localhost:5000'
   : 'https://specsmart-production-ed74.up.railway.app';
 
-function getHeaders() {
-  const token = localStorage.getItem('token');
+// ✅ FIXED: Get token from Supabase session, NOT localStorage
+async function getHeaders() {
+  const { data: { session }, error } = await supabase.auth.getSession();
+  if (error || !session) return { 'Content-Type': 'application/json' };
   return {
     'Content-Type': 'application/json',
-    ...(token && { Authorization: `Bearer ${token}` }),
+    Authorization: `Bearer ${session.access_token}`,
   };
 }
 
 export default function EditProfileModal({ onClose }) {
   const { user, updateUser, logout } = useAuth();
-  const [name, setName] = useState(user?.name || '');
+
+  // ✅ FIXED: user_metadata.name, not user.name
+  const [name, setName] = useState(user?.user_metadata?.name || '');
   const [email, setEmail] = useState(user?.email || '');
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState(null);
@@ -29,9 +34,19 @@ export default function EditProfileModal({ onClose }) {
     setSaving(true);
     setMsg(null);
     try {
+      // ✅ FIXED: await getHeaders() since it's now async
+      const headers = await getHeaders();
+
+      // Check if we actually got a token
+      if (!headers.Authorization) {
+        setMsg({ type: 'error', text: 'Session expired. Please log in again.' });
+        setTimeout(() => logout(), 1500);
+        return;
+      }
+
       const res = await fetch(`${API_BASE}/api/users/profile`, {
         method: 'PUT',
-        headers: getHeaders(),
+        headers,
         body: JSON.stringify({ name: name.trim(), email: email.trim().toLowerCase() }),
       });
       const data = await res.json();
@@ -44,6 +59,7 @@ export default function EditProfileModal({ onClose }) {
         setTimeout(() => logout(), 2500);
       } else {
         setMsg({ type: 'success', text: 'Profile updated successfully!' });
+        setTimeout(() => onClose(), 1500);
       }
     } catch {
       setMsg({ type: 'error', text: 'Network error. Please try again.' });
@@ -66,14 +82,25 @@ export default function EditProfileModal({ onClose }) {
           <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <User size={12} style={{ color: 'var(--text-3)' }} /> Full Name
           </label>
-          <input className="form-input" value={name} onChange={e => setName(e.target.value)} placeholder="Your full name" />
+          <input
+            className="form-input"
+            value={name}
+            onChange={e => setName(e.target.value)}
+            placeholder="Your full name"
+          />
         </div>
 
         <div className="form-group">
           <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <Mail size={12} style={{ color: 'var(--text-3)' }} /> Email Address
           </label>
-          <input className="form-input" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="your@email.com" />
+          <input
+            className="form-input"
+            type="email"
+            value={email}
+            onChange={e => setEmail(e.target.value)}
+            placeholder="your@email.com"
+          />
           <p style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 6 }}>
             ⚠️ Changing your email will sign you out.
           </p>

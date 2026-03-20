@@ -1,6 +1,5 @@
 // server/routes/users.js
 import express from 'express';
-import bcrypt from 'bcryptjs';
 import { authenticateToken } from '../middleware/auth.js';
 import pool from '../config/database.js';
 
@@ -17,8 +16,8 @@ router.get('/profile', authenticateToken, async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     res.json({ user: result.rows[0] });
   } catch (error) {
-    console.error('Get profile error:', error);
-    res.status(500).json({ error: 'Failed to get profile' });
+    console.error('Get profile error:', error.message);
+    res.status(500).json({ error: error.message });
   }
 });
 
@@ -42,21 +41,37 @@ router.put('/profile', authenticateToken, async (req, res) => {
       'SELECT name, email FROM users WHERE id = $1',
       [req.user.userId]
     );
-    const currentUser = current.rows[0];
 
+    if (current.rows.length === 0)
+      return res.status(404).json({ error: 'User not found' });
+
+    const currentUser = current.rows[0];
     const newName = name || currentUser.name;
     const newEmail = email ? email.toLowerCase() : currentUser.email;
 
-    const result = await pool.query(
-      `UPDATE users SET name = $1, email = $2, updated_at = NOW()
-       WHERE id = $3
-       RETURNING id, email, name, role, created_at`,
-      [newName, newEmail, req.user.userId]
-    );
+    // Try with updated_at first, fall back without it
+    let result;
+    try {
+      result = await pool.query(
+        `UPDATE users SET name = $1, email = $2, updated_at = NOW()
+         WHERE id = $3
+         RETURNING id, email, name, role, created_at`,
+        [newName, newEmail, req.user.userId]
+      );
+    } catch (colError) {
+      // updated_at column doesn't exist — retry without it
+      result = await pool.query(
+        `UPDATE users SET name = $1, email = $2
+         WHERE id = $3
+         RETURNING id, email, name, role, created_at`,
+        [newName, newEmail, req.user.userId]
+      );
+    }
+
     res.json({ user: result.rows[0], message: 'Profile updated successfully' });
   } catch (error) {
-    console.error('Update profile error:', error);
-    res.status(500).json({ error: 'Failed to update profile' });
+    console.error('Update profile error:', error.message);
+    res.status(500).json({ error: error.message });
   }
 });
 
@@ -80,8 +95,8 @@ router.post('/password-reset-request', authenticateToken, async (req, res) => {
 
     res.status(201).json({ message: 'Password reset request submitted. An admin will process it shortly.' });
   } catch (error) {
-    console.error('Password reset request error:', error);
-    res.status(500).json({ error: 'Failed to submit request' });
+    console.error('Password reset request error:', error.message);
+    res.status(500).json({ error: error.message });
   }
 });
 
@@ -98,7 +113,8 @@ router.get('/password-reset-request/status', authenticateToken, async (req, res)
     );
     res.json({ request: result.rows[0] || null });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to get request status' });
+    console.error('Get reset status error:', error.message);
+    res.status(500).json({ error: error.message });
   }
 });
 

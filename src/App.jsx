@@ -9,6 +9,8 @@ import AdminPanel from './pages/AdminPanel';
 import ArchiveHistory from './pages/ArchiveHistory';
 import DeletedHistory from './pages/DeletedHistory';
 import ResetPasswordPage from './pages/ResetPasswordPage';
+import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
+import TermsOfServicePage from './pages/TermsOfServicePage';
 
 const LoadingScreen = () => (
   <div style={{ background: '#0a0a0f', height: '100vh' }} />
@@ -50,6 +52,8 @@ function App() {
 
         {/* Public — no auth required */}
         <Route path="/reset-password" element={<ResetPasswordPage />} />
+        <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
+        <Route path="/terms-of-service" element={<TermsOfServicePage />} />
 
         {/* Regular user routes */}
         <Route path="/dashboard" element={

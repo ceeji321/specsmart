@@ -1,12 +1,12 @@
 // src/pages/LandingPage.jsx
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useState, useEffect } from 'react';
 import AuthModal from '../components/Auth/AuthModal';
 
 const ContactEmail = () => (
   <a
-    href="https://mail.google.com/mail/?view=cm&to=support@specsmart.com&su=SpecSmart%20Inquiry&body=Hi%20SpecSmart%20team%2C%0A%0A"
+    href="https://mail.google.com/mail/?view=cm&to=cjcendana3@gmail.com&su=SpecSmart%20Inquiry&body=Hi%20SpecSmart%20team%2C%0A%0A"
     target="_blank"
     rel="noopener noreferrer"
     className="btn btn-primary"
@@ -32,7 +32,6 @@ export default function LandingPage() {
     }
   }, [isAuthenticated, navigate]);
 
-  // Don't render anything if logged in
   if (isAuthenticated) return null;
 
   const openAuth = (mode) => { setAuthMode(mode); setShowAuth(true); };
@@ -53,7 +52,7 @@ export default function LandingPage() {
 
   return (
     <div className="page">
-      {/* Simple Landing Navbar (no auth dropdown) */}
+      {/* Navbar */}
       <nav style={{
         position: 'sticky', top: 0, zIndex: 50,
         background: 'rgba(10,11,15,0.85)',
@@ -168,15 +167,26 @@ export default function LandingPage() {
       {/* Footer */}
       <footer style={{ borderTop: '1px solid var(--border)', padding: '28px 24px', textAlign: 'center' }}>
         <p style={{ fontSize: '13px', color: 'var(--text-3)', marginBottom: '12px' }}>© 2026 SpecSmart. All rights reserved.</p>
-        <div style={{ display: 'flex', gap: '20px', justifyContent: 'center' }}>
+        <div style={{ display: 'flex', gap: '20px', justifyContent: 'center', flexWrap: 'wrap' }}>
           {[['About', 'about'], ['Contact', 'contact']].map(([label, id]) => (
             <button key={id} onClick={() => scrollTo(id)}
               style={{ background: 'none', border: 'none', fontSize: '13px', color: 'var(--text-3)', cursor: 'pointer' }}>
               {label}
             </button>
           ))}
-          <a href="#" style={{ fontSize: '13px', color: 'var(--text-3)', textDecoration: 'none' }}>Privacy Policy</a>
-          <a href="#" style={{ fontSize: '13px', color: 'var(--text-3)', textDecoration: 'none' }}>Terms of Service</a>
+          {/* ✅ FIXED: Now navigates to actual pages */}
+          <Link
+            to="/privacy-policy"
+            style={{ fontSize: '13px', color: 'var(--text-3)', textDecoration: 'none' }}
+          >
+            Privacy Policy
+          </Link>
+          <Link
+            to="/terms-of-service"
+            style={{ fontSize: '13px', color: 'var(--text-3)', textDecoration: 'none' }}
+          >
+            Terms of Service
+          </Link>
         </div>
       </footer>
 
