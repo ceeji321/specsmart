@@ -74,8 +74,46 @@ const GSMARENA_IMGS = {
   'oneplus 12': 'https://fdn2.gsmarena.com/vv/bigpic/oneplus-12.jpg',
 };
 
-// ─── In-memory cache — avoids re-fetching the same device twice ───────────────
+// ─── In-memory cache ──────────────────────────────────────────────────────────
 const deviceCache = new Map();
+
+// FIX: Safe JSON extractor — handles extra text, markdown fences, and truncated
+// responses. Tries full parse first, then extracts the first { } or [ ] block.
+function safeParseJSON(raw) {
+  if (!raw) return null;
+  // Strip markdown code fences
+  let cleaned = raw.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
+  // Try direct parse first
+  try { return JSON.parse(cleaned); } catch { /* fall through */ }
+  // Try extracting first JSON object
+  const objStart = cleaned.indexOf('{');
+  const objEnd   = cleaned.lastIndexOf('}');
+  if (objStart !== -1 && objEnd > objStart) {
+    try { return JSON.parse(cleaned.slice(objStart, objEnd + 1)); } catch { /* fall through */ }
+  }
+  // Try extracting first JSON array
+  const arrStart = cleaned.indexOf('[');
+  const arrEnd   = cleaned.lastIndexOf(']');
+  if (arrStart !== -1 && arrEnd > arrStart) {
+    try { return JSON.parse(cleaned.slice(arrStart, arrEnd + 1)); } catch { /* fall through */ }
+  }
+  return null;
+}
+
+// FIX: Safe value renderer — if the AI returns a nested object for a spec field
+// (e.g. cores: { performance: 8, efficiency: 4 }) convert it to a readable string
+// instead of letting React try to render the object directly, which crashes with
+// "Objects are not valid as a React child".
+function safeVal(val) {
+  if (val === null || val === undefined) return null;
+  if (typeof val === 'object') {
+    // Convert object values to "key: value" pairs joined by ", "
+    return Object.entries(val)
+      .map(([k, v]) => `${k}: ${v}`)
+      .join(', ');
+  }
+  return String(val);
+}
 
 function getDeviceImageUrl(device) {
   if (!device) return null;
@@ -89,15 +127,40 @@ function getDeviceImageUrl(device) {
 }
 
 function matchLocalDevice(suggestion) {
-  const nameLower = (suggestion.name || '').toLowerCase();
-  const brandLower = (suggestion.brand || '').toLowerCase();
-  let match = devices.find(d => d.name.toLowerCase() === nameLower);
+  const nameLower     = (suggestion.name     || '').toLowerCase();
+  const brandLower    = (suggestion.brand    || '').toLowerCase();
+  const categoryLower = (suggestion.category || '').toLowerCase();
+
+  // FIX: helper that rejects a local match if its category is clearly different
+  // from what the AI identified. Prevents "Samsung Galaxy S26 Ultra" matching
+  // an SSD entry just because both share a keyword like "Ultra" or "Samsung".
+  const categoryOk = (localDevice) => {
+    if (!categoryLower || !localDevice.category) return true; // can't tell — allow
+    const lc = localDevice.category.toLowerCase();
+    // Define incompatible category pairs
+    const isPhone  = categoryLower.includes('smartphone') || categoryLower.includes('phone');
+    const isPC     = ['gpu','cpu','ram','ssd','motherboard','psu','storage'].some(c => categoryLower.includes(c));
+    const isLaptop = categoryLower.includes('laptop');
+    if (isPhone  && (lc.includes('ssd') || lc.includes('gpu') || lc.includes('cpu') || lc.includes('ram') || lc.includes('motherboard') || lc.includes('psu'))) return false;
+    if (isPC     && (lc.includes('smartphone') || lc.includes('phone') || lc.includes('laptop'))) return false;
+    if (isLaptop && (lc.includes('smartphone') || lc.includes('phone') || lc.includes('ssd') || lc.includes('gpu') || lc.includes('cpu'))) return false;
+    return true;
+  };
+
+  // Exact name match — still guard category
+  let match = devices.find(d => d.name.toLowerCase() === nameLower && categoryOk(d));
   if (match) return match;
+
+  // Partial name match — guard category
   match = devices.find(d =>
-    d.name.toLowerCase().includes(nameLower) || nameLower.includes(d.name.toLowerCase())
+    categoryOk(d) &&
+    (d.name.toLowerCase().includes(nameLower) || nameLower.includes(d.name.toLowerCase()))
   );
   if (match) return match;
+
+  // Brand + keyword match — guard category
   match = devices.find(d => {
+    if (!categoryOk(d)) return false;
     const words = nameLower.split(' ').filter(w => w.length > 2);
     const dName = d.name.toLowerCase();
     return d.brand?.toLowerCase() === brandLower && words.some(w => dName.includes(w));
@@ -106,7 +169,7 @@ function matchLocalDevice(suggestion) {
 }
 
 const BrandInitial = ({ brand, size = 36 }) => {
-  const color = BRAND_COLORS[brand] || '#6366f1';
+  const color  = BRAND_COLORS[brand] || '#6366f1';
   const letter = (brand || '?')[0].toUpperCase();
   return (
     <div style={{
@@ -133,19 +196,18 @@ const BrandLogoFallback = ({ brand, emoji, size = 30 }) => {
 };
 
 const DeviceImage = ({ device, size = 40 }) => {
-  const [localFailed, setLocalFailed] = useState(false);
+  const [localFailed,  setLocalFailed]  = useState(false);
   const [remoteFailed, setRemoteFailed] = useState(false);
   useEffect(() => { setLocalFailed(false); setRemoteFailed(false); }, [device?.name]);
 
   const imgStyle = { width: size, height: size, objectFit: 'contain', padding: 3, boxSizing: 'border-box' };
-  const imageUrl = getDeviceImageUrl(device);
-  const proxySrc = imageUrl && imageUrl.startsWith('http')
+  const imageUrl  = getDeviceImageUrl(device);
+  const proxySrc  = imageUrl && imageUrl.startsWith('http')
     ? `https://wsrv.nl/?url=${encodeURIComponent(imageUrl)}&w=300&output=webp`
     : imageUrl;
 
   if (device?.localImg && !localFailed)
-    return <img src={device.localImg} alt={device?.name}
-      onError={() => setLocalFailed(true)} style={imgStyle} />;
+    return <img src={device.localImg} alt={device?.name} onError={() => setLocalFailed(true)} style={imgStyle} />;
   if (proxySrc && !remoteFailed)
     return <img src={proxySrc} alt={device?.name} referrerPolicy="no-referrer"
       onError={() => setRemoteFailed(true)} style={imgStyle} />;
@@ -195,20 +257,24 @@ const DevicePreview = ({ device }) => (
   </div>
 );
 
-// ─── API helpers — with caching ───────────────────────────────────────────────
+// ─── API helpers ──────────────────────────────────────────────────────────────
+
 async function fetchAISuggestions(query, category) {
   const cacheKey = `suggest:${query.toLowerCase()}:${category}`;
   if (deviceCache.has(cacheKey)) return deviceCache.get(cacheKey);
 
   const catFilter = category && category !== 'All' ? ` Focus only on ${category} products.` : '';
-  const response = await askAI([{
+  const response  = await askAI([{
     role: 'user',
     content: `List up to 6 real PC hardware or smartphone products matching: "${query}".${catFilter}
 Respond with JSON only (no markdown):
 [{ "name": "Product Name", "category": "CPU/GPU/RAM/SSD/Smartphone/Motherboard/PSU/Laptop/etc", "brand": "Brand", "emoji": "emoji", "specs": "short one-line spec" }]
 Only return products that actually exist. Be specific with model names.`
   }]);
-  const suggestions = JSON.parse(response.replace(/```json|```/g, '').trim());
+
+  // FIX: use safeParseJSON instead of bare JSON.parse — handles extra text and malformed responses
+  const parsed = safeParseJSON(response);
+  const suggestions = Array.isArray(parsed) ? parsed : [];
   const result = suggestions.map(s => {
     const local = matchLocalDevice(s);
     return { ...s, img: local?.img || local?.image || null, localImg: local?.localImg || null };
@@ -235,16 +301,34 @@ display, processor, cores, threads, baseClock, boostClock, tdp, socket, cache, m
   "specs": "One line key specs",
   "price": "Philippine Peso price range",
   "emoji": "single relevant emoji",
-  "details": { "key": "value" },
+  "details": { "key": "value as plain string" },
   "summary": "2 sentence overview"
 }
+IMPORTANT: All values inside "details" must be plain strings, never nested objects.
 If not found: {"found": false}`
   }]);
-  const result = JSON.parse(response.replace(/```json|```/g, '').trim());
+
+  // FIX: use safeParseJSON — the old bare JSON.parse crashed when the AI returned
+  // extra explanation text before or after the JSON, causing "position 332" errors
+  const result = safeParseJSON(response);
+
+  if (!result) {
+    console.warn('fetchAIDevice: could not parse response for', query, '| raw:', response?.slice(0, 200));
+    return { found: false };
+  }
+
   if (result.found) {
+    // FIX: flatten any nested objects in details so safeVal doesn't need to do it at render time
+    if (result.details && typeof result.details === 'object') {
+      const flat = {};
+      for (const [k, v] of Object.entries(result.details)) {
+        flat[k] = typeof v === 'object' && v !== null ? safeVal(v) : v;
+      }
+      result.details = flat;
+    }
     const local = matchLocalDevice(result);
     if (local) {
-      result.img = result.img || local.img || local.image || null;
+      result.img     = result.img     || local.img     || local.image || null;
       result.localImg = result.localImg || local.localImg || null;
     }
   }
@@ -369,8 +453,7 @@ export default function ComparePage() {
   const debounceRef1 = useRef(null);
   const debounceRef2 = useRef(null);
 
-  // ─── FIX: Load devices SEQUENTIALLY, not in parallel ─────────────────────
-  // d1 loads first, then d2 starts only after d1 finishes — prevents rate limit flood
+  // ─── Load devices sequentially to avoid rate limit flood ──────────────────
   useEffect(() => {
     const d1 = searchParams.get('d1');
     const d2 = searchParams.get('d2');
@@ -382,14 +465,13 @@ export default function ComparePage() {
         setAiLoading1(true);
         try {
           const r = await fetchAIDevice(d1);
-          if (r.found) setDevice1({ ...r, id: Date.now(), details: r.details || {} });
+          if (r?.found) setDevice1({ ...r, id: Date.now(), details: r.details || {} });
         } catch (e) {
           console.warn('Failed to load device 1:', e.message);
         }
         setAiLoading1(false);
       }
 
-      // Wait 500ms between calls to avoid back-to-back rate limit hits
       if (d1 && d2) await new Promise(res => setTimeout(res, 500));
 
       if (d2) {
@@ -397,7 +479,7 @@ export default function ComparePage() {
         setAiLoading2(true);
         try {
           const r = await fetchAIDevice(d2);
-          if (r.found) setDevice2({ ...r, id: Date.now(), details: r.details || {} });
+          if (r?.found) setDevice2({ ...r, id: Date.now(), details: r.details || {} });
         } catch (e) {
           console.warn('Failed to load device 2:', e.message);
         }
@@ -417,7 +499,6 @@ export default function ComparePage() {
     return () => document.removeEventListener('mousedown', handle);
   }, []);
 
-  // ─── FIX: Increased debounce to 1200ms — was 600ms ───────────────────────
   useEffect(() => {
     if (!search1.trim() || search1.length < 3) { setAiSuggestions1([]); return; }
     clearTimeout(debounceRef1.current);
@@ -455,8 +536,28 @@ export default function ComparePage() {
         (k === 'summary' && (device1?.summary || device2?.summary)))
     : [];
 
+  // FIX: Generate AI comparison text BEFORE saving so the app can display it.
+  // The old code called saveComparison() immediately when both devices were
+  // selected — before any AI result existed — so comparison_result was always
+  // empty and the app showed "No result saved".
   useEffect(() => {
-    if (device1 && device2 && !saved) { setSaved(true); saveComparison(device1, device2); }
+    if (device1 && device2 && !saved) {
+      setSaved(true);
+      (async () => {
+        try {
+          const prompt = `Compare ${device1.name} vs ${device2.name} for the Philippine market.
+Use these plain section headers only: Overview, Performance, Display, Camera, Battery, Philippine Price in PHP, Verdict.
+For PC parts skip Display/Camera/Battery and use: Overview, Performance, Key Specs, Power & Efficiency, Philippine Price in PHP, Verdict.
+Plain language. No markdown symbols like ** or ##.`;
+          const result = await askAI([{ role: 'user', content: prompt }]);
+          const cleaned = (result || '').replace(/```[a-z]*\n?/gi, '').replace(/```/g, '').trim();
+          await saveComparison(device1, device2, cleaned);
+        } catch (e) {
+          // Save with empty result rather than not saving at all
+          await saveComparison(device1, device2, '');
+        }
+      })();
+    }
     if (!device1 || !device2) setSaved(false);
   }, [device1, device2]);
 
@@ -478,7 +579,7 @@ export default function ComparePage() {
     setShowDropdown1(false); setSearch1(s.name); setAiLoading1(true);
     try {
       const r = await fetchAIDevice(s.name);
-      if (r.found) { setDevice1({ ...r, id: Date.now(), details: r.details || {} }); if (r.category) setActiveCategory2(r.category); }
+      if (r?.found) { setDevice1({ ...r, id: Date.now(), details: r.details || {} }); if (r.category) setActiveCategory2(r.category); }
     } catch {}
     setAiLoading1(false);
   };
@@ -487,7 +588,7 @@ export default function ComparePage() {
     setShowDropdown2(false); setSearch2(s.name); setAiLoading2(true);
     try {
       const r = await fetchAIDevice(s.name);
-      if (r.found) { setDevice2({ ...r, id: Date.now(), details: r.details || {} }); if (r.category) setActiveCategory1(r.category); }
+      if (r?.found) { setDevice2({ ...r, id: Date.now(), details: r.details || {} }); if (r.category) setActiveCategory1(r.category); }
     } catch {}
     setAiLoading2(false);
   };
@@ -540,8 +641,9 @@ export default function ComparePage() {
             ].map((row, i) => (
               <div key={i} style={{ display: 'grid', gridTemplateColumns: '140px 1fr 1fr', borderBottom: '1px solid var(--border)', background: i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.01)' }}>
                 <div style={{ padding: '14px 16px', fontSize: 13, fontWeight: 500, color: 'var(--text-2)', borderRight: '1px solid var(--border)' }}>{row.label}</div>
-                <div style={{ padding: '14px 16px', fontSize: 13, color: 'var(--text)', borderRight: '1px solid var(--border)' }}>{row.v1 || '—'}</div>
-                <div style={{ padding: '14px 16px', fontSize: 13, color: 'var(--text)' }}>{row.v2 || '—'}</div>
+                {/* FIX: wrap with safeVal so nested objects never reach React as raw values */}
+                <div style={{ padding: '14px 16px', fontSize: 13, color: 'var(--text)', borderRight: '1px solid var(--border)' }}>{safeVal(row.v1) || '—'}</div>
+                <div style={{ padding: '14px 16px', fontSize: 13, color: 'var(--text)' }}>{safeVal(row.v2) || '—'}</div>
               </div>
             ))}
             {detailKeys.map((key, i) => {
@@ -550,8 +652,10 @@ export default function ComparePage() {
               return (
                 <div key={key} style={{ display: 'grid', gridTemplateColumns: '140px 1fr 1fr', borderBottom: i < detailKeys.length - 1 ? '1px solid var(--border)' : 'none', background: (i + 4) % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.01)' }}>
                   <div style={{ padding: '14px 16px', fontSize: 13, fontWeight: 500, color: 'var(--text-2)', borderRight: '1px solid var(--border)' }}>{LABELS[key] || key}</div>
-                  <div style={{ padding: '14px 16px', fontSize: 13, color: 'var(--text)', borderRight: '1px solid var(--border)' }}>{v1 || '—'}</div>
-                  <div style={{ padding: '14px 16px', fontSize: 13, color: 'var(--text)' }}>{v2 || '—'}</div>
+                  {/* FIX: safeVal converts any nested object to a readable string instead
+                      of crashing with "Objects are not valid as a React child" */}
+                  <div style={{ padding: '14px 16px', fontSize: 13, color: 'var(--text)', borderRight: '1px solid var(--border)' }}>{safeVal(v1) || '—'}</div>
+                  <div style={{ padding: '14px 16px', fontSize: 13, color: 'var(--text)' }}>{safeVal(v2) || '—'}</div>
                 </div>
               );
             })}

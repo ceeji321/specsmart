@@ -89,16 +89,20 @@ export async function archiveHistory(ids) {
   } catch (err) { return false; }
 }
 
-export async function saveComparison(device1, device2) {
+// FIX: Added comparison_result parameter — the old version only saved device
+// names and never sent the AI text, so the app always showed "No result saved".
+export async function saveComparison(device1, device2, comparisonResult = '') {
   try {
     const headers = await getHeaders();
     const res = await fetch(`${API_BASE}/api/comparisons`, {
       method: 'POST', headers,
       body: JSON.stringify({
-        device1_name: device1.name,
-        device2_name: device2.name,
-        device1_id: device1.id,
-        device2_id: device2.id,
+        device1_name:      device1.name,
+        device2_name:      device2.name,
+        device1_id:        device1.id,
+        device2_id:        device2.id,
+        // FIX: send the AI comparison text so the app can display it
+        comparison_result: comparisonResult || '',
       }),
     });
     return res.ok;
