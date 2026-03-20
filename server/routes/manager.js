@@ -246,14 +246,15 @@ router.post('/users', authenticateToken, isManagerRole, async (req, res) => {
     const supabaseUser = authData.user;
 
     // ✅ Insert into our DB — use ON CONFLICT to avoid 500 on race condition
+    const username = email.toLowerCase().split('@')[0];
     let result;
     try {
       result = await client.query(
-        `INSERT INTO users (id, email, name, role, password_hash, created_at)
-         VALUES ($1, $2, $3, $4, 'supabase_managed', NOW())
+        `INSERT INTO users (id, email, name, username, role, password_hash, created_at)
+         VALUES ($1, $2, $3, $4, $5, 'supabase_managed', NOW())
          ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, role = EXCLUDED.role
          RETURNING id, email, COALESCE(name, email) AS name, role, created_at`,
-        [supabaseUser.id, email.toLowerCase(), name, role]
+        [supabaseUser.id, email.toLowerCase(), name, username, role]
       );
     } catch (dbError) {
       // DB insert failed — clean up Supabase user to avoid orphaned auth records
