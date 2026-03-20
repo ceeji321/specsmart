@@ -128,7 +128,7 @@ router.get('/users', authenticateToken, isManagerRole, async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Get users error:', error);
+    console.error('Get users error:', error.message);
     res.status(500).json({ success: false, message: 'Failed to retrieve users.' });
   } finally { client.release(); }
 });
@@ -144,14 +144,12 @@ router.get('/users/disabled', authenticateToken, isAdminRole, async (req, res) =
     );
     res.json({ success: true, data: { users: result.rows } });
   } catch (error) {
-    console.error('Get disabled users error:', error);
+    console.error('Get disabled users error:', error.message);
     res.status(500).json({ success: false, message: 'Failed to retrieve disabled users.' });
   } finally { client.release(); }
 });
 
 // ── GET /users/archived ───────────────────────────────────────────────────────
-// FIX: DISTINCT ON (user_id) grabs only the latest archive log row per user,
-// so a user archived multiple times never duplicates in the list.
 router.get('/users/archived', authenticateToken, isAdminRole, async (req, res) => {
   const client = await pool.connect();
   try {
@@ -179,7 +177,7 @@ router.get('/users/archived', authenticateToken, isAdminRole, async (req, res) =
     );
     res.json({ success: true, data: { users: result.rows } });
   } catch (error) {
-    console.error('Get archived users error:', error);
+    console.error('Get archived users error:', error.message);
     res.status(500).json({ success: false, message: 'Failed to retrieve archived users.' });
   } finally { client.release(); }
 });
@@ -197,6 +195,7 @@ router.get('/users/:id', authenticateToken, isManagerRole, async (req, res) => {
       return res.status(404).json({ success: false, message: 'User not found.' });
     res.json({ success: true, data: result.rows[0] });
   } catch (error) {
+    console.error('Get user error:', error.message);
     res.status(500).json({ success: false, message: 'Failed to retrieve user.' });
   } finally { client.release(); }
 });
@@ -206,11 +205,25 @@ router.post('/users', authenticateToken, isManagerRole, async (req, res) => {
   const client = await pool.connect();
   try {
     const { email, password, name, role = 'admin' } = req.body;
+
     if (!email || !password || !name)
       return res.status(400).json({ success: false, message: 'Email, password, and name are required.' });
+
+    if (password.length < 6)
+      return res.status(400).json({ success: false, message: 'Password must be at least 6 characters.' });
+
     if (role === 'admin' && req.user.role !== 'admin')
       return res.status(403).json({ success: false, message: 'Only admins can create admin accounts.' });
 
+    // ✅ Check if email already exists in our DB first
+    const existingInDB = await client.query(
+      'SELECT id FROM users WHERE email = $1',
+      [email.toLowerCase()]
+    );
+    if (existingInDB.rows.length > 0)
+      return res.status(409).json({ success: false, message: 'Email already registered.' });
+
+    // ✅ Create in Supabase
     const { data: authData, error: authError } = await supabase.auth.admin.createUser({
       email: email.toLowerCase(),
       password,
@@ -219,27 +232,43 @@ router.post('/users', authenticateToken, isManagerRole, async (req, res) => {
     });
 
     if (authError) {
-      if (authError.message.includes('already registered') || authError.code === 'email_exists')
-        return res.status(409).json({ success: false, message: 'Email already registered.' });
+      console.error('Supabase create error:', authError.message);
+      if (
+        authError.message.toLowerCase().includes('already registered') ||
+        authError.message.toLowerCase().includes('already been registered') ||
+        authError.code === 'email_exists'
+      ) {
+        return res.status(409).json({ success: false, message: 'Email already registered in auth system.' });
+      }
       return res.status(400).json({ success: false, message: authError.message });
     }
 
     const supabaseUser = authData.user;
 
-    const result = await client.query(
-      `INSERT INTO users (id, email, name, role, password_hash, created_at)
-       VALUES ($1, $2, $3, $4, 'supabase_managed', NOW())
-       ON CONFLICT (email) DO UPDATE SET name = EXCLUDED.name, role = EXCLUDED.role
-       RETURNING id, email, COALESCE(name, email) AS name, role, created_at`,
-      [supabaseUser.id, email.toLowerCase(), name, role]
-    );
+    // ✅ Insert into our DB — use ON CONFLICT to avoid 500 on race condition
+    let result;
+    try {
+      result = await client.query(
+        `INSERT INTO users (id, email, name, role, password_hash, created_at)
+         VALUES ($1, $2, $3, $4, 'supabase_managed', NOW())
+         ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, role = EXCLUDED.role
+         RETURNING id, email, COALESCE(name, email) AS name, role, created_at`,
+        [supabaseUser.id, email.toLowerCase(), name, role]
+      );
+    } catch (dbError) {
+      // DB insert failed — clean up Supabase user to avoid orphaned auth records
+      console.error('DB insert error after Supabase create:', dbError.message);
+      await supabase.auth.admin.deleteUser(supabaseUser.id).catch(() => {});
+      return res.status(500).json({ success: false, message: `Database error: ${dbError.message}` });
+    }
 
     const newUser = result.rows[0];
     broadcastUserEvent('user_created', newUser);
     res.status(201).json({ success: true, message: 'User created successfully.', data: newUser });
+
   } catch (error) {
-    console.error('Create user error:', error);
-    res.status(500).json({ success: false, message: 'Failed to create user.' });
+    console.error('Create user error:', error.message);
+    res.status(500).json({ success: false, message: `Failed to create user: ${error.message}` });
   } finally { client.release(); }
 });
 
@@ -276,7 +305,7 @@ router.put('/users/:id', authenticateToken, isManagerRole, async (req, res) => {
     broadcastUserEvent('user_updated', updated);
     res.json({ success: true, message: 'User updated successfully.', data: updated });
   } catch (error) {
-    console.error('Update user error:', error);
+    console.error('Update user error:', error.message);
     res.status(500).json({ success: false, message: 'Failed to update user.' });
   } finally { client.release(); }
 });
@@ -304,7 +333,7 @@ router.delete('/users/:id', authenticateToken, isAdminRole, async (req, res) => 
     broadcastUserEvent('user_deleted', { id });
     res.json({ success: true, message: 'User deleted successfully.' });
   } catch (error) {
-    console.error('Delete error:', error);
+    console.error('Delete error:', error.message);
     res.status(500).json({ success: false, message: 'Failed to delete user.' });
   } finally { client.release(); }
 });
@@ -324,7 +353,7 @@ router.post('/users/:id/disable', authenticateToken, isAdminRole, async (req, re
     broadcastUserEvent('user_disabled', { id });
     res.json({ success: true, message: 'User disabled successfully.' });
   } catch (error) {
-    console.error('Disable error:', error);
+    console.error('Disable error:', error.message);
     res.status(500).json({ success: false, message: 'Failed to disable user.' });
   } finally { client.release(); }
 });
@@ -338,13 +367,12 @@ router.post('/users/:id/enable', authenticateToken, isAdminRole, async (req, res
     broadcastUserEvent('user_enabled', { id: req.params.id });
     res.json({ success: true, message: 'User enabled successfully.' });
   } catch (error) {
-    console.error('Enable error:', error);
+    console.error('Enable error:', error.message);
     res.status(500).json({ success: false, message: 'Failed to enable user.' });
   } finally { client.release(); }
 });
 
 // ── POST /users/:id/archive ───────────────────────────────────────────────────
-// FIX: Check if already archived first to prevent duplicate archive log entries
 router.post('/users/:id/archive', authenticateToken, isAdminRole, async (req, res) => {
   const client = await pool.connect();
   try {
@@ -360,11 +388,8 @@ router.post('/users/:id/archive', authenticateToken, isAdminRole, async (req, re
       return res.status(404).json({ success: false, message: 'User not found.' });
 
     const u = userRes.rows[0];
-
-    // FIX: Prevent re-archiving an already archived user (stops duplicate log entries)
-    if (u.is_archived) {
+    if (u.is_archived)
       return res.status(409).json({ success: false, message: 'User is already archived.' });
-    }
 
     await client.query(
       `INSERT INTO archived_users (user_id, email, name, role, archived_by_id, archived_by_email, reason)
@@ -375,7 +400,7 @@ router.post('/users/:id/archive', authenticateToken, isAdminRole, async (req, re
     broadcastUserEvent('user_archived', { id });
     res.json({ success: true, message: 'User archived successfully.' });
   } catch (error) {
-    console.error('Archive error:', error);
+    console.error('Archive error:', error.message);
     res.status(500).json({ success: false, message: 'Failed to archive user.' });
   } finally { client.release(); }
 });
@@ -388,7 +413,7 @@ router.post('/users/:id/restore', authenticateToken, isAdminRole, async (req, re
     broadcastUserEvent('user_unarchived', { id: req.params.id });
     res.json({ success: true, message: 'User restored successfully.' });
   } catch (error) {
-    console.error('Restore error:', error);
+    console.error('Restore error:', error.message);
     res.status(500).json({ success: false, message: 'Failed to restore user.' });
   } finally { client.release(); }
 });
@@ -417,7 +442,7 @@ router.get('/statistics', authenticateToken, isManagerRole, async (req, res) => 
     `);
     res.json({ success: true, data: stats.rows[0] });
   } catch (error) {
-    console.error('Stats error:', error);
+    console.error('Stats error:', error.message);
     res.status(500).json({ success: false, message: 'Failed to retrieve statistics.' });
   } finally { client.release(); }
 });
@@ -432,8 +457,9 @@ router.post('/users/:id/reset-password', authenticateToken, isAdminRole, async (
     if (error) return res.status(400).json({ success: false, message: error.message });
     res.json({ success: true, message: 'Password reset successfully.' });
   } catch (error) {
+    console.error('Reset password error:', error.message);
     res.status(500).json({ success: false, message: 'Failed to reset password.' });
   }
 });
 
-export default router;  
+export default router;
