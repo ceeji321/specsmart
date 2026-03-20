@@ -104,15 +104,11 @@ router.post('/register', async (req, res) => {
 
     const fullName = `${firstName} ${lastName}`;
 
-    // ── Create in Supabase Auth (auto-confirmed, no email needed) ─────────────
     const { data: authData, error: authError } = await supabase.auth.admin.createUser({
       email: trimmedEmail,
       password,
       email_confirm: true,
-      user_metadata: {
-        name: fullName,
-        role: 'user',
-      },
+      user_metadata: { name: fullName, role: 'user' },
     });
 
     if (authError) {
@@ -125,19 +121,17 @@ router.post('/register', async (req, res) => {
 
     const supabaseUser = authData.user;
 
-    // ── Sync to your PostgreSQL users table ───────────────────────────────────
     try {
-  await pool.query(
-  `INSERT INTO users (id, username, email, name, role, password_hash, created_at)
-   VALUES ($1, $2, $3, $4, 'user', 'supabase_managed', NOW())
-   ON CONFLICT (email) DO NOTHING`,
-  [supabaseUser.id, trimmedEmail, trimmedEmail, fullName]
-);
+      await pool.query(
+        `INSERT INTO users (id, username, email, name, role, password_hash, status, created_at)
+         VALUES ($1, $2, $3, $4, 'user', 'supabase_managed', 'active', NOW())
+         ON CONFLICT (email) DO NOTHING`,
+        [supabaseUser.id, trimmedEmail, trimmedEmail, fullName]
+      );
     } catch (dbError) {
       console.error('DB sync error (non-fatal):', dbError.message);
     }
 
-    // ── Sign in to get a session token ────────────────────────────────────────
     const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
       email: trimmedEmail,
       password,
@@ -146,12 +140,7 @@ router.post('/register', async (req, res) => {
     if (signInError) {
       return res.status(201).json({
         message: 'User registered successfully. Please log in.',
-        user: {
-          id: supabaseUser.id,
-          email: trimmedEmail,
-          name: fullName,
-          role: 'user',
-        },
+        user: { id: supabaseUser.id, email: trimmedEmail, name: fullName, role: 'user' },
       });
     }
 
@@ -182,37 +171,59 @@ router.post('/login', async (req, res) => {
 
     const trimmedEmail = email.trim().toLowerCase();
 
+    // ── Check if account is disabled or archived ──────────────────────────────
+    try {
+      const userCheck = await pool.query(
+        `SELECT is_disabled, is_archived FROM users WHERE email = $1`,
+        [trimmedEmail]
+      );
+      if (userCheck.rows.length > 0) {
+        const u = userCheck.rows[0];
+        if (u.is_archived)
+          return res.status(403).json({ error: 'This account has been archived. Please contact support.' });
+        if (u.is_disabled)
+          return res.status(403).json({ error: 'This account has been disabled. Please contact support.' });
+      }
+    } catch (dbCheckError) {
+      console.error('DB account status check error (non-fatal):', dbCheckError.message);
+    }
+
+    // ── Supabase sign in ──────────────────────────────────────────────────────
     const { data, error } = await supabase.auth.signInWithPassword({
       email: trimmedEmail,
       password,
     });
 
-    if (error) {
+    if (error)
       return res.status(401).json({ error: 'Invalid email or password' });
-    }
 
     const supabaseUser = data.user;
     const role = supabaseUser.user_metadata?.role || 'user';
     const name = supabaseUser.user_metadata?.name || trimmedEmail.split('@')[0];
 
-    // ── Update last_login in PostgreSQL (non-fatal) ───────────────────────────
+    // ── Update last_login safely — only column that always exists ─────────────
     try {
-      await pool.query(
-        `UPDATE users SET last_login = NOW(), updated_at = NOW() WHERE email = $1`,
+      const updateResult = await pool.query(
+        `UPDATE users SET last_login = NOW() WHERE email = $1 RETURNING last_login`,
         [trimmedEmail]
       );
-    } catch (_) {}
+      if (updateResult.rowCount === 0) {
+        // User exists in Supabase but not in our DB yet — insert them
+        await pool.query(
+          `INSERT INTO users (id, username, email, name, role, password_hash, status, last_login, created_at)
+           VALUES ($1, $2, $3, $4, $5, 'supabase_managed', 'active', NOW(), NOW())
+           ON CONFLICT (email) DO UPDATE SET last_login = NOW()`,
+          [supabaseUser.id, trimmedEmail, trimmedEmail, name, role]
+        );
+      }
+    } catch (dbErr) {
+      console.error('last_login update error (non-fatal):', dbErr.message);
+    }
 
     res.json({
       message: 'Login successful',
       token: data.session.access_token,
-      user: {
-        id:        supabaseUser.id,
-        email:     trimmedEmail,
-        name,
-        role,
-        createdAt: supabaseUser.created_at,
-      },
+      user: { id: supabaseUser.id, email: trimmedEmail, name, role, createdAt: supabaseUser.created_at },
     });
   } catch (error) {
     console.error('Login error:', error);
@@ -223,35 +234,62 @@ router.post('/login', async (req, res) => {
 // ─── Get current user (/me) ───────────────────────────────────────────────────
 router.get('/me', authenticateToken, async (req, res) => {
   try {
-    // Try PostgreSQL first for extra profile fields
-    const result = await pool.query(
-      'SELECT id, email, name, role, created_at, updated_at, last_login FROM users WHERE email = $1',
-      [req.user.email]
-    );
+    // ── Try PostgreSQL first ──────────────────────────────────────────────────
+    try {
+      const result = await pool.query(
+        'SELECT id, email, name, role, status, created_at, last_login FROM users WHERE email = $1',
+        [req.user.email]
+      );
 
-    if (result.rows.length > 0) {
-      const user = result.rows[0];
-      // Always trust Supabase for the role
-      return res.json({
-        user: {
-          id:        user.id,
-          email:     user.email,
-          name:      user.name,
-          role:      req.user.role,
-          createdAt: user.created_at,
-          updatedAt: user.updated_at,
-          lastLogin: user.last_login,
-        },
-      });
+      if (result.rows.length > 0) {
+        const user = result.rows[0];
+        return res.json({
+          user: {
+            id:        user.id,
+            email:     user.email,
+            name:      user.name,
+            role:      req.user.role || user.role,
+            status:    user.status,
+            createdAt: user.created_at,
+            lastLogin: user.last_login,
+          },
+        });
+      }
+    } catch (dbError) {
+      console.error('PostgreSQL /me error (non-fatal):', dbError.message);
     }
 
-    // Fallback: return from Supabase token data
+    // ── Fallback: get from Supabase Auth ─────────────────────────────────────
+    const { data: { user: supabaseUser }, error } =
+      await supabase.auth.admin.getUserById(req.user.userId);
+
+    if (error || !supabaseUser)
+      return res.status(404).json({ error: 'User not found' });
+
+    // ── Sync to PostgreSQL for next time ──────────────────────────────────────
+    try {
+      await pool.query(
+        `INSERT INTO users (id, username, email, name, role, password_hash, status, created_at)
+         VALUES ($1, $2, $3, $4, $5, 'supabase_managed', 'active', NOW())
+         ON CONFLICT (email) DO UPDATE SET name = EXCLUDED.name, role = EXCLUDED.role`,
+        [
+          supabaseUser.id,
+          supabaseUser.email,
+          supabaseUser.email,
+          supabaseUser.user_metadata?.name || supabaseUser.email.split('@')[0],
+          supabaseUser.user_metadata?.role || 'user',
+        ]
+      );
+    } catch (_) {}
+
     res.json({
       user: {
-        id:    req.user.userId,
-        email: req.user.email,
-        name:  req.user.email.split('@')[0],
-        role:  req.user.role,
+        id:        supabaseUser.id,
+        email:     supabaseUser.email,
+        name:      supabaseUser.user_metadata?.name || supabaseUser.email.split('@')[0],
+        role:      supabaseUser.user_metadata?.role || 'user',
+        status:    'active',
+        createdAt: supabaseUser.created_at,
       },
     });
   } catch (error) {
@@ -271,25 +309,21 @@ router.put('/change-password', authenticateToken, async (req, res) => {
     const passwordError = validatePassword(newPassword);
     if (passwordError) return res.status(400).json({ error: passwordError });
 
-    // Verify current password by attempting a sign-in
     const { error: verifyError } = await supabase.auth.signInWithPassword({
       email: req.user.email,
       password: currentPassword,
     });
 
-    if (verifyError) {
+    if (verifyError)
       return res.status(401).json({ error: 'Current password is incorrect' });
-    }
 
-    // Update password in Supabase
     const { error: updateError } = await supabase.auth.admin.updateUserById(
       req.user.userId,
       { password: newPassword }
     );
 
-    if (updateError) {
+    if (updateError)
       return res.status(400).json({ error: updateError.message });
-    }
 
     res.json({ message: 'Password changed successfully' });
   } catch (error) {
@@ -307,18 +341,14 @@ router.post('/forgot-password', async (req, res) => {
 
     const trimmedEmail = email.trim().toLowerCase();
 
-    // Check if user exists in Supabase
     const { data: { users }, error: listError } = await supabase.auth.admin.listUsers();
     if (listError) throw listError;
 
     const supabaseUser = users.find(u => u.email === trimmedEmail);
 
-    // Always return same message to prevent enumeration
-    if (!supabaseUser) {
+    if (!supabaseUser)
       return res.json({ message: 'If that email is registered, a reset link has been sent.' });
-    }
 
-    // Store token in PostgreSQL for custom email flow
     await pool.query('DELETE FROM password_reset_tokens WHERE user_id = $1', [supabaseUser.id]).catch(() => {});
 
     const resetToken = crypto.randomBytes(32).toString('hex');
@@ -386,15 +416,13 @@ router.post('/reset-password', async (req, res) => {
 
     const resetRecord = result.rows[0];
 
-    // Update password in Supabase
     const { error: updateError } = await supabase.auth.admin.updateUserById(
       resetRecord.user_id,
       { password: newPassword }
     );
 
-    if (updateError) {
+    if (updateError)
       return res.status(400).json({ error: 'Failed to reset password. Please try again.' });
-    }
 
     await pool.query(
       'UPDATE password_reset_tokens SET used = TRUE WHERE id = $1',

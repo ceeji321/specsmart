@@ -4,6 +4,11 @@ import { X, Eye, EyeOff, Check, Circle } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
+// ─── API base ──────────────────────────────────────────────────────────────────
+const API_BASE = import.meta.env.DEV
+  ? 'http://localhost:5000'
+  : 'https://specsmart-production-ed74.up.railway.app';
+
 // ─── Validation rules ──────────────────────────────────────────────────────────
 const NAME_REGEX = /^[a-zA-Z]+$/;
 
@@ -67,7 +72,7 @@ const AuthModal = ({ isOpen, onClose, defaultMode = 'login' }) => {
   const [nameErrors, setNameErrors]     = useState({ firstName: '', lastName: '' });
   const [touched, setTouched]           = useState({});
 
-  const { login, register, supabase } = useAuth();
+  const { login, register } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => { setMode(defaultMode); }, [defaultMode]);
@@ -154,7 +159,6 @@ const AuthModal = ({ isOpen, onClose, defaultMode = 'login' }) => {
 
         if (result.success) {
           if (result.message) {
-            // Email confirmation required
             setSuccess(result.message);
           } else {
             onClose();
@@ -165,14 +169,24 @@ const AuthModal = ({ isOpen, onClose, defaultMode = 'login' }) => {
         }
 
       } else if (mode === 'forgot') {
-        // ── Use Supabase directly for password reset ──
-        const { error: resetError } = await supabase.auth.resetPasswordForEmail(
-          formData.email.trim(),
-          { redirectTo: `${window.location.origin}/reset-password` }
-        );
+        // ── FIX: Call YOUR OWN backend, not Supabase directly ──────────────
+        // The old code called supabase.auth.resetPasswordForEmail() which sends
+        // a Supabase-style link that ResetPasswordPage.jsx cannot read.
+        // Your ResetPasswordPage expects ?token= from /api/auth/forgot-password.
+        const res = await fetch(`${API_BASE}/api/auth/forgot-password`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: formData.email.trim() }),
+        });
 
-        if (resetError) setError(resetError.message || 'Failed to send reset email');
-        else setSuccess('Check your email for a password reset link!');
+        const data = await res.json();
+
+        if (!res.ok) {
+          setError(data.error || 'Failed to send reset email');
+        } else {
+          setSuccess('Check your email for a password reset link!');
+        }
+        // ──────────────────────────────────────────────────────────────────
 
       } else {
         if (!formData.email.trim() || !formData.password) {

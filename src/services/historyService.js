@@ -25,12 +25,28 @@ export async function fetchHistory() {
 
 export async function saveChat(title, messages, chatId = null) {
   try {
-    const cleanMessages = messages.filter(m => m.role && m.content).map(m => ({ role: m.role, content: m.content }));
+    const cleanMessages = messages
+      .filter(m => m.role && (m.content || m.image))
+      .map(m => ({
+        role: m.role,
+        content: m.content || '',
+        ...(m.image && { image: m.image, imageMime: m.imageMime || 'image/jpeg' }),
+      }));
     if (cleanMessages.length < 2) return null;
     const headers = await getHeaders();
+
+    if (chatId) {
+      const res = await fetch(`${API_BASE}/api/history/${chatId}`, {
+        method: 'PUT', headers,
+        body: JSON.stringify({ title: title.slice(0, 100), messages: cleanMessages }),
+      });
+      if (!res.ok) return null;
+      return (await res.json()).history;
+    }
+
     const res = await fetch(`${API_BASE}/api/history`, {
       method: 'POST', headers,
-      body: JSON.stringify({ title: title.slice(0, 100), messages: cleanMessages, chatId }),
+      body: JSON.stringify({ title: title.slice(0, 100), messages: cleanMessages }),
     });
     if (!res.ok) return null;
     return (await res.json()).history;
@@ -40,15 +56,35 @@ export async function saveChat(title, messages, chatId = null) {
 export async function deleteHistory(ids) {
   try {
     const headers = await getHeaders();
-    const res = await fetch(`${API_BASE}/api/history`, { method: 'DELETE', headers, body: JSON.stringify({ ids }) });
+    const res = await fetch(`${API_BASE}/api/history`, {
+      method: 'DELETE',
+      headers,
+      body: JSON.stringify({ ids }),
+    });
     return res.ok;
-  } catch (err) { return false; }
+  } catch (err) { console.error('deleteHistory error:', err); return false; }
+}
+
+export async function deleteComparisons(ids) {
+  try {
+    const headers = await getHeaders();
+    const res = await fetch(`${API_BASE}/api/comparisons`, {
+      method: 'DELETE',
+      headers,
+      body: JSON.stringify({ ids }),
+    });
+    return res.ok;
+  } catch (err) { console.error('deleteComparisons error:', err); return false; }
 }
 
 export async function archiveHistory(ids) {
   try {
     const headers = await getHeaders();
-    const res = await fetch(`${API_BASE}/api/history/archive`, { method: 'PATCH', headers, body: JSON.stringify({ ids }) });
+    const res = await fetch(`${API_BASE}/api/history/archive`, {
+      method: 'PATCH',
+      headers,
+      body: JSON.stringify({ ids }),
+    });
     return res.ok;
   } catch (err) { return false; }
 }
@@ -58,7 +94,12 @@ export async function saveComparison(device1, device2) {
     const headers = await getHeaders();
     const res = await fetch(`${API_BASE}/api/comparisons`, {
       method: 'POST', headers,
-      body: JSON.stringify({ device1_name: device1.name, device2_name: device2.name, device1_id: device1.id, device2_id: device2.id }),
+      body: JSON.stringify({
+        device1_name: device1.name,
+        device2_name: device2.name,
+        device1_id: device1.id,
+        device2_id: device2.id,
+      }),
     });
     return res.ok;
   } catch (err) { return false; }

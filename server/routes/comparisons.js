@@ -1,60 +1,51 @@
-// server/routes/comparisons.js
 import express from 'express';
 import { authenticateToken } from '../middleware/auth.js';
-import pool from '../config/database.js';
+import { createClient } from '@supabase/supabase-js';
 
 const router = express.Router();
+const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
 
-// ── Ensure comparisons table supports UUID user_id ────────────────────────────
-async function ensureComparisonsTable() {
-  const client = await pool.connect();
-  try {
-    await client.query(`
-      ALTER TABLE comparisons 
-      ALTER COLUMN user_id TYPE TEXT USING user_id::TEXT
-    `);
-  } catch (e) {
-    // Already TEXT — ignore
-  } finally {
-    client.release();
-  }
-}
-ensureComparisonsTable().catch(console.error);
-
-// GET /api/comparisons — get user's comparison history
+// GET /api/comparisons
 router.get('/', authenticateToken, async (req, res) => {
   try {
-    const result = await pool.query(
-      `SELECT id, device1_name, device2_name, created_at
-       FROM comparisons
-       WHERE user_id = $1
-       ORDER BY created_at DESC
-       LIMIT 50`,
-      [String(req.user.userId)]
-    );
+    const { data, error } = await supabase
+      .from('device_comparisons')
+      .select('id, device1_name, device2_name, created_at')
+      .eq('user_id', req.user.userId)
+      .order('created_at', { ascending: false })
+      .limit(50);
+
+    if (error) throw error;
 
     const now = new Date();
-    const todayStart = new Date(now); todayStart.setHours(0,0,0,0);
+    const todayStart     = new Date(now); todayStart.setHours(0,0,0,0);
     const yesterdayStart = new Date(todayStart); yesterdayStart.setDate(yesterdayStart.getDate() - 1);
 
-    const items = result.rows.map(row => {
-      const createdAt = new Date(row.created_at);
-      let dateLabel = 'last7days';
-      if (createdAt >= todayStart) dateLabel = 'today';
-      else if (createdAt >= yesterdayStart) dateLabel = 'yesterday';
+    const items = (data || [])
+      // FIX: filter out blank comparisons saved from Android app with empty names
+      .filter(row => {
+        const d1 = (row.device1_name || '').trim();
+        const d2 = (row.device2_name || '').trim();
+        return d1.length > 0 && d2.length > 0;
+      })
+      .map(row => {
+        const createdAt = new Date(row.created_at);
+        let dateLabel = 'last7days';
+        if (createdAt >= todayStart)          dateLabel = 'today';
+        else if (createdAt >= yesterdayStart) dateLabel = 'yesterday';
 
-      return {
-        id: row.id,
-        title: `${row.device1_name} vs ${row.device2_name}`,
-        time: createdAt.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
-        date: dateLabel,
-        type: 'comparison',
-        messages: [
-          { role: 'user', content: `Compare ${row.device1_name} vs ${row.device2_name}` },
-          { role: 'assistant', content: `Comparison between **${row.device1_name}** and **${row.device2_name}** — view the Compare page for full details.` }
-        ]
-      };
-    });
+        return {
+          id:    row.id,
+          title: `${row.device1_name} vs ${row.device2_name}`,
+          time:  createdAt.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+          date:  dateLabel,
+          type:  'comparison',
+          messages: [
+            { role: 'user',      content: `Compare ${row.device1_name} vs ${row.device2_name}` },
+            { role: 'assistant', content: `Comparison between **${row.device1_name}** and **${row.device2_name}**.` },
+          ],
+        };
+      });
 
     res.json({ comparisons: items });
   } catch (error) {
@@ -63,37 +54,66 @@ router.get('/', authenticateToken, async (req, res) => {
   }
 });
 
-// POST /api/comparisons — save a comparison
+// POST /api/comparisons
 router.post('/', authenticateToken, async (req, res) => {
   try {
-    const { device1_name, device2_name, device1_id, device2_id } = req.body;
-    if (!device1_name || !device2_name) {
+    const { device1_name, device2_name } = req.body;
+
+    // FIX: reject empty device names to prevent blank "vs" rows
+    if (!device1_name || !device2_name)
       return res.status(400).json({ error: 'device1_name and device2_name are required' });
-    }
 
-    // Avoid duplicate saves within 1 hour
-    const existing = await pool.query(
-      `SELECT id FROM comparisons 
-       WHERE user_id = $1 AND device1_name = $2 AND device2_name = $3
-       AND created_at > NOW() - INTERVAL '1 hour'`,
-      [String(req.user.userId), device1_name, device2_name]
-    );
+    const d1 = device1_name.trim();
+    const d2 = device2_name.trim();
+    if (!d1 || !d2)
+      return res.status(400).json({ error: 'device names cannot be empty' });
 
-    if (existing.rows.length > 0) {
-      return res.json({ comparison: existing.rows[0], skipped: true });
-    }
+    // Avoid duplicate within 1 hour
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+    const { data: existing } = await supabase
+      .from('device_comparisons')
+      .select('id')
+      .eq('user_id', req.user.userId)
+      .eq('device1_name', d1)
+      .eq('device2_name', d2)
+      .gte('created_at', oneHourAgo)
+      .limit(1);
 
-    const result = await pool.query(
-      `INSERT INTO comparisons (user_id, device1_name, device2_name, device1_id, device2_id, created_at)
-       VALUES ($1, $2, $3, $4, $5, NOW())
-       RETURNING id, device1_name, device2_name, created_at`,
-      [String(req.user.userId), device1_name, device2_name, device1_id || null, device2_id || null]
-    );
+    if (existing?.length > 0)
+      return res.json({ comparison: existing[0], skipped: true });
 
-    res.status(201).json({ comparison: result.rows[0] });
+    const { data, error } = await supabase
+      .from('device_comparisons')
+      .insert({ user_id: req.user.userId, device1_name: d1, device2_name: d2 })
+      .select('id, device1_name, device2_name, created_at')
+      .single();
+
+    if (error) throw error;
+    res.status(201).json({ comparison: data });
   } catch (error) {
     console.error('Save comparison error:', error);
     res.status(500).json({ error: 'Failed to save comparison' });
+  }
+});
+
+// DELETE /api/comparisons
+router.delete('/', authenticateToken, async (req, res) => {
+  try {
+    const { ids } = req.body;
+    if (!Array.isArray(ids) || ids.length === 0)
+      return res.status(400).json({ error: 'ids array is required' });
+
+    const { error } = await supabase
+      .from('device_comparisons')
+      .delete()
+      .in('id', ids)
+      .eq('user_id', req.user.userId);
+
+    if (error) throw error;
+    res.json({ success: true, deleted: ids.length });
+  } catch (error) {
+    console.error('Delete comparisons error:', error);
+    res.status(500).json({ error: 'Failed to delete comparisons' });
   }
 });
 

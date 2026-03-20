@@ -3,12 +3,13 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import { useAuth } from '../contexts/AuthContext';
-import { fetchHistory, fetchComparisons, archiveHistory } from '../services/historyService';
+import { fetchHistory, fetchComparisons, deleteHistory, deleteComparisons } from '../services/historyService';
 
 export default function HistoryPage() {
   const [items, setItems] = useState([]);
   const [selected, setSelected] = useState(new Set());
   const [loading, setLoading] = useState(true);
+  const [deleting, setDeleting] = useState(false);
   const { isAuthenticated, loading: authLoading } = useAuth();
   const navigate = useNavigate();
 
@@ -46,12 +47,30 @@ export default function HistoryPage() {
     else setSelected(new Set(items.map(i => i.id)));
   };
 
-  const archiveSelected = async () => {
+  const deleteSelected = async () => {
+    if (deleting) return;
+    setDeleting(true);
+
     const ids = [...selected];
-    const chatIds = ids.filter(id => !items.find(i => i.id === id)?.type);
-    if (chatIds.length) await archiveHistory(chatIds);
+
+    const chatIds = ids.filter(id => {
+      const item = items.find(i => i.id === id);
+      return !item?.type || item.type !== 'comparison';
+    });
+    const comparisonIds = ids.filter(id => {
+      const item = items.find(i => i.id === id);
+      return item?.type === 'comparison';
+    });
+
+    const promises = [];
+    if (chatIds.length > 0) promises.push(deleteHistory(chatIds));
+    if (comparisonIds.length > 0) promises.push(deleteComparisons(comparisonIds));
+
+    await Promise.all(promises);
+
     setItems(prev => prev.filter(i => !selected.has(i.id)));
     setSelected(new Set());
+    setDeleting(false);
   };
 
   const renderSection = (label, sectionItems) => {
@@ -61,22 +80,72 @@ export default function HistoryPage() {
         <div className="history-section-label">{label}</div>
         {sectionItems.map(item => (
           <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <input type="checkbox" checked={selected.has(item.id)} onChange={() => toggle(item.id)}
+            <input
+              type="checkbox"
+              checked={selected.has(item.id)}
+              onChange={() => toggle(item.id)}
               onClick={e => e.stopPropagation()}
-              style={{ width: 16, height: 16, accentColor: 'var(--accent)', cursor: 'pointer', flexShrink: 0 }} />
-            <div className="history-item" style={{ flex: 1, cursor: 'pointer' }}
+              style={{ width: 16, height: 16, accentColor: 'var(--accent)', cursor: 'pointer', flexShrink: 0 }}
+            />
+            <div
+              className="history-item"
+              style={{ flex: 1, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10 }}
               onClick={() => {
-                if (item.type === 'comparison') navigate('/compare');
-                else navigate(`/chat/${item.id}`);
-              }}>
-              <span className="history-item-time">{item.time}</span>
-              <span className="history-item-title">{item.title}</span>
-              {item.type === 'comparison' && (
-                <span style={{ fontSize: 11, color: 'var(--accent)', background: 'rgba(99,102,241,0.1)', padding: '2px 8px', borderRadius: 50, flexShrink: 0 }}>
-                  ⚖️ Compare
-                </span>
+                if (item.type === 'comparison') {
+                  const parts = item.title.split(' vs ');
+                  const d1 = encodeURIComponent(parts[0] || '');
+                  const d2 = encodeURIComponent(parts[1] || '');
+                  navigate(`/compare?d1=${d1}&d2=${d2}`);
+                } else {
+                  navigate(`/chat/${item.id}`);
+                }
+              }}
+            >
+              {/* Thumbnail: scanned image or placeholder icon */}
+              {item.hasImage && item.imageThumb ? (
+                <img
+                  src={`data:${item.imageMime || 'image/jpeg'};base64,${item.imageThumb}`}
+                  alt="Hardware"
+                  style={{
+                    width: 36, height: 36, objectFit: 'cover',
+                    borderRadius: 6, flexShrink: 0,
+                    border: '1px solid var(--border)',
+                  }}
+                />
+              ) : (
+                <div style={{
+                  width: 36, height: 36, flexShrink: 0,
+                  borderRadius: 6, background: 'var(--bg-3)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 16,
+                }}>
+                  {item.type === 'comparison' ? '⚖️' : '💬'}
+                </div>
               )}
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span className="history-item-time">{item.time}</span>
+                  {item.type === 'comparison' && (
+                    <span style={{
+                      fontSize: 11, color: 'var(--accent)',
+                      background: 'rgba(99,102,241,0.1)',
+                      padding: '2px 8px', borderRadius: 50, flexShrink: 0,
+                    }}>
+                      ⚖️ Compare
+                    </span>
+                  )}
+                </div>
+                <span className="history-item-title" style={{
+                  display: 'block', overflow: 'hidden',
+                  textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                }}>
+                  {item.title}
+                </span>
+              </div>
+
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" strokeWidth="2"
                 style={{ color: 'var(--text-3)', flexShrink: 0 }}>
                 <path d="m9 18 6-6-6-6"/>
               </svg>
@@ -102,21 +171,49 @@ export default function HistoryPage() {
 
         <div className="history-actions">
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <input type="checkbox"
+            <input
+              type="checkbox"
               checked={selected.size === items.length && items.length > 0}
               onChange={toggleAll}
-              style={{ width: 16, height: 16, accentColor: 'var(--accent)', cursor: 'pointer' }} />
+              style={{ width: 16, height: 16, accentColor: 'var(--accent)', cursor: 'pointer' }}
+            />
             <span style={{ fontSize: 13, color: 'var(--text-2)' }}>
               {selected.size === 0 ? 'None selected' : `${selected.size} selected`}
             </span>
           </div>
+
           {selected.size > 0 && (
-            <button className="btn btn-ghost" style={{ padding: '7px 14px', fontSize: 13 }} onClick={archiveSelected}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/>
-                <line x1="10" y1="12" x2="14" y2="12"/>
-              </svg>
-              Archive
+            <button
+              className="btn btn-ghost"
+              style={{
+                padding: '7px 14px', fontSize: 13,
+                color: '#ef4444',
+                opacity: deleting ? 0.6 : 1,
+                cursor: deleting ? 'not-allowed' : 'pointer',
+              }}
+              onClick={deleteSelected}
+              disabled={deleting}
+            >
+              {deleting ? (
+                <>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+                    style={{ animation: 'spin 1s linear infinite' }}>
+                    <circle cx="12" cy="12" r="10" strokeOpacity="0.2"/>
+                    <path d="M22 12a10 10 0 0 1-10 10"/>
+                  </svg>
+                  Deleting...
+                </>
+              ) : (
+                <>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <polyline points="3 6 5 6 21 6"/>
+                    <path d="M19 6l-1 14H6L5 6"/>
+                    <path d="M10 11v6M14 11v6"/>
+                    <path d="M9 6V4h6v2"/>
+                  </svg>
+                  Delete ({selected.size})
+                </>
+              )}
             </button>
           )}
         </div>
@@ -128,7 +225,9 @@ export default function HistoryPage() {
         ) : items.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '80px 0', color: 'var(--text-3)' }}>
             <div style={{ fontSize: 48, marginBottom: 16 }}>💬</div>
-            <div style={{ fontFamily: 'Syne', fontSize: 18, fontWeight: 700, marginBottom: 8, color: 'var(--text-2)' }}>No chat history</div>
+            <div style={{ fontFamily: 'Syne', fontSize: 18, fontWeight: 700, marginBottom: 8, color: 'var(--text-2)' }}>
+              No chat history
+            </div>
             <div style={{ fontSize: 14 }}>Start a conversation with SpecSmart AI</div>
           </div>
         ) : (
@@ -139,6 +238,10 @@ export default function HistoryPage() {
           </>
         )}
       </div>
+
+      <style>{`
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+      `}</style>
     </div>
   );
 }

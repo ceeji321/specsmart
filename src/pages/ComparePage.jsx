@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import { devices } from '../data/devices';
 import { saveComparison } from '../services/historyService';
@@ -42,33 +43,68 @@ const BRAND_COLORS = {
   'be quiet!': '#333333', 'Thermaltake': '#c0392b',
 };
 
-// ── Try to find a matching device in local DB by name/brand ──────────────────
+const GSMARENA_IMGS = {
+  'samsung galaxy s25 ultra': 'https://fdn2.gsmarena.com/vv/bigpic/samsung-galaxy-s25-ultra.jpg',
+  'samsung galaxy s25+': 'https://fdn2.gsmarena.com/vv/bigpic/samsung-galaxy-s25plus.jpg',
+  'samsung galaxy s25': 'https://fdn2.gsmarena.com/vv/bigpic/samsung-galaxy-s25.jpg',
+  'samsung galaxy s24 ultra': 'https://fdn2.gsmarena.com/vv/bigpic/samsung-galaxy-s24-ultra-5g.jpg',
+  'samsung galaxy s24+': 'https://fdn2.gsmarena.com/vv/bigpic/samsung-galaxy-s24plus-5g.jpg',
+  'samsung galaxy s24': 'https://fdn2.gsmarena.com/vv/bigpic/samsung-galaxy-s24-5g.jpg',
+  'samsung galaxy s23 ultra': 'https://fdn2.gsmarena.com/vv/bigpic/samsung-galaxy-s23-ultra-5g.jpg',
+  'apple iphone 16 pro max': 'https://fdn2.gsmarena.com/vv/bigpic/apple-iphone-16-pro-max.jpg',
+  'apple iphone 16 pro': 'https://fdn2.gsmarena.com/vv/bigpic/apple-iphone-16-pro.jpg',
+  'apple iphone 16 plus': 'https://fdn2.gsmarena.com/vv/bigpic/apple-iphone-16-plus.jpg',
+  'apple iphone 16': 'https://fdn2.gsmarena.com/vv/bigpic/apple-iphone-16.jpg',
+  'apple iphone 15 pro max': 'https://fdn2.gsmarena.com/vv/bigpic/apple-iphone-15-pro-max.jpg',
+  'apple iphone 15 pro': 'https://fdn2.gsmarena.com/vv/bigpic/apple-iphone-15-pro.jpg',
+  'apple iphone 15': 'https://fdn2.gsmarena.com/vv/bigpic/apple-iphone-15.jpg',
+  'apple iphone 14 pro max': 'https://fdn2.gsmarena.com/vv/bigpic/apple-iphone-14-pro-max.jpg',
+  'apple iphone 14 pro': 'https://fdn2.gsmarena.com/vv/bigpic/apple-iphone-14-pro.jpg',
+  'apple iphone 14': 'https://fdn2.gsmarena.com/vv/bigpic/apple-iphone-14.jpg',
+  'apple iphone 13 pro max': 'https://fdn2.gsmarena.com/vv/bigpic/apple-iphone-13-pro-max.jpg',
+  'apple iphone 13 pro': 'https://fdn2.gsmarena.com/vv/bigpic/apple-iphone-13-pro.jpg',
+  'apple iphone 13': 'https://fdn2.gsmarena.com/vv/bigpic/apple-iphone-13.jpg',
+  'apple iphone 12 pro': 'https://fdn2.gsmarena.com/vv/bigpic/apple-iphone-12-pro.jpg',
+  'apple iphone 12': 'https://fdn2.gsmarena.com/vv/bigpic/apple-iphone-12.jpg',
+  'google pixel 9 pro': 'https://fdn2.gsmarena.com/vv/bigpic/google-pixel-9-pro.jpg',
+  'google pixel 9': 'https://fdn2.gsmarena.com/vv/bigpic/google-pixel-9.jpg',
+  'google pixel 8 pro': 'https://fdn2.gsmarena.com/vv/bigpic/google-pixel-8-pro.jpg',
+  'xiaomi 14 ultra': 'https://fdn2.gsmarena.com/vv/bigpic/xiaomi-14-ultra.jpg',
+  'xiaomi 14': 'https://fdn2.gsmarena.com/vv/bigpic/xiaomi-14.jpg',
+  'oneplus 12': 'https://fdn2.gsmarena.com/vv/bigpic/oneplus-12.jpg',
+};
+
+// ─── In-memory cache — avoids re-fetching the same device twice ───────────────
+const deviceCache = new Map();
+
+function getDeviceImageUrl(device) {
+  if (!device) return null;
+  const lower = (device.name || '').toLowerCase();
+  for (const [key, url] of Object.entries(GSMARENA_IMGS)) {
+    if (lower === key || lower.includes(key) || key.includes(lower)) return url;
+  }
+  if (device.localImg) return device.localImg;
+  if (device.img && device.img.startsWith('http')) return device.img;
+  return null;
+}
+
 function matchLocalDevice(suggestion) {
   const nameLower = (suggestion.name || '').toLowerCase();
   const brandLower = (suggestion.brand || '').toLowerCase();
-
-  // Exact name match
   let match = devices.find(d => d.name.toLowerCase() === nameLower);
   if (match) return match;
-
-  // Partial name match
   match = devices.find(d =>
-    d.name.toLowerCase().includes(nameLower) ||
-    nameLower.includes(d.name.toLowerCase())
+    d.name.toLowerCase().includes(nameLower) || nameLower.includes(d.name.toLowerCase())
   );
   if (match) return match;
-
-  // Brand + shared keyword match
   match = devices.find(d => {
     const words = nameLower.split(' ').filter(w => w.length > 2);
     const dName = d.name.toLowerCase();
     return d.brand?.toLowerCase() === brandLower && words.some(w => dName.includes(w));
   });
-
   return match || null;
 }
 
-// ── Brand initial circle (last resort) ───────────────────────────────────────
 const BrandInitial = ({ brand, size = 36 }) => {
   const color = BRAND_COLORS[brand] || '#6366f1';
   const letter = (brand || '?')[0].toUpperCase();
@@ -84,7 +120,6 @@ const BrandInitial = ({ brand, size = 36 }) => {
   );
 };
 
-// ── Brand logo → emoji → initial ─────────────────────────────────────────────
 const BrandLogoFallback = ({ brand, emoji, size = 30 }) => {
   const [err, setErr] = useState(false);
   const url = getBrandLogoUrl(brand);
@@ -97,26 +132,26 @@ const BrandLogoFallback = ({ brand, emoji, size = 30 }) => {
     style={{ width: size, height: size, objectFit: 'contain' }} />;
 };
 
-// ── 3-tier image: remote URL → localImg → brand logo/initial ─────────────────
 const DeviceImage = ({ device, size = 40 }) => {
-  const [urlFailed, setUrlFailed] = useState(false);
   const [localFailed, setLocalFailed] = useState(false);
-
-  const urlSrc = device?.img || device?.image || null;
-  const localSrc = device?.localImg || null;
-
-  useEffect(() => { setUrlFailed(false); setLocalFailed(false); }, [device?.name]);
+  const [remoteFailed, setRemoteFailed] = useState(false);
+  useEffect(() => { setLocalFailed(false); setRemoteFailed(false); }, [device?.name]);
 
   const imgStyle = { width: size, height: size, objectFit: 'contain', padding: 3, boxSizing: 'border-box' };
+  const imageUrl = getDeviceImageUrl(device);
+  const proxySrc = imageUrl && imageUrl.startsWith('http')
+    ? `https://wsrv.nl/?url=${encodeURIComponent(imageUrl)}&w=300&output=webp`
+    : imageUrl;
 
-  if (urlSrc && !urlFailed)
-    return <img src={urlSrc} alt={device?.name} onError={() => setUrlFailed(true)} style={imgStyle} />;
-  if (localSrc && !localFailed)
-    return <img src={localSrc} alt={device?.name} onError={() => setLocalFailed(true)} style={imgStyle} />;
+  if (device?.localImg && !localFailed)
+    return <img src={device.localImg} alt={device?.name}
+      onError={() => setLocalFailed(true)} style={imgStyle} />;
+  if (proxySrc && !remoteFailed)
+    return <img src={proxySrc} alt={device?.name} referrerPolicy="no-referrer"
+      onError={() => setRemoteFailed(true)} style={imgStyle} />;
   return <BrandLogoFallback brand={device?.brand} emoji={device?.emoji} size={size - 10} />;
 };
 
-// ── White square thumbnail container ─────────────────────────────────────────
 const ThumbBox = ({ size = 44, children }) => (
   <div style={{
     width: size, height: size, borderRadius: 10, background: 'white',
@@ -127,7 +162,6 @@ const ThumbBox = ({ size = 44, children }) => (
   </div>
 );
 
-// ── Selected device preview card ──────────────────────────────────────────────
 const DevicePreview = ({ device }) => (
   <div style={{ marginTop: 12, border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden', background: 'var(--bg-2)' }}>
     <div style={{
@@ -161,41 +195,38 @@ const DevicePreview = ({ device }) => (
   </div>
 );
 
-// ── Fetch AI suggestions, then enrich with local DB images ────────────────────
+// ─── API helpers — with caching ───────────────────────────────────────────────
 async function fetchAISuggestions(query, category) {
+  const cacheKey = `suggest:${query.toLowerCase()}:${category}`;
+  if (deviceCache.has(cacheKey)) return deviceCache.get(cacheKey);
+
   const catFilter = category && category !== 'All' ? ` Focus only on ${category} products.` : '';
   const response = await askAI([{
     role: 'user',
     content: `List up to 6 real PC hardware or smartphone products matching: "${query}".${catFilter}
-
 Respond with JSON only (no markdown):
-[
-  { "name": "Product Name", "category": "CPU/GPU/RAM/SSD/Smartphone/Motherboard/PSU/Laptop/etc", "brand": "Brand", "emoji": "emoji", "specs": "short one-line spec" }
-]
+[{ "name": "Product Name", "category": "CPU/GPU/RAM/SSD/Smartphone/Motherboard/PSU/Laptop/etc", "brand": "Brand", "emoji": "emoji", "specs": "short one-line spec" }]
 Only return products that actually exist. Be specific with model names.`
   }]);
   const suggestions = JSON.parse(response.replace(/```json|```/g, '').trim());
-
-  // For each AI suggestion, try to match a local device and steal its images
-  return suggestions.map(s => {
+  const result = suggestions.map(s => {
     const local = matchLocalDevice(s);
-    return {
-      ...s,
-      img: local?.img || local?.image || null,
-      localImg: local?.localImg || null,
-    };
+    return { ...s, img: local?.img || local?.image || null, localImg: local?.localImg || null };
   });
+
+  deviceCache.set(cacheKey, result);
+  return result;
 }
 
-// ── Fetch full AI device details, also enrich with local images ───────────────
 async function fetchAIDevice(query) {
+  const cacheKey = `device:${query.toLowerCase()}`;
+  if (deviceCache.has(cacheKey)) return deviceCache.get(cacheKey);
+
   const response = await askAI([{
     role: 'user',
     content: `The user wants to compare this device: "${query}"
-
-Respond with JSON only (no markdown). Use ONLY these exact key names for details — no other keys:
+Respond with JSON only (no markdown). Use ONLY these exact key names for details:
 display, processor, cores, threads, baseClock, boostClock, tdp, socket, cache, memory, vram, cudaCores, streamProc, capacity, type, speed, latency, readSpeed, writeSpeed, tbw, formFactor, interface, ram, storage, mainCamera, battery, os, layout, switches, connectivity, sensor, dpi, pollRate, weight, wattage, efficiency, modular, warranty, chipset, memType, memSlots, pcie, m2Slots, usbPorts
-
 {
   "found": true,
   "name": "Exact Product Name",
@@ -210,7 +241,6 @@ display, processor, cores, threads, baseClock, boostClock, tdp, socket, cache, m
 If not found: {"found": false}`
   }]);
   const result = JSON.parse(response.replace(/```json|```/g, '').trim());
-
   if (result.found) {
     const local = matchLocalDevice(result);
     if (local) {
@@ -218,10 +248,11 @@ If not found: {"found": false}`
       result.localImg = result.localImg || local.localImg || null;
     }
   }
+
+  deviceCache.set(cacheKey, result);
   return result;
 }
 
-// ── SearchBox component ───────────────────────────────────────────────────────
 const SearchBox = ({
   containerRef, label, search, setSearch, showDropdown, setShowDropdown,
   localFiltered, aiSuggestions, suggestionsLoading,
@@ -242,7 +273,6 @@ const SearchBox = ({
         onFocus={() => setShowDropdown(true)}
         style={{ borderRadius: 'var(--radius-sm)' }}
       />
-
       {showDropdown && search.trim() && (
         <div style={{
           position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0, zIndex: 100,
@@ -250,7 +280,6 @@ const SearchBox = ({
           borderRadius: 'var(--radius-sm)', boxShadow: 'var(--shadow)',
           overflow: 'hidden', maxHeight: 420, overflowY: 'auto',
         }}>
-          {/* Category pills */}
           <div style={{ padding: '8px 10px', display: 'flex', gap: 5, flexWrap: 'wrap', background: 'var(--bg-3)', borderBottom: '1px solid var(--border)', position: 'sticky', top: 0 }}>
             {CATEGORY_FILTERS.map(cat => (
               <button key={cat} onClick={() => setActiveCategory(cat)} style={{
@@ -261,8 +290,6 @@ const SearchBox = ({
               }}>{cat}</button>
             ))}
           </div>
-
-          {/* ── In Database ── */}
           {localFiltered.length > 0 && (
             <>
               <div style={{ padding: '5px 14px', fontSize: 10, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.8px', background: 'var(--bg-3)' }}>
@@ -273,9 +300,7 @@ const SearchBox = ({
                   style={{ padding: '9px 14px', cursor: 'pointer', display: 'flex', gap: 10, alignItems: 'center' }}
                   onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-3)'}
                   onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                  <ThumbBox size={44}>
-                    <DeviceImage device={d} size={42} />
-                  </ThumbBox>
+                  <ThumbBox size={44}><DeviceImage device={d} size={42} /></ThumbBox>
                   <div>
                     <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)' }}>{d.name}</div>
                     <div style={{ fontSize: 11, color: 'var(--text-3)' }}>{d.category} · {d.price}</div>
@@ -284,8 +309,6 @@ const SearchBox = ({
               ))}
             </>
           )}
-
-          {/* ── AI Suggestions ── */}
           <div style={{ padding: '5px 14px', fontSize: 10, fontWeight: 700, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.8px', background: 'var(--bg-3)', display: 'flex', alignItems: 'center', gap: 5 }}>
             <Sparkles size={10} /> AI Suggestions
           </div>
@@ -299,12 +322,7 @@ const SearchBox = ({
                 style={{ padding: '9px 14px', cursor: aiLoading ? 'default' : 'pointer', display: 'flex', gap: 10, alignItems: 'center', opacity: aiLoading ? 0.6 : 1 }}
                 onMouseEnter={e => { if (!aiLoading) e.currentTarget.style.background = 'var(--bg-3)'; }}
                 onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}>
-
-                {/* Image: matched local device img → brand logo → initial */}
-                <ThumbBox size={44}>
-                  <DeviceImage device={s} size={42} />
-                </ThumbBox>
-
+                <ThumbBox size={44}><DeviceImage device={s} size={42} /></ThumbBox>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)' }}>{s.name}</div>
                   <div style={{ fontSize: 11, color: 'var(--text-3)' }}>{s.category} · {s.brand}</div>
@@ -319,19 +337,17 @@ const SearchBox = ({
         </div>
       )}
     </div>
-
     {aiLoading && (
       <div style={{ marginTop: 12, textAlign: 'center', color: 'var(--text-3)', fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
         <Sparkles size={13} style={{ color: 'var(--accent)' }} /> Loading device details...
       </div>
     )}
-
     {device && <DevicePreview device={device} />}
   </div>
 );
 
-// ── Main page ─────────────────────────────────────────────────────────────────
 export default function ComparePage() {
+  const [searchParams] = useSearchParams();
   const [device1, setDevice1] = useState(null);
   const [device2, setDevice2] = useState(null);
   const [search1, setSearch1] = useState('');
@@ -353,6 +369,45 @@ export default function ComparePage() {
   const debounceRef1 = useRef(null);
   const debounceRef2 = useRef(null);
 
+  // ─── FIX: Load devices SEQUENTIALLY, not in parallel ─────────────────────
+  // d1 loads first, then d2 starts only after d1 finishes — prevents rate limit flood
+  useEffect(() => {
+    const d1 = searchParams.get('d1');
+    const d2 = searchParams.get('d2');
+    if (!d1 && !d2) return;
+
+    const loadSequentially = async () => {
+      if (d1) {
+        setSearch1(d1);
+        setAiLoading1(true);
+        try {
+          const r = await fetchAIDevice(d1);
+          if (r.found) setDevice1({ ...r, id: Date.now(), details: r.details || {} });
+        } catch (e) {
+          console.warn('Failed to load device 1:', e.message);
+        }
+        setAiLoading1(false);
+      }
+
+      // Wait 500ms between calls to avoid back-to-back rate limit hits
+      if (d1 && d2) await new Promise(res => setTimeout(res, 500));
+
+      if (d2) {
+        setSearch2(d2);
+        setAiLoading2(true);
+        try {
+          const r = await fetchAIDevice(d2);
+          if (r.found) setDevice2({ ...r, id: Date.now(), details: r.details || {} });
+        } catch (e) {
+          console.warn('Failed to load device 2:', e.message);
+        }
+        setAiLoading2(false);
+      }
+    };
+
+    loadSequentially();
+  }, []); // eslint-disable-line
+
   useEffect(() => {
     const handle = (e) => {
       if (ref1.current && !ref1.current.contains(e.target)) setShowDropdown1(false);
@@ -362,27 +417,28 @@ export default function ComparePage() {
     return () => document.removeEventListener('mousedown', handle);
   }, []);
 
+  // ─── FIX: Increased debounce to 1200ms — was 600ms ───────────────────────
   useEffect(() => {
-    if (!search1.trim() || search1.length < 2) { setAiSuggestions1([]); return; }
+    if (!search1.trim() || search1.length < 3) { setAiSuggestions1([]); return; }
     clearTimeout(debounceRef1.current);
     debounceRef1.current = setTimeout(async () => {
       setSuggestionsLoading1(true);
       try { setAiSuggestions1(await fetchAISuggestions(search1, activeCategory1)); }
       catch { setAiSuggestions1([]); }
       setSuggestionsLoading1(false);
-    }, 600);
+    }, 1200);
     return () => clearTimeout(debounceRef1.current);
   }, [search1, activeCategory1]);
 
   useEffect(() => {
-    if (!search2.trim() || search2.length < 2) { setAiSuggestions2([]); return; }
+    if (!search2.trim() || search2.length < 3) { setAiSuggestions2([]); return; }
     clearTimeout(debounceRef2.current);
     debounceRef2.current = setTimeout(async () => {
       setSuggestionsLoading2(true);
       try { setAiSuggestions2(await fetchAISuggestions(search2, activeCategory2)); }
       catch { setAiSuggestions2([]); }
       setSuggestionsLoading2(false);
-    }, 600);
+    }, 1200);
     return () => clearTimeout(debounceRef2.current);
   }, [search2, activeCategory2]);
 
@@ -423,7 +479,7 @@ export default function ComparePage() {
     try {
       const r = await fetchAIDevice(s.name);
       if (r.found) { setDevice1({ ...r, id: Date.now(), details: r.details || {} }); if (r.category) setActiveCategory2(r.category); }
-    } catch { }
+    } catch {}
     setAiLoading1(false);
   };
 
@@ -432,19 +488,19 @@ export default function ComparePage() {
     try {
       const r = await fetchAIDevice(s.name);
       if (r.found) { setDevice2({ ...r, id: Date.now(), details: r.details || {} }); if (r.category) setActiveCategory1(r.category); }
-    } catch { }
+    } catch {}
     setAiLoading2(false);
   };
 
   return (
     <div className="page">
       <Navbar />
-      <div className="page-content">
+      <div className="page-content" style={{ maxWidth: 900 }}>
         <h1 style={{ fontFamily: 'Syne', fontSize: 28, fontWeight: 800, marginBottom: 32, textAlign: 'center' }}>
           Compare Devices
         </h1>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: 20, alignItems: 'start', marginBottom: 32 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) auto minmax(0,1fr)', gap: 20, alignItems: 'start', marginBottom: 32 }}>
           <SearchBox
             containerRef={ref1} label="Compare:"
             search={search1} setSearch={setSearch1}
@@ -475,12 +531,12 @@ export default function ComparePage() {
         </div>
 
         {(device1 || device2) && (
-          <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden', marginBottom: 80 }}>
+          <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden', marginBottom: 32 }}>
             {[
-              { label: 'Brand', v1: device1?.brand, v2: device2?.brand },
-              { label: 'Category', v1: device1?.category, v2: device2?.category },
-              { label: 'Key Specs', v1: device1?.specs, v2: device2?.specs },
-              { label: 'Price', v1: device1?.price, v2: device2?.price },
+              { label: 'Brand',     v1: device1?.brand,    v2: device2?.brand },
+              { label: 'Category',  v1: device1?.category, v2: device2?.category },
+              { label: 'Key Specs', v1: device1?.specs,    v2: device2?.specs },
+              { label: 'Price',     v1: device1?.price,    v2: device2?.price },
             ].map((row, i) => (
               <div key={i} style={{ display: 'grid', gridTemplateColumns: '140px 1fr 1fr', borderBottom: '1px solid var(--border)', background: i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.01)' }}>
                 <div style={{ padding: '14px 16px', fontSize: 13, fontWeight: 500, color: 'var(--text-2)', borderRight: '1px solid var(--border)' }}>{row.label}</div>

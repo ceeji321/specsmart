@@ -208,7 +208,7 @@ function DeviceImage({ device, category }) {
 
   const localSrc = device.localImg || null;
   const remoteSrc = device.img || device.image || null;
-  const proxiedSrc = remoteSrc
+  const proxiedSrc = remoteSrc && remoteSrc.startsWith('http')
     ? `https://wsrv.nl/?url=${encodeURIComponent(remoteSrc)}&w=300&output=webp`
     : null;
 
@@ -517,20 +517,30 @@ function findCatalogDevice(name) {
   return null;
 }
 
-function DeviceOptionButton({ name, isPrimary, category, onClick }) {
+function DeviceOptionButton({ name, isPrimary, category, onClick, scannedImage, scannedImageMime }) {
   const catalogDevice = findCatalogDevice(name);
   const brand = name?.split(' ')[0] || '';
   const remoteSrc = catalogDevice?.img || null;
   const proxiedSrc = remoteSrc ? `https://wsrv.nl/?url=${encodeURIComponent(remoteSrc)}&w=200&output=webp` : null;
-  const [imgFailed, setImgFailed] = useState(false);
+  const [remoteFailed, setRemoteFailed] = useState(false);
+
+  const scannedSrc = isPrimary && scannedImage
+    ? `data:${scannedImageMime || 'image/jpeg'};base64,${scannedImage}`
+    : null;
+
+  const showRemote = proxiedSrc && !remoteFailed;
+  const showScanned = !showRemote && scannedSrc;
 
   return (
     <button onClick={onClick}
       style={{ background: isPrimary ? 'var(--accent)' : 'var(--bg-3)', border: isPrimary ? '2px solid var(--accent)' : '1px solid var(--border)', borderRadius: '12px', padding: '0', cursor: 'pointer', textAlign: 'left', overflow: 'hidden', display: 'flex', alignItems: 'center', width: '100%' }}>
       <div style={{ width: '72px', height: '72px', flexShrink: 0, background: isPrimary ? 'rgba(255,255,255,0.15)' : 'var(--bg-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', borderRight: isPrimary ? '1px solid rgba(255,255,255,0.2)' : '1px solid var(--border)' }}>
-        {proxiedSrc && !imgFailed ? (
-          <img src={proxiedSrc} alt={name} referrerPolicy="no-referrer" onError={() => setImgFailed(true)}
+        {showRemote ? (
+          <img src={proxiedSrc} alt={name} referrerPolicy="no-referrer" onError={() => setRemoteFailed(true)}
             style={{ width: '100%', height: '100%', objectFit: 'contain', padding: '6px', boxSizing: 'border-box' }} />
+        ) : showScanned ? (
+          <img src={scannedSrc} alt={name}
+            style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
         ) : (
           <CategoryThumbnail category={category || 'SMARTPHONE'} brand={brand} />
         )}
@@ -542,16 +552,26 @@ function DeviceOptionButton({ name, isPrimary, category, onClick }) {
   );
 }
 
-function ConfirmDeviceCard({ displayName, alt1, alt2, category, onConfirm, onHelpIdentify, onUploadAgain, onSeeMore }) {
+function isValidAltName(val) {
+  if (!val) return false;
+  const trimmed = String(val).trim().toLowerCase();
+  return trimmed !== '' && trimmed !== 'null' && trimmed !== 'none' &&
+    trimmed !== 'n/a' && trimmed !== 'unknown' && trimmed !== 'undefined';
+}
+
+function ConfirmDeviceCard({ displayName, alt1, alt2, category, onConfirm, onHelpIdentify, onUploadAgain, onSeeMore, scannedImage, scannedImageMime }) {
+  const showAlt1 = isValidAltName(alt1);
+  const showAlt2 = isValidAltName(alt2);
+
   return (
     <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden', marginTop: '4px' }}>
       <div style={{ padding: '16px 18px 12px' }}>
         <div style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text)', marginBottom: '2px', fontFamily: 'Syne, sans-serif' }}>Is this your device?</div>
         <div style={{ fontSize: '12px', color: 'var(--text-3)', marginBottom: '14px' }}>Tap to confirm and get full specs.</div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          <DeviceOptionButton name={displayName} isPrimary={true} category={category} onClick={() => onConfirm(displayName)} />
-          {alt1 && alt1 !== 'null' && <DeviceOptionButton name={alt1} isPrimary={false} category={category} onClick={() => onConfirm(alt1)} />}
-          {alt2 && alt2 !== 'null' && <DeviceOptionButton name={alt2} isPrimary={false} category={category} onClick={() => onConfirm(alt2)} />}
+          <DeviceOptionButton name={displayName} isPrimary={true} category={category} onClick={() => onConfirm(displayName)} scannedImage={scannedImage} scannedImageMime={scannedImageMime} />
+          {showAlt1 && <DeviceOptionButton name={alt1} isPrimary={false} category={category} onClick={() => onConfirm(alt1)} />}
+          {showAlt2 && <DeviceOptionButton name={alt2} isPrimary={false} category={category} onClick={() => onConfirm(alt2)} />}
           <button onClick={onSeeMore} style={{ background: 'none', border: '1px dashed var(--border)', borderRadius: '10px', padding: '10px 16px', fontSize: '13px', color: 'var(--accent)', cursor: 'pointer', textAlign: 'center', fontFamily: 'inherit', fontWeight: 600 }}>📦 See More Models</button>
         </div>
       </div>
@@ -648,6 +668,8 @@ export default function ChatPage({ onLogout }) {
   const [wizardState, setWizardState] = useState(null);
   const [catalogOpen, setCatalogOpen] = useState(false);
   const [catalogCategory, setCatalogCategory] = useState('SMARTPHONE');
+  // ─── FIX: track whether this is a history view (no wizard allowed) ────────
+  const [isHistoryView, setIsHistoryView] = useState(false);
 
   const messagesEndRef = useRef();
   const fileRef = useRef();
@@ -655,6 +677,7 @@ export default function ChatPage({ onLogout }) {
   const cancelStreamRef = useRef(null);
   const streamingMsgIdRef = useRef(null);
   const savedChatIdRef = useRef(null);
+  const isSavingRef = useRef(false);
   const sendMessageRef = useRef(null);
 
   const WELCOME_MESSAGE = "👋 Hi! I'm SpecSmart AI, your specialized tech advisor for the Philippine market.\n\nI can help with:\n• PC Components (CPU, GPU, RAM, Storage, Motherboards, PSU)\n• Smartphones\n• Laptops\n\nAsk me anything, or upload a hardware image for AI identification! Prices are in Philippine Peso (₱).";
@@ -676,6 +699,7 @@ export default function ChatPage({ onLogout }) {
     setUploadedPreview(null);
     if (fileRef.current) fileRef.current.value = '';
     setIsLoading(true);
+    isSavingRef.current = false;
 
     try {
       const token = await getToken();
@@ -697,35 +721,46 @@ export default function ChatPage({ onLogout }) {
         }
 
         const sanitizeName = (name) => {
-          if (!name || name === 'null') return '';
-          return name.includes(' or ') ? name.split(' or ')[0].trim() : name;
+          if (!name) return '';
+          const s = String(name).trim();
+          if (['null', 'none', 'n/a', 'unknown', 'undefined'].includes(s.toLowerCase())) return '';
+          const words = s.split(' ');
+          if (words.length >= 2 && words[0].toLowerCase() === words[1].toLowerCase()) {
+            return words.slice(1).join(' ');
+          }
+          return s;
         };
 
         const rawDisplayName = scanResult.displayName || 'Unknown Device';
-        const words = rawDisplayName.split(' ');
-        const dedupedName = (words.length >= 2 && words[0] === words[1]) ? words.slice(1).join(' ') : rawDisplayName;
-        const displayName = sanitizeName(dedupedName) || dedupedName;
+        const displayName = sanitizeName(rawDisplayName) || rawDisplayName;
         const { category, confidence } = scanResult;
         const alt1 = sanitizeName(scanResult.alternative1 || '');
         const alt2 = sanitizeName(scanResult.alternative2 || '');
         const confEmoji = confidence === 'HIGH' ? '🟢' : confidence === 'MEDIUM' ? '🟡' : '🔴';
 
-        setMessages(prev => [...prev, {
-          id: Date.now() + 1, role: 'assistant',
-          content: `📷 Identified: **${displayName}** (${category}) ${confEmoji} ${confidence || ''} confidence`,
-        }]);
+        const aiContent = `📷 Identified: **${displayName}** (${category}) ${confEmoji} ${confidence || ''} confidence`;
+        setMessages(prev => [...prev, { id: Date.now() + 1, role: 'assistant', content: aiContent }]);
 
         const cat = category?.toUpperCase();
-        setWizardState({ phase: 'confirm', scanResult: { ...scanResult, displayName, alternative1: alt1, alternative2: alt2 }, category: cat, displayName, confidence });
-
-        setMessages(prev => {
-          const all = prev.filter(m => m.role && m.content && m.id !== 0);
-          if (all.length >= 2) {
-            saveChat(`Image scan: ${displayName}`, all.map(m => ({ role: m.role, content: m.content })), savedChatIdRef.current)
-              .then(s => { if (s?.id) savedChatIdRef.current = s.id; });
-          }
-          return prev;
+        setWizardState({
+          phase: 'confirm',
+          scanResult: { ...scanResult, displayName, alternative1: alt1, alternative2: alt2 },
+          category: cat,
+          displayName,
+          confidence,
+          scannedImage: imageData,
+          scannedImageMime: imageMime || 'image/jpeg',
         });
+
+        if (!isSavingRef.current) {
+          isSavingRef.current = true;
+          const msgsToSave = [
+            { role: userMessage.role, content: userMessage.content, image: userMessage.image, imageMime: userMessage.imageMime },
+            { role: 'assistant', content: aiContent },
+          ];
+          saveChat(`📷 ${displayName}`, msgsToSave, savedChatIdRef.current)
+            .then(s => { if (s?.id) savedChatIdRef.current = s.id; });
+        }
         return;
       }
 
@@ -749,18 +784,26 @@ export default function ChatPage({ onLogout }) {
           messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
         },
         () => {
-          setMessages(prev => {
-            const updated = prev.map(msg => msg.id === streamingId ? { ...msg, streaming: false } : msg);
-            const all = updated.filter(m => m.role && m.content && m.id !== 0);
-            if (all.length >= 2) {
-              const t = all.find(m => m.role === 'user');
-              saveChat(t ? t.content.slice(0, 60) : 'Chat', all.map(m => ({ role: m.role, content: m.content })), savedChatIdRef.current)
-                .then(s => { if (s?.id) savedChatIdRef.current = s.id; });
-            }
-            return updated;
-          });
+          setMessages(prev => prev.map(msg =>
+            msg.id === streamingId ? { ...msg, streaming: false } : msg
+          ));
           setIsStreaming(false);
           cancelStreamRef.current = null;
+
+          if (!isSavingRef.current) {
+            isSavingRef.current = true;
+            const finalMsgs = messagesRef.current
+              .map(msg => msg.id === streamingId ? { ...msg, streaming: false } : msg)
+              .filter(m => m.role && m.content && m.id !== 0);
+            if (finalMsgs.length >= 2) {
+              const t = finalMsgs.find(m => m.role === 'user');
+              saveChat(
+                t ? t.content.slice(0, 60) : 'Chat',
+                finalMsgs.map(m => ({ role: m.role, content: m.content, image: m.image, imageMime: m.imageMime })),
+                savedChatIdRef.current
+              ).then(s => { if (s?.id) savedChatIdRef.current = s.id; });
+            }
+          }
         },
         err => {
           setModelStatus('');
@@ -780,11 +823,11 @@ export default function ChatPage({ onLogout }) {
     }
   }, [input]); // eslint-disable-line
 
-  // Keep ref in sync so loadHistory can call sendMessage safely
   useEffect(() => {
     sendMessageRef.current = sendMessage;
   }, [sendMessage]);
 
+  // ── Load existing chat by id ───────────────────────────────────────────────
   useEffect(() => {
     const loadHistory = async () => {
       if (id) {
@@ -794,16 +837,33 @@ export default function ChatPage({ onLogout }) {
             headers: { Authorization: `Bearer ${token}` },
           });
           const data = await res.json();
-          const historyItem = data.history?.find(h => h.id === parseInt(id));
-          if (historyItem?.messages?.length) {
+          const historyItem = data.history?.find(h => String(h.id) === String(id));
+
+          if (historyItem) {
             savedChatIdRef.current = historyItem.id;
-            setMessages(historyItem.messages.map(m => ({ ...m, id: Math.random() })));
+            let loadedMessages = [];
+
+            if (historyItem.messages?.length) {
+              loadedMessages = historyItem.messages.map(m => ({ ...m, id: Math.random() }));
+            } else if (historyItem.message) {
+              loadedMessages = [
+                { id: Math.random(), role: 'user',      content: historyItem.message  },
+                { id: Math.random(), role: 'assistant', content: historyItem.response },
+              ];
+            }
+
+            setMessages(loadedMessages);
+            // ─── FIX: Mark as history view — wizard must NEVER show ──────────
+            // Old code incorrectly restored wizard state here which caused
+            // "Is this your device?" to re-appear on every history open.
+            // History is read-only — just show the messages as-is.
+            setIsHistoryView(true);
+            setWizardState(null);
             return;
           }
         } catch (err) { console.warn('Could not load history:', err); }
       }
 
-      // ✅ FIX: Read pendingMessage and send it after welcome message is set
       const pending = sessionStorage.getItem('pendingMessage');
       if (pending) {
         sessionStorage.removeItem('pendingMessage');
@@ -832,26 +892,68 @@ export default function ChatPage({ onLogout }) {
   const confirmDevice = useCallback(async (deviceName, category) => {
     setWizardState(null);
     setCatalogOpen(false);
-    setIsLoading(true);
-    setMessages(prev => [...prev, { id: Date.now(), role: 'user', content: `✅ That's the ${deviceName}` }]);
+
+    const userMsgId = Date.now();
+    const streamingId = userMsgId + 1;
+    setMessages(prev => [
+      ...prev,
+      { id: userMsgId, role: 'user', content: `✅ That's the ${deviceName}` },
+      { id: streamingId, role: 'assistant', content: '', streaming: true },
+    ]);
+    setIsLoading(false);
+    setIsStreaming(true);
+
+    const query = `Give me the full specs, Philippine Peso price (as of 2025), where to buy in the Philippines, and a brief verdict for the ${deviceName}.`;
 
     try {
-      const token = await getToken();
-      const res = await fetch(`${API_BASE}/api/ai/chat`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...(token && { Authorization: `Bearer ${token}` }) },
-        body: JSON.stringify({
-          messages: [{ role: 'user', content: `I confirmed this device: ${deviceName}.\n\nProvide full specs, Philippine price (PHP, as of 2025), where to buy in the Philippines, and a brief verdict.` }],
-        }),
-      });
-      const data = await res.json();
-      setMessages(prev => [...prev, { id: Date.now() + 1, role: 'assistant', content: data.content || 'Could not fetch specs.' }]);
-      setIsLoading(false);
-      const cat = category?.toUpperCase();
-      if (QUICK_ACTIONS[cat]) setWizardState({ phase: 'quick_actions', deviceName, category: cat });
+      cancelStreamRef.current = await askAIStream(
+        [{ role: 'user', content: query }],
+        tok => {
+          setMessages(prev => prev.map(msg =>
+            msg.id === streamingId ? { ...msg, content: msg.content + tok } : msg
+          ));
+          messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        },
+        () => {
+          setMessages(prev => prev.map(msg =>
+            msg.id === streamingId ? { ...msg, streaming: false } : msg
+          ));
+          setIsStreaming(false);
+          cancelStreamRef.current = null;
+          const cat = category?.toUpperCase();
+          if (QUICK_ACTIONS[cat]) setWizardState({ phase: 'quick_actions', deviceName, category: cat });
+
+          // ─── FIX: Save full conversation including confirm + specs ─────────
+          // Previous code never saved after confirmDevice, so history only
+          // had the first 2 messages (image + identification).
+          const allMsgs = messagesRef.current
+            .map(m => m.id === streamingId ? { ...m, streaming: false } : m)
+            .filter(m => m.role && m.content && m.id !== 0);
+          if (allMsgs.length >= 2) {
+            saveChat(
+              `📷 ${deviceName}`,
+              allMsgs.map(m => ({ role: m.role, content: m.content, image: m.image, imageMime: m.imageMime })),
+              savedChatIdRef.current
+            ).then(s => { if (s?.id) savedChatIdRef.current = s.id; });
+          }
+        },
+        err => {
+          setMessages(prev => prev.map(msg =>
+            msg.id === streamingId
+              ? { ...msg, content: err.message || '⚠️ Could not fetch specs. Please try again.', streaming: false }
+              : msg
+          ));
+          setIsStreaming(false);
+          cancelStreamRef.current = null;
+        }
+      );
     } catch {
-      setIsLoading(false);
-      setMessages(prev => [...prev, { id: Date.now() + 1, role: 'assistant', content: '⚠️ Could not fetch specs. Please try again.' }]);
+      setIsStreaming(false);
+      setMessages(prev => prev.map(msg =>
+        msg.id === streamingId
+          ? { ...msg, content: '⚠️ Could not fetch specs. Please try again.', streaming: false }
+          : msg
+      ));
     }
   }, []);
 
@@ -943,6 +1045,8 @@ export default function ChatPage({ onLogout }) {
   };
 
   const renderWizard = () => {
+    // ─── FIX: Never show wizard on history view ───────────────────────────────
+    if (isHistoryView) return null;
     if (!wizardState) return null;
     if (wizardState.phase === 'confirm') return (
       <ConfirmDeviceCard
@@ -951,6 +1055,8 @@ export default function ChatPage({ onLogout }) {
         alt2={wizardState.scanResult.alternative2 || ''}
         category={wizardState.category}
         confidence={wizardState.confidence}
+        scannedImage={wizardState.scannedImage}
+        scannedImageMime={wizardState.scannedImageMime}
         onConfirm={(name) => confirmDevice(name, wizardState.category)}
         onHelpIdentify={() => startWizard(wizardState.scanResult, wizardState.category)}
         onUploadAgain={() => { setWizardState(null); fileRef.current?.click(); }}
@@ -990,6 +1096,12 @@ export default function ChatPage({ onLogout }) {
             SpecSmart is typing...
           </span>
         )}
+        {/* ─── FIX: Show read-only label for history chats ──────────────── */}
+        {isHistoryView && (
+          <span style={{ fontSize: '11px', color: 'var(--text-3)', background: 'var(--bg-3)', border: '1px solid var(--border)', borderRadius: '20px', padding: '3px 10px', marginLeft: 'auto' }}>
+            📋 History
+          </span>
+        )}
       </div>
 
       <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px 160px' }}>
@@ -1013,7 +1125,8 @@ export default function ChatPage({ onLogout }) {
             </div>
           ))}
 
-          {wizardState && !isLoading && !isStreaming && (
+          {/* ─── FIX: Only show wizard on live chats, never on history ────── */}
+          {wizardState && !isHistoryView && !isLoading && !isStreaming && (
             <div className="message ai" style={{ alignItems: 'flex-start' }}>
               <div className="message-avatar ai">SS</div>
               <div style={{ flex: 1 }}>{renderWizard()}</div>

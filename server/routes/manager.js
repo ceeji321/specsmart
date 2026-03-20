@@ -98,7 +98,6 @@ router.get('/users', authenticateToken, isManagerRole, async (req, res) => {
       params.push(role);
     }
     if (search) {
-      // ✅ FIX: Use COALESCE instead of referencing 'username' directly in WHERE
       conditions.push(`(email ILIKE $${i} OR COALESCE(name, email) ILIKE $${i})`);
       params.push(`%${search}%`);
       i++;
@@ -151,14 +150,30 @@ router.get('/users/disabled', authenticateToken, isAdminRole, async (req, res) =
 });
 
 // ── GET /users/archived ───────────────────────────────────────────────────────
+// FIX: DISTINCT ON (user_id) grabs only the latest archive log row per user,
+// so a user archived multiple times never duplicates in the list.
 router.get('/users/archived', authenticateToken, isAdminRole, async (req, res) => {
   const client = await pool.connect();
   try {
     const result = await client.query(
-      `SELECT u.id, u.email, COALESCE(u.name, u.email) AS name, u.role, u.created_at, u.last_login,
-              a.archived_at, a.reason AS archive_reason
+      `SELECT
+         u.id,
+         u.email,
+         COALESCE(u.name, u.email) AS name,
+         u.role,
+         u.created_at,
+         u.last_login,
+         latest_archive.archived_at,
+         latest_archive.reason AS archive_reason
        FROM users u
-       LEFT JOIN archived_users a ON a.user_id = CAST(u.id AS TEXT)
+       LEFT JOIN (
+         SELECT DISTINCT ON (user_id)
+           user_id,
+           archived_at,
+           reason
+         FROM archived_users
+         ORDER BY user_id, archived_at DESC
+       ) latest_archive ON latest_archive.user_id = CAST(u.id AS TEXT)
        WHERE u.is_archived = TRUE
        ORDER BY COALESCE(u.name, u.email) ASC`
     );
@@ -196,7 +211,6 @@ router.post('/users', authenticateToken, isManagerRole, async (req, res) => {
     if (role === 'admin' && req.user.role !== 'admin')
       return res.status(403).json({ success: false, message: 'Only admins can create admin accounts.' });
 
-    // Create in Supabase Auth
     const { data: authData, error: authError } = await supabase.auth.admin.createUser({
       email: email.toLowerCase(),
       password,
@@ -212,7 +226,6 @@ router.post('/users', authenticateToken, isManagerRole, async (req, res) => {
 
     const supabaseUser = authData.user;
 
-    // Sync to PostgreSQL
     const result = await client.query(
       `INSERT INTO users (id, email, name, role, password_hash, created_at)
        VALUES ($1, $2, $3, $4, 'supabase_managed', NOW())
@@ -247,7 +260,6 @@ router.put('/users/:id', authenticateToken, isManagerRole, async (req, res) => {
     if (role && ['user', 'admin'].includes(role)) {
       updates.push(`role = $${i++}`);
       params.push(role);
-      // Also update role in Supabase metadata
       await supabase.auth.admin.updateUserById(id, {
         user_metadata: { role }
       }).catch(console.error);
@@ -288,7 +300,6 @@ router.delete('/users/:id', authenticateToken, isAdminRole, async (req, res) => 
       [String(u.id), u.email, u.name, u.role, String(req.user.userId), req.user.email]
     );
     await client.query('DELETE FROM users WHERE id = $1', [id]);
-    // Also delete from Supabase Auth
     await supabase.auth.admin.deleteUser(id).catch(console.error);
     broadcastUserEvent('user_deleted', { id });
     res.json({ success: true, message: 'User deleted successfully.' });
@@ -309,7 +320,6 @@ router.post('/users/:id/disable', authenticateToken, isAdminRole, async (req, re
     if (userRes.rows.length === 0)
       return res.status(404).json({ success: false, message: 'User not found.' });
     await client.query('UPDATE users SET is_disabled = TRUE WHERE id = $1', [id]);
-    // Ban in Supabase too
     await supabase.auth.admin.updateUserById(id, { ban_duration: '876600h' }).catch(console.error);
     broadcastUserEvent('user_disabled', { id });
     res.json({ success: true, message: 'User disabled successfully.' });
@@ -324,7 +334,6 @@ router.post('/users/:id/enable', authenticateToken, isAdminRole, async (req, res
   const client = await pool.connect();
   try {
     await client.query('UPDATE users SET is_disabled = FALSE WHERE id = $1', [req.params.id]);
-    // Unban in Supabase too
     await supabase.auth.admin.updateUserById(req.params.id, { ban_duration: 'none' }).catch(console.error);
     broadcastUserEvent('user_enabled', { id: req.params.id });
     res.json({ success: true, message: 'User enabled successfully.' });
@@ -335,6 +344,7 @@ router.post('/users/:id/enable', authenticateToken, isAdminRole, async (req, res
 });
 
 // ── POST /users/:id/archive ───────────────────────────────────────────────────
+// FIX: Check if already archived first to prevent duplicate archive log entries
 router.post('/users/:id/archive', authenticateToken, isAdminRole, async (req, res) => {
   const client = await pool.connect();
   try {
@@ -342,12 +352,20 @@ router.post('/users/:id/archive', authenticateToken, isAdminRole, async (req, re
     const { reason } = req.body;
     if (id === String(req.user.userId))
       return res.status(400).json({ success: false, message: 'You cannot archive your own account.' });
+
     const userRes = await client.query(
-      `SELECT id, email, COALESCE(name, email) AS name, role FROM users WHERE id = $1`, [id]
+      `SELECT id, email, COALESCE(name, email) AS name, role, is_archived FROM users WHERE id = $1`, [id]
     );
     if (userRes.rows.length === 0)
       return res.status(404).json({ success: false, message: 'User not found.' });
+
     const u = userRes.rows[0];
+
+    // FIX: Prevent re-archiving an already archived user (stops duplicate log entries)
+    if (u.is_archived) {
+      return res.status(409).json({ success: false, message: 'User is already archived.' });
+    }
+
     await client.query(
       `INSERT INTO archived_users (user_id, email, name, role, archived_by_id, archived_by_email, reason)
        VALUES ($1,$2,$3,$4,$5,$6,$7)`,
@@ -410,7 +428,6 @@ router.post('/users/:id/reset-password', authenticateToken, isAdminRole, async (
     const { new_password } = req.body;
     if (!new_password || new_password.length < 6)
       return res.status(400).json({ success: false, message: 'Password must be at least 6 characters.' });
-    // Reset via Supabase instead of bcrypt
     const { error } = await supabase.auth.admin.updateUserById(req.params.id, { password: new_password });
     if (error) return res.status(400).json({ success: false, message: error.message });
     res.json({ success: true, message: 'Password reset successfully.' });
@@ -419,4 +436,4 @@ router.post('/users/:id/reset-password', authenticateToken, isAdminRole, async (
   }
 });
 
-export default router;
+export default router;  

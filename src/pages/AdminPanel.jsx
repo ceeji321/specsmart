@@ -63,9 +63,7 @@ const LiveBadge = ({ connected }) => (
   </div>
 );
 
-// ── Get Supabase session token (from axios header set by AuthContext) ──────────
 const getSupabaseToken = () => {
-  // AuthContext sets this header on every login/session refresh
   const authHeader = axios.defaults.headers.common['Authorization'];
   if (authHeader && authHeader.startsWith('Bearer ')) {
     return authHeader.replace('Bearer ', '');
@@ -77,26 +75,49 @@ const getSupabaseToken = () => {
 const RowActions = ({ user, onDisable, onArchive, currentId }) => {
   const [disableHover, setDisableHover] = useState(false);
   const [archiveHover, setArchiveHover] = useState(false);
-  const isSelf = String(user.id) === String(currentId);
-  if (isSelf) return null;
+  const isSelf    = String(user.id) === String(currentId);
+  const isAdmin   = user.role === 'admin';
 
-  const btnBase = { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, width: 90, padding: '4px 0', borderRadius: 6, cursor: 'pointer', fontSize: 11, fontWeight: 600, fontFamily: "'DM Sans', sans-serif", transition: 'background 0.15s, color 0.15s', userSelect: 'none' };
+  // Hide actions for self OR for other admins — admins are protected
+  if (isSelf || isAdmin) return null;
+
+  const btnBase = {
+    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
+    width: 90, padding: '4px 0', borderRadius: 6, cursor: 'pointer',
+    fontSize: 11, fontWeight: 600, fontFamily: "'DM Sans', sans-serif",
+    transition: 'background 0.15s, color 0.15s, border-color 0.15s',
+    userSelect: 'none',
+  };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-end', width: 'fit-content', marginLeft: 'auto' }}>
+      {/* Disable button — amber */}
       <div
         onMouseEnter={() => setDisableHover(true)}
         onMouseLeave={() => setDisableHover(false)}
         onClick={onDisable}
-        style={{ ...btnBase, color: disableHover ? '#fde68a' : '#fbbf24', background: disableHover ? 'rgba(251,191,36,0.18)' : 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.25)' }}
+        style={{
+          ...btnBase,
+          color: disableHover ? '#fde68a' : '#fbbf24',
+          background: disableHover ? 'rgba(251,191,36,0.18)' : 'rgba(251,191,36,0.08)',
+          border: `1px solid ${disableHover ? 'rgba(251,191,36,0.5)' : 'rgba(251,191,36,0.25)'}`,
+        }}
       >
         <Ban size={11} /> Disable
       </div>
+
+      {/* Archive button — purple */}
       <div
         onMouseEnter={() => setArchiveHover(true)}
         onMouseLeave={() => setArchiveHover(false)}
         onClick={onArchive}
-        style={{ ...btnBase, color: archiveHover ? '#fff' : '#a78bfa', background: archiveHover ? 'rgba(167,139,250,0.25)' : 'rgba(167,139,250,0.12)', border: '1px solid rgba(167,139,250,0.35)' }}
+        style={{
+          ...btnBase,
+          color: archiveHover ? '#c4b5fd' : '#a78bfa',
+          background: archiveHover ? 'rgba(167,139,250,0.22)' : 'rgba(167,139,250,0.1)',
+          border: `1px solid ${archiveHover ? '#a78bfa' : 'rgba(167,139,250,0.35)'}`,
+          boxShadow: archiveHover ? '0 0 0 1px rgba(167,139,250,0.3)' : 'none',
+        }}
       >
         <Archive size={11} /> Archive
       </div>
@@ -180,15 +201,26 @@ const ArchiveModal = ({ user, onClose, onArchived }) => {
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 380 }}>
-        <div style={{ width: 48, height: 48, borderRadius: 12, background: 'rgba(154,160,176,0.1)', border: '1px solid rgba(154,160,176,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-2)', marginBottom: 16 }}>
+        <div style={{ width: 48, height: 48, borderRadius: 12, background: 'rgba(167,139,250,0.1)', border: '1px solid rgba(167,139,250,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#a78bfa', marginBottom: 16 }}>
           <Archive size={22} />
         </div>
         <div className="modal-title" style={{ fontSize: 18 }}>Archive User?</div>
         <p className="modal-sub"><strong style={{ color: 'var(--text)' }}>{user.name}</strong> will be hidden from the active list. Their record is kept and can be restored.</p>
         <div className="form-group">
           <label className="form-label">Reason (optional)</label>
-          <select value={reason} onChange={e => setReason(e.target.value)}
-            style={{ width: '100%', padding: '9px 12px', borderRadius: 8, fontSize: 13, fontFamily: "'DM Sans', sans-serif", fontWeight: 500, background: 'var(--bg-3)', border: '1px solid var(--border)', color: reason ? 'var(--text)' : 'var(--text-3)', cursor: 'pointer', outline: 'none', appearance: 'none', backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239aa0b0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 12px center', paddingRight: 36 }}>
+          <select
+            value={reason}
+            onChange={e => setReason(e.target.value)}
+            style={{
+              width: '100%', padding: '9px 12px', borderRadius: 8, fontSize: 13,
+              fontFamily: "'DM Sans', sans-serif", fontWeight: 500,
+              background: 'var(--bg-3)', border: '1px solid var(--border)',
+              color: reason ? 'var(--text)' : 'var(--text-3)',
+              cursor: 'pointer', outline: 'none', appearance: 'none',
+              backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239aa0b0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E")`,
+              backgroundRepeat: 'no-repeat', backgroundPosition: 'right 12px center', paddingRight: 36,
+            }}
+          >
             <option value="">Select a reason…</option>
             {PRESET_REASONS.map(r => <option key={r} value={r}>{r}</option>)}
           </select>
@@ -196,7 +228,31 @@ const ArchiveModal = ({ user, onClose, onArchived }) => {
         {err && <div style={{ color: 'var(--red)', fontSize: 13, marginBottom: 12 }}>{err}</div>}
         <div style={{ display: 'flex', gap: 10 }}>
           <button className="btn btn-ghost" onClick={onClose} style={{ flex: 1 }}>Cancel</button>
-          <button onClick={handleArchive} disabled={loading} style={{ flex: 1, padding: '9px 16px', borderRadius: 8, background: 'rgba(154,160,176,0.1)', color: 'var(--text-2)', border: '1px solid rgba(154,160,176,0.25)', cursor: loading ? 'not-allowed' : 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, opacity: loading ? 0.7 : 1 }}>
+          <button
+            onClick={handleArchive}
+            disabled={loading}
+            style={{
+              flex: 1, padding: '9px 16px', borderRadius: 8,
+              background: 'rgba(167,139,250,0.15)',
+              color: '#c4b5fd',
+              border: '1px solid rgba(167,139,250,0.45)',
+              cursor: loading ? 'not-allowed' : 'pointer',
+              fontWeight: 600,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+              opacity: loading ? 0.7 : 1,
+              transition: 'background 0.15s, border-color 0.15s',
+            }}
+            onMouseEnter={e => {
+              if (!loading) {
+                e.currentTarget.style.background = 'rgba(167,139,250,0.25)';
+                e.currentTarget.style.borderColor = '#a78bfa';
+              }
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.background = 'rgba(167,139,250,0.15)';
+              e.currentTarget.style.borderColor = 'rgba(167,139,250,0.45)';
+            }}
+          >
             {loading ? 'Archiving…' : <><Archive size={14} /> Archive</>}
           </button>
         </div>
@@ -215,7 +271,6 @@ const CreateModal = ({ onClose, onCreated }) => {
     if (!form.email || !form.name || !form.password) { setErr('All fields are required'); return; }
     setSaving(true); setErr('');
     try {
-      // Create via backend which will use Supabase admin API
       const res = await axios.post(`${API_URL}/api/manager/users`, form);
       onCreated(res.data.data);
       onClose();
@@ -372,7 +427,7 @@ const ArchivedUsersTab = () => {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <h2 style={{ fontFamily: 'Syne, sans-serif', fontSize: 18, fontWeight: 700, margin: 0 }}>Archived Users</h2>
-          <span style={{ background: 'rgba(154,160,176,0.1)', color: 'var(--text-3)', borderRadius: 20, padding: '2px 10px', fontSize: 11, fontWeight: 700, border: '1px solid rgba(154,160,176,0.2)' }}>{users.length}</span>
+          <span style={{ background: 'rgba(167,139,250,0.12)', color: '#a78bfa', borderRadius: 20, padding: '2px 10px', fontSize: 11, fontWeight: 700, border: '1px solid rgba(167,139,250,0.3)' }}>{users.length}</span>
         </div>
         <button onClick={load} style={{ background: 'none', border: '1px solid var(--border)', color: 'var(--text-2)', cursor: 'pointer', padding: '7px 10px', borderRadius: 8, display: 'flex', alignItems: 'center' }}><RefreshCw size={15} /></button>
       </div>
@@ -426,7 +481,6 @@ export default function AdminPanel() {
   const { user, isManager } = useAuth();
   const navigate = useNavigate();
 
-  // ✅ FIX: Read role from user_metadata (Supabase), not user.role
   const currentUserRole = user?.user_metadata?.role || user?.app_metadata?.role || 'user';
   const isAdmin = currentUserRole === 'admin';
   const currentUserId = user?.id;
@@ -452,7 +506,6 @@ export default function AdminPanel() {
     if (!isManager) navigate('/dashboard');
   }, [isManager]);
 
-  // ✅ FIX: Get token from Supabase localStorage key, not old JWT token key
   useEffect(() => {
     if (!isManager) return;
     const connect = () => {
@@ -473,7 +526,18 @@ export default function AdminPanel() {
           if (type === 'user_updated') setUsers(prev => prev.map(u => u.id === data.id ? data : u));
           if (['user_deleted', 'user_archived', 'user_disabled'].includes(type)) {
             setUsers(prev => prev.filter(u => u.id !== data.id));
-            setStats(s => s ? { ...s, total_users: Math.max(0, +s.total_users - 1) } : s);
+            setStats(s => s ? {
+              ...s,
+              total_users:    Math.max(0, +s.total_users - 1),
+              disabled_users: type === 'user_disabled' ? +s.disabled_users + 1 : s.disabled_users,
+              archived_users: type === 'user_archived' ? +s.archived_users + 1 : s.archived_users,
+            } : s);
+          }
+          if (type === 'user_enabled') {
+            setStats(s => s ? { ...s, disabled_users: Math.max(0, +s.disabled_users - 1), total_users: +s.total_users + 1 } : s);
+          }
+          if (type === 'user_unarchived') {
+            setStats(s => s ? { ...s, archived_users: Math.max(0, +s.archived_users - 1), total_users: +s.total_users + 1 } : s);
           }
         } catch (_) {}
       };
@@ -506,8 +570,8 @@ export default function AdminPanel() {
   }, [search]);
 
   const handleUserDeleted  = (id) => { setUsers(us => us.filter(u => u.id !== id)); setStats(s => s ? { ...s, total_users: Math.max(0, +s.total_users - 1) } : s); };
-  const handleUserArchived = (id) => { setUsers(us => us.filter(u => u.id !== id)); setStats(s => s ? { ...s, total_users: Math.max(0, +s.total_users - 1) } : s); };
-  const handleUserDisabled = (id) => { setUsers(us => us.filter(u => u.id !== id)); setStats(s => s ? { ...s, total_users: Math.max(0, +s.total_users - 1) } : s); };
+  const handleUserArchived = (id) => { setUsers(us => us.filter(u => u.id !== id)); setStats(s => s ? { ...s, total_users: Math.max(0, +s.total_users - 1), archived_users: +s.archived_users + 1 } : s); };
+  const handleUserDisabled = (id) => { setUsers(us => us.filter(u => u.id !== id)); setStats(s => s ? { ...s, total_users: Math.max(0, +s.total_users - 1), disabled_users: +s.disabled_users + 1 } : s); };
   const handleUserCreated  = (u)  => { setUsers(prev => prev.find(x => x.id === u.id) ? prev : [u, ...prev]); setStats(s => s ? { ...s, total_users: +s.total_users + 1 } : s); };
 
   const fmt = (d) => {
@@ -521,14 +585,28 @@ export default function AdminPanel() {
     );
   };
 
-  const tabStyle = (tab) => ({
-    padding: '8px 18px', borderRadius: 8, fontSize: 13, fontWeight: 600,
-    border: '1px solid', cursor: 'pointer', transition: 'all 0.15s',
-    fontFamily: 'DM Sans, sans-serif', display: 'flex', alignItems: 'center', gap: 6,
-    background: activeTab === tab ? 'var(--accent-glow)' : 'var(--bg-3)',
-    borderColor: activeTab === tab ? 'var(--accent)' : 'var(--border)',
-    color: activeTab === tab ? 'var(--accent)' : 'var(--text-2)',
-  });
+  const tabStyle = (tab) => {
+    const isActive = activeTab === tab;
+    if (tab === 'archived') {
+      return {
+        padding: '8px 18px', borderRadius: 8, fontSize: 13, fontWeight: 600,
+        border: '1px solid', cursor: 'pointer', transition: 'all 0.15s',
+        fontFamily: 'DM Sans, sans-serif', display: 'flex', alignItems: 'center', gap: 6,
+        background: isActive ? 'rgba(167,139,250,0.15)' : 'var(--bg-3)',
+        borderColor: isActive ? '#a78bfa' : 'var(--border)',
+        color: isActive ? '#c4b5fd' : 'var(--text-2)',
+        boxShadow: isActive ? '0 0 0 1px rgba(167,139,250,0.2)' : 'none',
+      };
+    }
+    return {
+      padding: '8px 18px', borderRadius: 8, fontSize: 13, fontWeight: 600,
+      border: '1px solid', cursor: 'pointer', transition: 'all 0.15s',
+      fontFamily: 'DM Sans, sans-serif', display: 'flex', alignItems: 'center', gap: 6,
+      background: isActive ? 'var(--accent-glow)' : 'var(--bg-3)',
+      borderColor: isActive ? 'var(--accent)' : 'var(--border)',
+      color: isActive ? 'var(--accent)' : 'var(--text-2)',
+    };
+  };
 
   return (
     <div className="page">
@@ -544,7 +622,6 @@ export default function AdminPanel() {
                 <Shield size={18} />
               </div>
               <h1 style={{ fontFamily: 'Syne, sans-serif', fontSize: 24, fontWeight: 800, margin: 0 }}>Admin Panel</h1>
-              {/* ✅ FIX: Show role from user_metadata */}
               <RoleBadge role={currentUserRole} />
               <LiveBadge connected={sseConnected} />
             </div>
@@ -563,13 +640,13 @@ export default function AdminPanel() {
           <StatCard icon={<User size={20} />} label="Regular Users" value={stats?.regular_users} accent="var(--text-2)" />
           <StatCard icon={<Crown size={20} />} label="Admins" value={stats?.admins} accent="var(--red)" />
           <StatCard icon={<Ban size={20} />} label="Disabled" value={stats?.disabled_users} accent="#fbbf24" />
-          <StatCard icon={<Archive size={20} />} label="Archived" value={stats?.archived_users} accent="var(--text-3)" />
+          <StatCard icon={<Archive size={20} />} label="Archived" value={stats?.archived_users} accent="#a78bfa" />
         </div>
 
         {/* Tabs */}
         <div style={{ display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap' }}>
-          <button style={tabStyle('users')} onClick={() => setActiveTab('users')}><Users size={14} /> Users</button>
-          <button style={tabStyle('disabled')} onClick={() => setActiveTab('disabled')}><Ban size={14} /> Disabled</button>
+          <button style={tabStyle('users')}    onClick={() => setActiveTab('users')}   ><Users   size={14} /> Users</button>
+          <button style={tabStyle('disabled')} onClick={() => setActiveTab('disabled')}><Ban     size={14} /> Disabled</button>
           <button style={tabStyle('archived')} onClick={() => setActiveTab('archived')}><Archive size={14} /> Archived</button>
         </div>
 
