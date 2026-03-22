@@ -14,6 +14,7 @@ router.get('/profile', authenticateToken, async (req, res) => {
     );
 
     if (result.rows.length === 0) {
+      // User exists in Supabase Auth but not in public.users — auto-create
       const username = req.user.email.split('@')[0];
       const inserted = await pool.query(
         `INSERT INTO public.users (id, email, name, username, role, status, created_at)
@@ -32,22 +33,12 @@ router.get('/profile', authenticateToken, async (req, res) => {
   }
 });
 
-// PUT /api/users/profile — update name, username, and/or email
+// PUT /api/users/profile — update name and username
 router.put('/profile', authenticateToken, async (req, res) => {
   try {
-    const { name, email } = req.body;
-    if (!name && !email)
-      return res.status(400).json({ error: 'Name or email is required' });
-
-    // Check email conflict
-    if (email) {
-      const existing = await pool.query(
-        'SELECT id FROM public.users WHERE email = $1 AND id != $2',
-        [email.toLowerCase(), req.user.userId]
-      );
-      if (existing.rows.length > 0)
-        return res.status(409).json({ error: 'Email already in use by another account' });
-    }
+    const { name } = req.body;
+    if (!name)
+      return res.status(400).json({ error: 'Name is required' });
 
     // Get current user row
     const current = await pool.query(
@@ -72,18 +63,17 @@ router.put('/profile', authenticateToken, async (req, res) => {
       username: req.user.email.split('@')[0],
     };
 
-    const newName  = name  ? name.trim()               : currentUser.name;
-    const newEmail = email ? email.trim().toLowerCase() : currentUser.email;
+    const newName = name ? name.trim() : currentUser.name;
 
     // ✅ FIX: Also update username to match name
     // The Android app stores username, the web stores name
     // Keeping them in sync ensures both platforms show the same value
     const result = await pool.query(
       `UPDATE public.users
-       SET name = $1, email = $2, username = $1
-       WHERE id = $3
+       SET name = $1, username = $1
+       WHERE id = $2
        RETURNING id, email, name, username, role, status, created_at`,
-      [newName, newEmail, req.user.userId]
+      [newName, req.user.userId]
     );
 
     if (result.rows.length === 0)
