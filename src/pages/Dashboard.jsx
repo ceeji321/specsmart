@@ -1,9 +1,13 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import { devices, categories } from '../data/devices';
 import { X, Sparkles } from 'lucide-react';
 import { askAI } from '../services/aiService';
+
+const API_BASE = import.meta.env.DEV
+  ? 'http://localhost:5000'
+  : 'https://specsmart-production-ed74.up.railway.app';
 
 // ─── Brand colors ─────────────────────────────────────────────────────────────
 const BRAND_COLORS = {
@@ -44,8 +48,6 @@ const BRAND_COLORS = {
   'be quiet!':    '#333333',
   'Thermaltake':  '#c0392b',
   'EVGA':         '#0066cc',
-  'Fractal':      '#4a4a4a',
-  'Super Flower': '#ff8c00',
   'Lenovo':       '#e2231a',
   'HP':           '#0096d6',
   'Dell':         '#007db8',
@@ -54,89 +56,146 @@ const BRAND_COLORS = {
   'Logitech':     '#00b3e3',
 };
 
-// ─── BrandInitial ─────────────────────────────────────────────────────────────
-const BrandInitial = ({ brand, size = 40 }) => {
+// ─── Category icons ───────────────────────────────────────────────────────────
+const CATEGORY_ICON = {
+  'CPU':         '🔲',
+  'GPU':         '🎮',
+  'RAM':         '📊',
+  'NVMe SSD':    '💾',
+  'SATA SSD':    '💽',
+  'Motherboard': '🔌',
+  'PSU':         '⚡',
+  'Smartphone':  '📱',
+  'Laptop':      '💻',
+  'Tablet':      '📋',
+};
+
+// ─── Image cache so we don't re-fetch on every re-render ─────────────────────
+const imageCache = new Map();
+
+// ─── Fetch product image from our backend ─────────────────────────────────────
+async function fetchProductImage(name) {
+  if (!name) return null;
+  if (imageCache.has(name)) return imageCache.get(name);
+
+  try {
+    const res = await fetch(`${API_BASE}/api/ai/product-image?q=${encodeURIComponent(name)}`);
+    if (!res.ok) { imageCache.set(name, null); return null; }
+    const data = await res.json();
+    const url = data.url || null;
+    imageCache.set(name, url);
+    return url;
+  } catch {
+    imageCache.set(name, null);
+    return null;
+  }
+}
+
+// ─── Try to find local DB image first ────────────────────────────────────────
+function getLocalDeviceImage(name) {
+  const nameLower = (name || '').toLowerCase();
+  const match = devices.find(d => {
+    const dName = d.name.toLowerCase();
+    return dName === nameLower || dName.includes(nameLower) || nameLower.includes(dName);
+  });
+  if (match) return match.image || match.img || match.localImg || null;
+  return null;
+}
+
+// ─── BrandCard — styled fallback tile ────────────────────────────────────────
+const BrandCard = ({ brand, category, size = 34 }) => {
   const color = BRAND_COLORS[brand] || '#6366f1';
   const initial = (brand || '?')[0].toUpperCase();
+  const icon = CATEGORY_ICON[category] || '📦';
+  const isSmall = size <= 40;
   return (
     <div style={{
       width: size, height: size,
-      borderRadius: '50%',
-      background: color,
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      color: 'white',
-      fontWeight: 800,
-      fontSize: size * 0.42,
-      fontFamily: 'Syne, sans-serif',
-      flexShrink: 0,
-      userSelect: 'none',
+      borderRadius: isSmall ? 9 : 14,
+      background: `linear-gradient(135deg, ${color}dd, ${color}88)`,
+      display: 'flex', flexDirection: 'column',
+      alignItems: 'center', justifyContent: 'center',
+      flexShrink: 0, userSelect: 'none', position: 'relative', overflow: 'hidden',
     }}>
-      {initial}
+      <div style={{ position: 'absolute', inset: 0, opacity: 0.12, background: 'repeating-linear-gradient(45deg, transparent, transparent 3px, rgba(255,255,255,0.3) 3px, rgba(255,255,255,0.3) 4px)' }} />
+      <span style={{ color: 'white', fontWeight: 900, fontSize: size * 0.38, fontFamily: 'Syne, sans-serif', lineHeight: 1, textShadow: '0 1px 3px rgba(0,0,0,0.3)', position: 'relative', zIndex: 1 }}>{initial}</span>
+      {isSmall && <span style={{ fontSize: size * 0.28, lineHeight: 1, position: 'relative', zIndex: 1 }}>{icon}</span>}
     </div>
   );
 };
 
-// ─── DeviceCardImage — URL first → localImg fallback → brand initial ──────────
+// ─── SuggestionImage — loads real product image via backend ──────────────────
+const SuggestionImage = ({ suggestion }) => {
+  const [imgUrl, setImgUrl] = useState(null);
+  const [failed, setFailed] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setImgUrl(null); setFailed(false); setLoading(true);
+    if (!suggestion?.name) { setLoading(false); return; }
+
+    // 1. Check local DB first (instant, no network)
+    const local = getLocalDeviceImage(suggestion.name);
+    if (local) { setImgUrl(local); setLoading(false); return; }
+
+    // 2. Check cache
+    if (imageCache.has(suggestion.name)) {
+      setImgUrl(imageCache.get(suggestion.name));
+      setLoading(false);
+      return;
+    }
+
+    // 3. Fetch from backend
+    fetchProductImage(suggestion.name).then(url => {
+      setImgUrl(url);
+      setLoading(false);
+    });
+  }, [suggestion?.name]);
+
+  if (loading) {
+    // Show shimmer while loading
+    return (
+      <div style={{
+        width: 34, height: 34, borderRadius: 9,
+        background: 'linear-gradient(90deg, #2a2a2a 25%, #3a3a3a 50%, #2a2a2a 75%)',
+        backgroundSize: '200% 100%',
+        animation: 'shimmer 1.2s infinite',
+        flexShrink: 0,
+      }} />
+    );
+  }
+
+  if (imgUrl && !failed) {
+    return (
+      <div style={{ width: 34, height: 34, borderRadius: 9, background: 'white', overflow: 'hidden', flexShrink: 0, boxShadow: '0 1px 4px rgba(0,0,0,0.15)' }}>
+        <img
+          src={imgUrl}
+          alt={suggestion.name}
+          onError={() => setFailed(true)}
+          style={{ width: '100%', height: '100%', objectFit: 'contain', padding: 3, boxSizing: 'border-box' }}
+        />
+      </div>
+    );
+  }
+
+  return <BrandCard brand={suggestion.brand} category={suggestion.category} size={34} />;
+};
+
+// ─── DeviceCardImage ──────────────────────────────────────────────────────────
 const DeviceCardImage = ({ device }) => {
   const [urlFailed, setUrlFailed] = useState(false);
   const [localFailed, setLocalFailed] = useState(false);
-
-  // Support both `img` and `image` field names
   const urlSrc = device.img || device.image || null;
-  // Local image stored in /public/images/ — set via `localImg` field in devices.js
   const localSrc = device.localImg || null;
+  useEffect(() => { setUrlFailed(false); setLocalFailed(false); }, [device.id]);
+  const imgStyle = { width: '100%', height: '100%', objectFit: 'contain', padding: '14px', boxSizing: 'border-box' };
 
-  // Reset on device change
-  useEffect(() => {
-    setUrlFailed(false);
-    setLocalFailed(false);
-  }, [device.id]);
-
-  const imgStyle = {
-    width: '100%',
-    height: '100%',
-    objectFit: 'contain',
-    padding: '14px',
-    boxSizing: 'border-box',
-  };
-
-  // 1️⃣ Try remote URL first
-  if (urlSrc && !urlFailed) {
-    return (
-      <img
-        src={urlSrc}
-        alt={device.name}
-        onError={() => setUrlFailed(true)}
-        style={imgStyle}
-      />
-    );
-  }
-
-  // 2️⃣ URL failed — try local image from /public/images/
-  if (localSrc && !localFailed) {
-    return (
-      <img
-        src={localSrc}
-        alt={device.name}
-        onError={() => setLocalFailed(true)}
-        style={imgStyle}
-      />
-    );
-  }
-
-  // 3️⃣ Both failed — show brand initial circle
-  return (
-    <div style={{
-      width: 70, height: 70, borderRadius: 16, background: 'white',
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      padding: 10, boxShadow: '0 4px 16px rgba(0,0,0,0.2)',
-      position: 'relative', zIndex: 1,
-    }}>
-      <BrandInitial brand={device.brand} size={50} />
-    </div>
-  );
+  if (urlSrc && !urlFailed) return <img src={urlSrc} alt={device.name} onError={() => setUrlFailed(true)} style={imgStyle} />;
+  if (localSrc && !localFailed) return <img src={localSrc} alt={device.name} onError={() => setLocalFailed(true)} style={imgStyle} />;
+  return <div style={{ display:'flex', alignItems:'center', justifyContent:'center', width:'100%', height:'100%' }}><BrandCard brand={device.brand} category={device.category} size={70} /></div>;
 };
 
+// ─── AI helpers ───────────────────────────────────────────────────────────────
 async function fetchAISuggestions(query) {
   const response = await askAI([{
     role: 'user',
@@ -144,8 +203,9 @@ async function fetchAISuggestions(query) {
 
 Respond with JSON only (no markdown):
 [
-  { "name": "Product Name", "category": "CPU/GPU/RAM/SSD/Smartphone/Motherboard/PSU/Laptop/etc", "brand": "Brand", "emoji": "emoji", "specs": "short one-line spec" }
+  { "name": "Product Name", "category": "CATEGORY", "brand": "Brand", "specs": "short one-line spec" }
 ]
+For category use EXACTLY one of: CPU, GPU, RAM, NVMe SSD, SATA SSD, Smartphone, Motherboard, PSU, Laptop, Tablet
 Only return products that actually exist. Be specific with model names.`
   }]);
   const clean = response.replace(/```json|```/g, '').trim();
@@ -161,21 +221,20 @@ Respond with JSON only (no markdown):
 {
   "found": true,
   "name": "Product Name",
-  "category": "CPU/GPU/RAM/SSD/Smartphone/Motherboard/PSU/Laptop/etc",
+  "category": "CPU/GPU/RAM/NVMe SSD/SATA SSD/Smartphone/Motherboard/PSU/Laptop/Tablet",
   "brand": "Brand Name",
   "specs": "Key specs in one line",
   "price": "Philippine Peso price range",
-  "emoji": "emoji",
   "details": { "key1": "value1" },
   "summary": "2-3 sentence overview"
 }
-If not found: {"found": false}
-Focus on PC hardware, smartphones only.`
+If not found: {"found": false}`
   }]);
   const clean = response.replace(/```json|```/g, '').trim();
   return JSON.parse(clean);
 }
 
+// ─── Dashboard ────────────────────────────────────────────────────────────────
 export default function Dashboard() {
   const [search, setSearch] = useState('');
   const [activeCategory, setActiveCategory] = useState('All');
@@ -262,11 +321,7 @@ export default function Dashboard() {
       reader.onload = (ev) => {
         const base64 = ev.target.result.split(',')[1];
         const mime = uploadedFile.type || 'image/jpeg';
-        sessionStorage.setItem('pendingMessage', JSON.stringify({
-          content: chatInput,
-          imageData: base64,
-          imageMime: mime,
-        }));
+        sessionStorage.setItem('pendingMessage', JSON.stringify({ content: chatInput, imageData: base64, imageMime: mime }));
         setChatInput(''); setUploadedFile(null);
         navigate(`/chat/${Date.now()}`);
       };
@@ -288,10 +343,12 @@ export default function Dashboard() {
 
   return (
     <div className="page">
+      {/* shimmer animation */}
+      <style>{`@keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }`}</style>
       <Navbar />
       <div className="page-content">
 
-        {/* Search */}
+        {/* ── Search ── */}
         <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 28 }}>
           <div ref={searchRef} style={{ position: 'relative', width: '100%', maxWidth: 600 }}>
             <div className="search-wrapper" style={{ position: 'relative' }}>
@@ -312,13 +369,15 @@ export default function Dashboard() {
               )}
             </div>
 
+            {/* ── Dropdown ── */}
             {showDropdown && search.trim() && (
               <div style={{
                 position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0, zIndex: 200,
                 background: 'var(--bg-2)', border: '1px solid var(--border)',
                 borderRadius: 'var(--radius-sm)', boxShadow: 'var(--shadow)',
-                overflow: 'hidden', maxHeight: 400, overflowY: 'auto',
+                overflow: 'hidden', maxHeight: 420, overflowY: 'auto',
               }}>
+                {/* In Database */}
                 {dropdownLocal.length > 0 && (
                   <>
                     <div style={{ padding: '5px 14px', fontSize: 10, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.8px', background: 'var(--bg-3)' }}>
@@ -329,9 +388,7 @@ export default function Dashboard() {
                         style={{ padding: '9px 14px', cursor: 'pointer', display: 'flex', gap: 10, alignItems: 'center' }}
                         onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-3)'}
                         onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                        <div style={{ width: 34, height: 34, borderRadius: 9, background: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 4, flexShrink: 0 }}>
-                          <BrandInitial brand={d.brand} size={26} />
-                        </div>
+                        <LocalDropdownImage device={d} />
                         <div>
                           <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)' }}>{d.name}</div>
                           <div style={{ fontSize: 11, color: 'var(--text-3)' }}>{d.category} · {d.price}</div>
@@ -340,6 +397,8 @@ export default function Dashboard() {
                     ))}
                   </>
                 )}
+
+                {/* AI Suggestions */}
                 <div style={{ padding: '5px 14px', fontSize: 10, fontWeight: 700, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.8px', background: 'var(--bg-3)', display: 'flex', alignItems: 'center', gap: 5 }}>
                   <Sparkles size={10} /> AI Suggestions
                 </div>
@@ -353,9 +412,7 @@ export default function Dashboard() {
                       style={{ padding: '9px 14px', cursor: 'pointer', display: 'flex', gap: 10, alignItems: 'center' }}
                       onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-3)'}
                       onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                      <div style={{ width: 34, height: 34, borderRadius: 9, background: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 4, flexShrink: 0 }}>
-                        <BrandInitial brand={s.brand} size={26} />
-                      </div>
+                      <SuggestionImage suggestion={s} />
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)' }}>{s.name}</div>
                         <div style={{ fontSize: 11, color: 'var(--text-3)' }}>{s.category} · {s.brand}</div>
@@ -374,7 +431,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Category filters */}
+        {/* ── Category filters ── */}
         <div className="filter-row">
           {categories.map(cat => (
             <button key={cat} className={`filter-tag ${activeCategory === cat ? 'active' : ''}`}
@@ -400,9 +457,7 @@ export default function Dashboard() {
             {aiSearchResult.found ? (
               <div style={{ background: 'var(--bg-2)', border: '1px solid var(--accent)', borderRadius: 'var(--radius)', overflow: 'hidden', boxShadow: '0 0 20px rgba(99,102,241,0.1)' }}>
                 <div style={{ background: 'linear-gradient(135deg, rgba(99,102,241,0.15), rgba(99,102,241,0.03))', padding: '20px', borderBottom: '1px solid var(--border)', display: 'flex', gap: 16, alignItems: 'center' }}>
-                  <div style={{ width: 60, height: 60, borderRadius: 14, background: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 8, flexShrink: 0, boxShadow: '0 4px 16px rgba(0,0,0,0.2)' }}>
-                    <BrandInitial brand={aiSearchResult.brand} size={44} />
-                  </div>
+                  <AIResultImage result={aiSearchResult} />
                   <div style={{ flex: 1 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
                       <Sparkles size={12} style={{ color: 'var(--accent)' }} />
@@ -450,7 +505,7 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* Device grid */}
+        {/* ── Device grid ── */}
         {!aiSearchResult && !aiSearching && (
           localFiltered.length === 0 && search ? (
             <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-3)' }}>
@@ -463,19 +518,15 @@ export default function Dashboard() {
                 <div key={device.id} className="device-card fade-up"
                   style={{ animationDelay: `${i * 0.04}s`, cursor: 'pointer' }}
                   onClick={() => setSelectedDevice(device)}>
-
                   <div className="device-card-img" style={{
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    background: (device.img || device.image || device.localImg)
-                      ? 'var(--bg-3)'
-                      : `linear-gradient(135deg, ${BRAND_COLORS[device.brand] || '#6366f1'}22, ${BRAND_COLORS[device.brand] || '#6366f1'}08)`,
+                    background: (device.img || device.image || device.localImg) ? 'var(--bg-3)' : `linear-gradient(135deg, ${BRAND_COLORS[device.brand] || '#6366f1'}22, ${BRAND_COLORS[device.brand] || '#6366f1'}08)`,
                     position: 'relative', overflow: 'hidden',
                   }}>
                     <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: BRAND_COLORS[device.brand] || 'var(--accent)', zIndex: 2 }} />
                     {!(device.img || device.image || device.localImg) && <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(circle at 50% 40%, rgba(99,102,241,0.06), transparent 70%)' }} />}
                     <DeviceCardImage device={device} />
                   </div>
-
                   <div className="device-card-body">
                     <div className="device-card-category">{device.category}</div>
                     <div className="device-card-name">{device.name}</div>
@@ -489,7 +540,7 @@ export default function Dashboard() {
         )}
       </div>
 
-      {/* Chat bar */}
+      {/* ── Chat bar ── */}
       {!isSearching && (
         <div className="chat-wrapper">
           <form className="chat-bar" onSubmit={handleChatSubmit}>
@@ -511,16 +562,13 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Device popup modal */}
+      {/* ── Device modal ── */}
       {selectedDevice && (
         <div className="modal-overlay" onClick={() => setSelectedDevice(null)}>
           <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 480, width: '100%' }}>
             <button onClick={() => setSelectedDevice(null)} style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer' }}><X size={18} /></button>
             <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 20 }}>
-              {/* Modal image also uses the same fallback logic */}
-              <div style={{ width: 56, height: 56, borderRadius: 14, background: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 6, boxShadow: '0 4px 16px rgba(0,0,0,0.2)', flexShrink: 0, overflow: 'hidden' }}>
-                <ModalDeviceImage device={selectedDevice} />
-              </div>
+              <ModalDeviceImage device={selectedDevice} />
               <div>
                 <div style={{ fontSize: 11, color: 'var(--accent)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 }}>{selectedDevice.category}</div>
                 <div style={{ fontFamily: 'Syne, sans-serif', fontWeight: 800, fontSize: 18 }}>{selectedDevice.name}</div>
@@ -550,30 +598,54 @@ export default function Dashboard() {
   );
 }
 
-// ─── ModalDeviceImage — same fallback logic, used inside the popup modal ──────
+// ─── LocalDropdownImage ───────────────────────────────────────────────────────
+function LocalDropdownImage({ device }) {
+  const [urlFailed, setUrlFailed] = useState(false);
+  const [localFailed, setLocalFailed] = useState(false);
+  const urlSrc   = device.img || device.image || null;
+  const localSrc = device.localImg || null;
+  useEffect(() => { setUrlFailed(false); setLocalFailed(false); }, [device.id]);
+  const s = { width: '100%', height: '100%', objectFit: 'contain' };
+
+  if (urlSrc && !urlFailed)
+    return <div style={{ width:34, height:34, borderRadius:9, background:'white', display:'flex', alignItems:'center', justifyContent:'center', padding:4, flexShrink:0, overflow:'hidden' }}><img src={urlSrc} alt={device.name} onError={() => setUrlFailed(true)} style={s} /></div>;
+  if (localSrc && !localFailed)
+    return <div style={{ width:34, height:34, borderRadius:9, background:'white', display:'flex', alignItems:'center', justifyContent:'center', padding:4, flexShrink:0, overflow:'hidden' }}><img src={localSrc} alt={device.name} onError={() => setLocalFailed(true)} style={s} /></div>;
+  return <BrandCard brand={device.brand} category={device.category} size={34} />;
+}
+
+// ─── AIResultImage ────────────────────────────────────────────────────────────
+function AIResultImage({ result }) {
+  const [imgUrl, setImgUrl] = useState(null);
+  const [failed, setFailed] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setImgUrl(null); setFailed(false); setLoading(true);
+    const local = getLocalDeviceImage(result.name);
+    if (local) { setImgUrl(local); setLoading(false); return; }
+    fetchProductImage(result.name).then(url => { setImgUrl(url); setLoading(false); });
+  }, [result?.name]);
+
+  const wrapStyle = { width:60, height:60, borderRadius:14, background:'white', display:'flex', alignItems:'center', justifyContent:'center', padding:6, flexShrink:0, boxShadow:'0 4px 16px rgba(0,0,0,0.2)', overflow:'hidden' };
+
+  if (loading) return <div style={{ ...wrapStyle, background: 'var(--bg-3)' }} />;
+  if (imgUrl && !failed)
+    return <div style={wrapStyle}><img src={imgUrl} alt={result.name} onError={() => setFailed(true)} style={{ width:'100%', height:'100%', objectFit:'contain' }} /></div>;
+  return <BrandCard brand={result.brand} category={result.category} size={60} />;
+}
+
+// ─── ModalDeviceImage ─────────────────────────────────────────────────────────
 function ModalDeviceImage({ device }) {
   const [urlFailed, setUrlFailed] = useState(false);
   const [localFailed, setLocalFailed] = useState(false);
-
-  const urlSrc = device.img || device.image || null;
+  const urlSrc   = device.img || device.image || null;
   const localSrc = device.localImg || null;
+  useEffect(() => { setUrlFailed(false); setLocalFailed(false); }, [device.id]);
+  const wrapStyle = { width:56, height:56, borderRadius:14, background:'white', display:'flex', alignItems:'center', justifyContent:'center', padding:6, boxShadow:'0 4px 16px rgba(0,0,0,0.2)', flexShrink:0, overflow:'hidden' };
+  const s = { width:'100%', height:'100%', objectFit:'contain' };
 
-  useEffect(() => {
-    setUrlFailed(false);
-    setLocalFailed(false);
-  }, [device.id]);
-
-  const imgStyle = { width: '100%', height: '100%', objectFit: 'contain' };
-
-  if (urlSrc && !urlFailed) {
-    return <img src={urlSrc} alt={device.name} onError={() => setUrlFailed(true)} style={imgStyle} />;
-  }
-  if (localSrc && !localFailed) {
-    return <img src={localSrc} alt={device.name} onError={() => setLocalFailed(true)} style={imgStyle} />;
-  }
-  return (
-    <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <BrandInitial brand={device.brand} size={40} />
-    </div>
-  );
+  if (urlSrc && !urlFailed) return <div style={wrapStyle}><img src={urlSrc} alt={device.name} onError={() => setUrlFailed(true)} style={s} /></div>;
+  if (localSrc && !localFailed) return <div style={wrapStyle}><img src={localSrc} alt={device.name} onError={() => setLocalFailed(true)} style={s} /></div>;
+  return <BrandCard brand={device.brand} category={device.category} size={56} />;
 }

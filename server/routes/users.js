@@ -1,4 +1,3 @@
-// server/routes/users.js
 import express from 'express';
 import { authenticateToken } from '../middleware/auth.js';
 import pool from '../config/database.js';
@@ -9,15 +8,27 @@ const router = express.Router();
 router.get('/profile', authenticateToken, async (req, res) => {
   try {
     const result = await pool.query(
-      'SELECT id, email, name, role, created_at, last_login FROM users WHERE id = $1',
+      'SELECT id, email, name, username, role, status, created_at FROM public.users WHERE id = $1',
       [req.user.userId]
     );
-    if (result.rows.length === 0)
-      return res.status(404).json({ error: 'User not found' });
+
+    if (result.rows.length === 0) {
+      // User exists in Supabase Auth but not in public.users — auto-create
+      const username = req.user.email.split('@')[0];
+      const inserted = await pool.query(
+        `INSERT INTO public.users (id, email, name, username, role, status, created_at)
+         VALUES ($1, $2, $3, $4, 'user', 'active', NOW())
+         ON CONFLICT (id) DO UPDATE SET email = EXCLUDED.email
+         RETURNING id, email, name, username, role, status, created_at`,
+        [req.user.userId, req.user.email, username, username]
+      );
+      return res.json({ user: inserted.rows[0] });
+    }
+
     res.json({ user: result.rows[0] });
   } catch (error) {
     console.error('Get profile error:', error.message);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Failed to get profile', detail: error.message });
   }
 });
 
@@ -28,50 +39,56 @@ router.put('/profile', authenticateToken, async (req, res) => {
     if (!name && !email)
       return res.status(400).json({ error: 'Name or email is required' });
 
+    // Check email conflict
     if (email) {
       const existing = await pool.query(
-        'SELECT id FROM users WHERE email = $1 AND id != $2',
+        'SELECT id FROM public.users WHERE email = $1 AND id != $2',
         [email.toLowerCase(), req.user.userId]
       );
       if (existing.rows.length > 0)
         return res.status(409).json({ error: 'Email already in use by another account' });
     }
 
+    // Get current user row
     const current = await pool.query(
-      'SELECT name, email FROM users WHERE id = $1',
+      'SELECT id, name, email, username FROM public.users WHERE id = $1',
       [req.user.userId]
     );
 
-    if (current.rows.length === 0)
-      return res.status(404).json({ error: 'User not found' });
-
-    const currentUser = current.rows[0];
-    const newName = name || currentUser.name;
-    const newEmail = email ? email.toLowerCase() : currentUser.email;
-
-    // Try with updated_at first, fall back without it
-    let result;
-    try {
-      result = await pool.query(
-        `UPDATE users SET name = $1, email = $2, updated_at = NOW()
-         WHERE id = $3
-         RETURNING id, email, name, role, created_at`,
-        [newName, newEmail, req.user.userId]
-      );
-    } catch (colError) {
-      // updated_at column doesn't exist — retry without it
-      result = await pool.query(
-        `UPDATE users SET name = $1, email = $2
-         WHERE id = $3
-         RETURNING id, email, name, role, created_at`,
-        [newName, newEmail, req.user.userId]
+    // Auto-create if missing
+    if (current.rows.length === 0) {
+      const username = req.user.email.split('@')[0];
+      await pool.query(
+        `INSERT INTO public.users (id, email, name, username, role, status, created_at)
+         VALUES ($1, $2, $3, $4, 'user', 'active', NOW())
+         ON CONFLICT (id) DO NOTHING`,
+        [req.user.userId, req.user.email, username, username]
       );
     }
+
+    const currentUser = current.rows[0] || {
+      name: req.user.email.split('@')[0],
+      email: req.user.email,
+    };
+
+    const newName  = name  ? name.trim()               : currentUser.name;
+    const newEmail = email ? email.trim().toLowerCase() : currentUser.email;
+
+    const result = await pool.query(
+      `UPDATE public.users
+       SET name = $1, email = $2
+       WHERE id = $3
+       RETURNING id, email, name, username, role, status, created_at`,
+      [newName, newEmail, req.user.userId]
+    );
+
+    if (result.rows.length === 0)
+      return res.status(404).json({ error: 'User not found' });
 
     res.json({ user: result.rows[0], message: 'Profile updated successfully' });
   } catch (error) {
     console.error('Update profile error:', error.message);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Failed to update profile', detail: error.message });
   }
 });
 
@@ -95,8 +112,8 @@ router.post('/password-reset-request', authenticateToken, async (req, res) => {
 
     res.status(201).json({ message: 'Password reset request submitted. An admin will process it shortly.' });
   } catch (error) {
-    console.error('Password reset request error:', error.message);
-    res.status(500).json({ error: error.message });
+    console.error('Password reset request error:', error);
+    res.status(500).json({ error: 'Failed to submit request' });
   }
 });
 
@@ -113,8 +130,7 @@ router.get('/password-reset-request/status', authenticateToken, async (req, res)
     );
     res.json({ request: result.rows[0] || null });
   } catch (error) {
-    console.error('Get reset status error:', error.message);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Failed to get request status' });
   }
 });
 

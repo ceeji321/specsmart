@@ -5,12 +5,9 @@ import { optionalAuth } from '../middleware/auth.js';
 const router = express.Router();
 
 // ─── Model fallback chain ─────────────────────────────────────────────────────
-// Confirmed active free-tier Groq models (March 2026)
-// llama-3.1-8b-instant = official replacement for deprecated llama3-8b-8192
-// Llama 4 Maverick requires paid tier — do NOT include on free accounts
 const CHAT_MODELS = [
-  'llama-3.3-70b-versatile',  // primary — best quality, 100K TPD free
-  'llama-3.1-8b-instant',     // fallback — fast, confirmed active free tier
+  'llama-3.3-70b-versatile',
+  'llama-3.1-8b-instant',
 ];
 
 async function groqChatWithFallback(payload) {
@@ -29,8 +26,6 @@ async function groqChatWithFallback(payload) {
       if (!response.ok) {
         const errData = await response.json().catch(() => ({}));
         const errMsg = errData.error?.message || `HTTP ${response.status}`;
-
-        // Rate limit or quota exceeded — try next model
         if (
           response.status === 429 ||
           errMsg.toLowerCase().includes('rate limit') ||
@@ -42,22 +37,16 @@ async function groqChatWithFallback(payload) {
           lastError = new Error(errMsg);
           continue;
         }
-
-        // Non-rate-limit error — throw immediately
         throw new Error(errMsg);
       }
 
       const data = await response.json();
       if (data.choices?.length) {
-        if (model !== CHAT_MODELS[0]) {
-          console.log(`[groqFallback] Used fallback model: ${model}`);
-        }
+        if (model !== CHAT_MODELS[0]) console.log(`[groqFallback] Used fallback model: ${model}`);
         return data;
       }
       throw new Error('Empty response from Groq');
-
     } catch (err) {
-      // Re-check if it's a rate limit error from a network exception
       if (
         err.message?.toLowerCase().includes('rate limit') ||
         err.message?.toLowerCase().includes('tokens per day') ||
@@ -67,18 +56,15 @@ async function groqChatWithFallback(payload) {
         lastError = err;
         continue;
       }
-      throw err; // Non-rate-limit — propagate immediately
+      throw err;
     }
   }
-
-  // All models exhausted
   throw new Error(
     'All AI models are currently rate limited. Please wait a few minutes and try again. ' +
     (lastError?.message || '')
   );
 }
 
-// Streaming version of the fallback (tries models until one accepts the request)
 async function groqStreamWithFallback(payload) {
   let lastError;
   for (const model of CHAT_MODELS) {
@@ -95,7 +81,6 @@ async function groqStreamWithFallback(payload) {
       if (!response.ok) {
         const errData = await response.json().catch(() => ({}));
         const errMsg = errData.error?.message || `HTTP ${response.status}`;
-
         if (
           response.status === 429 ||
           errMsg.toLowerCase().includes('rate limit') ||
@@ -110,10 +95,8 @@ async function groqStreamWithFallback(payload) {
         throw new Error(errMsg);
       }
 
-      if (model !== CHAT_MODELS[0]) {
-        console.log(`[groqStreamFallback] Using fallback model: ${model}`);
-      }
-      return response; // Return the raw Response for streaming
+      if (model !== CHAT_MODELS[0]) console.log(`[groqStreamFallback] Using fallback model: ${model}`);
+      return response;
     } catch (err) {
       if (
         err.message?.toLowerCase().includes('rate limit') ||
@@ -127,7 +110,6 @@ async function groqStreamWithFallback(payload) {
       throw err;
     }
   }
-
   throw new Error(
     'All AI models are currently rate limited. Please wait a few minutes and try again. ' +
     (lastError?.message || '')
@@ -156,7 +138,6 @@ When answering:
 
 // ─── Spec Database ────────────────────────────────────────────────────────────
 const SPEC_DB = {
-  // ── iPhones ──────────────────────────────────────────────────────────────────
   'Apple iPhone 16 Pro Max': {
     display: '6.9" Super Retina XDR OLED, 2868×1320, ProMotion 120Hz, Always-On',
     processor: 'Apple A18 Pro chip (3nm), 6-core CPU, 6-core GPU',
@@ -331,8 +312,6 @@ const SPEC_DB = {
     buy: 'Apple PH, Beyond The Box, iStore, Lazada/Shopee',
     verdict: 'Cheapest 5G iPhone with A15 chip. Small battery and outdated design are drawbacks.',
   },
-
-  // ── Samsung ───────────────────────────────────────────────────────────────────
   'Samsung Galaxy S24 Ultra': {
     display: '6.8" Dynamic AMOLED 2X, 3088×1440, 1-120Hz adaptive, 2600 nits peak',
     processor: 'Snapdragon 8 Gen 3 for Galaxy (4nm)',
@@ -409,8 +388,6 @@ const SPEC_DB = {
     buy: 'Samsung PH, Lazada/Shopee Samsung official',
     verdict: 'Very capable mid-range. IP67 and AMOLED screen at this price is hard to beat.',
   },
-
-  // ── Xiaomi / Redmi / POCO ─────────────────────────────────────────────────────
   'Xiaomi 14 Ultra': {
     display: '6.73" LTPO AMOLED, 3200×1440, 1-120Hz, 3000 nits',
     processor: 'Snapdragon 8 Gen 3 (4nm)',
@@ -485,8 +462,6 @@ const SPEC_DB = {
     buy: 'Xiaomi PH Lazada/Shopee official',
     verdict: 'Dimensity 8300 Ultra is a beast for gaming. Best gaming phone under ₱19K.',
   },
-
-  // ── Google Pixel ──────────────────────────────────────────────────────────────
   'Google Pixel 9 Pro': {
     display: '6.3" LTPO OLED, 2856×1280, 1-120Hz, 3000 nits',
     processor: 'Google Tensor G4 (4nm)',
@@ -511,8 +486,6 @@ const SPEC_DB = {
     buy: 'Google Store (US import), select importers',
     verdict: 'Best AI-powered camera at this price. Note: limited official PH after-sales support.',
   },
-
-  // ── OnePlus ───────────────────────────────────────────────────────────────────
   'OnePlus 12': {
     display: '6.82" LTPO AMOLED, 3168×1440, 1-120Hz, 4500 nits',
     processor: 'Snapdragon 8 Gen 3 (4nm)',
@@ -525,8 +498,6 @@ const SPEC_DB = {
     buy: 'OnePlus PH Lazada/Shopee official',
     verdict: '100W charging fills the massive 5400mAh battery in ~26 min. Excellent value flagship.',
   },
-
-  // ── NVIDIA GPUs ───────────────────────────────────────────────────────────────
   'NVIDIA GeForce RTX 4090': {
     vram: '24GB GDDR6X',
     bus: '384-bit',
@@ -618,8 +589,6 @@ const SPEC_DB = {
     buy: 'PC Express, DynaQuest PC, Villman, Lazada',
     verdict: 'Best entry-point for RTX 40 series. 8GB VRAM is tight in 2025 for demanding games.',
   },
-
-  // ── AMD GPUs ──────────────────────────────────────────────────────────────────
   'AMD Radeon RX 7900 XTX': {
     vram: '24GB GDDR6',
     bus: '384-bit',
@@ -659,8 +628,6 @@ const SPEC_DB = {
     buy: 'PC Express, DynaQuest PC, Lazada',
     verdict: 'Budget 1080p card. Competes with RTX 4060 at a lower price.',
   },
-
-  // ── CPUs (Intel) ──────────────────────────────────────────────────────────────
   'Intel Core i9-14900K': {
     cores: '24 cores (8P + 16E), 32 threads',
     base_clock: '3.2 GHz (P-core)',
@@ -723,8 +690,6 @@ const SPEC_DB = {
     buy: 'PC Express, DynaQuest PC, Lazada',
     verdict: 'Cheapest viable gaming CPU in 2025.',
   },
-
-  // ── CPUs (AMD) ────────────────────────────────────────────────────────────────
   'AMD Ryzen 9 9950X': {
     cores: '16 cores, 32 threads',
     base_clock: '4.3 GHz',
@@ -825,8 +790,6 @@ const SPEC_DB = {
     buy: 'PC Express, DynaQuest PC, Lazada',
     verdict: 'Best AM4 gaming CPU ever. Drop-in upgrade for existing AM4 systems.',
   },
-
-  // ── RAM ───────────────────────────────────────────────────────────────────────
   'Corsair Vengeance DDR5 6000MHz': {
     type: 'DDR5',
     speed: '6000 MT/s (PC5-48000)',
@@ -872,8 +835,6 @@ const SPEC_DB = {
     buy: 'PC Express, DynaQuest PC, Villman, Lazada',
     verdict: 'Most popular DDR4 RAM in PH. Reliable, low-profile, works everywhere.',
   },
-
-  // ── SSDs ──────────────────────────────────────────────────────────────────────
   'Samsung 990 Pro 2TB NVMe': {
     type: 'NVMe PCIe 4.0 x4, M.2 2280',
     seq_read: '7450 MB/s',
@@ -913,8 +874,6 @@ const SPEC_DB = {
     buy: 'PC Express, DynaQuest PC, Lazada',
     verdict: 'Best SATA SSD upgrade for old laptops and desktops.',
   },
-
-  // ── Motherboards ──────────────────────────────────────────────────────────────
   'ASUS ROG Strix Z790-E Gaming': {
     socket: 'LGA1700',
     chipset: 'Intel Z790',
@@ -960,8 +919,6 @@ const SPEC_DB = {
     buy: 'PC Express, DynaQuest PC, Lazada',
     verdict: 'Best budget AM4 board in PH.',
   },
-
-  // ── PSUs ──────────────────────────────────────────────────────────────────────
   'Corsair RM850x 850W Gold': {
     wattage: '850W',
     efficiency: '80 PLUS Gold',
@@ -984,7 +941,66 @@ const SPEC_DB = {
   },
 };
 
-// Vision model
+// ─── Static image map for known devices (instant, no API calls) ───────────────
+const STATIC_IMAGE_MAP = {
+  // iPhones
+  'Apple iPhone 16 Pro Max': 'https://store.storeimages.cdn-apple.com/4982/as-images.apple.com/is/iphone-16-pro-finish-select-202409-6-9inch-deserttitanium?wid=400&hei=400&fmt=jpeg&qlt=95',
+  'Apple iPhone 16 Pro': 'https://store.storeimages.cdn-apple.com/4982/as-images.apple.com/is/iphone-16-pro-finish-select-202409-6-3inch-deserttitanium?wid=400&hei=400&fmt=jpeg&qlt=95',
+  'Apple iPhone 16 Plus': 'https://store.storeimages.cdn-apple.com/4982/as-images.apple.com/is/iphone-16-plus-finish-select-202409-6-7inch-black?wid=400&hei=400&fmt=jpeg&qlt=95',
+  'Apple iPhone 16': 'https://store.storeimages.cdn-apple.com/4982/as-images.apple.com/is/iphone-16-finish-select-202409-6-1inch-black?wid=400&hei=400&fmt=jpeg&qlt=95',
+  'Apple iPhone 15 Pro Max': 'https://store.storeimages.cdn-apple.com/4982/as-images.apple.com/is/iphone-15-pro-finish-select-202309-6-7inch-naturaltitanium?wid=400&hei=400&fmt=jpeg&qlt=95',
+  'Apple iPhone 15 Pro': 'https://store.storeimages.cdn-apple.com/4982/as-images.apple.com/is/iphone-15-pro-finish-select-202309-6-1inch-naturaltitanium?wid=400&hei=400&fmt=jpeg&qlt=95',
+  'Apple iPhone 15': 'https://store.storeimages.cdn-apple.com/4982/as-images.apple.com/is/iphone-15-finish-select-202309-6-1inch-pink?wid=400&hei=400&fmt=jpeg&qlt=95',
+  'Apple iPhone 14': 'https://store.storeimages.cdn-apple.com/4982/as-images.apple.com/is/iphone-14-finish-select-202209-6-1inch-midnight?wid=400&hei=400&fmt=jpeg&qlt=95',
+  'Apple iPhone 13': 'https://store.storeimages.cdn-apple.com/4982/as-images.apple.com/is/iphone-13-finish-select-2023-6-1inch-midnight?wid=400&hei=400&fmt=jpeg&qlt=95',
+  'Apple iPhone SE (2022)': 'https://store.storeimages.cdn-apple.com/4982/as-images.apple.com/is/iphone-se-finish-select-202203-midnight?wid=400&hei=400&fmt=jpeg&qlt=95',
+  // Samsung
+  'Samsung Galaxy S24 Ultra': 'https://images.samsung.com/is/image/samsung/p6pim/levant/2401/gallery/levant-galaxy-s24-ultra-s928-sm-s928bztgmid-thumb-539573424?$264_264_PNG$',
+  'Samsung Galaxy S24+': 'https://images.samsung.com/is/image/samsung/p6pim/levant/2401/gallery/levant-galaxy-s24-sm-s926bzadeub-thumb-539573271?$264_264_PNG$',
+  'Samsung Galaxy S24': 'https://images.samsung.com/is/image/samsung/p6pim/levant/2401/gallery/levant-galaxy-s24-sm-s921bzadeub-thumb-539573097?$264_264_PNG$',
+  'Samsung Galaxy S23 Ultra': 'https://images.samsung.com/is/image/samsung/p6pim/levant/2302/gallery/levant-galaxy-s23-ultra-s918-sm-s918bzageub-thumb-534863401?$264_264_PNG$',
+  'Samsung Galaxy A55': 'https://images.samsung.com/is/image/samsung/p6pim/levant/2404/gallery/levant-galaxy-a55-5g-sm-a556ezageub-thumb-541477071?$264_264_PNG$',
+  'Samsung Galaxy A35': 'https://images.samsung.com/is/image/samsung/p6pim/levant/2404/gallery/levant-galaxy-a35-5g-sm-a356ezageub-thumb-541478412?$264_264_PNG$',
+  // Xiaomi / POCO
+  'Xiaomi 14 Ultra': 'https://i01.appmifile.com/webfile/globalimg/products/pc/xiaomi-14-ultra/specs-header.png',
+  'Xiaomi 14': 'https://i01.appmifile.com/webfile/globalimg/products/pc/xiaomi-14/xiaomi14-white.png',
+  'Xiaomi Redmi Note 13 Pro+': 'https://i01.appmifile.com/webfile/globalimg/products/pc/redmi-note-13-pro-plus/overview-header-img.png',
+  'Xiaomi Redmi Note 13 Pro': 'https://i01.appmifile.com/webfile/globalimg/products/pc/redmi-note-13-pro/kv.png',
+  'POCO F6 Pro': 'https://i01.appmifile.com/webfile/globalimg/products/pc/poco-f6-pro/poco-f6-pro-black.png',
+  'POCO X6 Pro': 'https://i01.appmifile.com/webfile/globalimg/products/pc/poco-x6-pro/overview-kv.png',
+  // Google
+  'Google Pixel 9 Pro': 'https://lh3.googleusercontent.com/Nu8_kKHBPKoY6sLVAGXTVRZl9LHkxmYP2B1L_X7R6xr8xW_x_X_wW_tJ_2ZbE_Q=w400',
+  'Google Pixel 9': 'https://lh3.googleusercontent.com/T_xzEE4cBX0j8Xh7oa2nVJzFNZmHzNZmHzNZmHzNZmHzNZmHzNZmHzNZmHzNZmHzN=w400',
+  // OnePlus
+  'OnePlus 12': 'https://oasis.opstatics.com/content/dam/oasis/page/2023/global/products/12/spec/Silky-Black-spec.png',
+  // NVIDIA GPUs
+  'NVIDIA GeForce RTX 4090': 'https://www.nvidia.com/content/nvidiaGDC/us/en_US/geforce/graphics-cards/40-series/rtx-4090/_jcr_content/root/responsivegrid/nv_container_392921705/nv_container/nv_image.coreimg.100.630.jpeg/1686857513391/geforce-rtx-4090-product-photo-001.jpeg',
+  'NVIDIA GeForce RTX 4080 Super': 'https://www.nvidia.com/content/nvidiaGDC/us/en_US/geforce/graphics-cards/40-series/rtx-4080-super/_jcr_content/root/responsivegrid/nv_container_392921705/nv_container/nv_image.coreimg.100.630.jpeg/1705025793566/geforce-rtx-4080-super-product-photo-001.jpeg',
+  'NVIDIA GeForce RTX 4070 Ti Super': 'https://www.nvidia.com/content/nvidiaGDC/us/en_US/geforce/graphics-cards/40-series/rtx-4070-ti-super/_jcr_content/root/responsivegrid/nv_container_392921705/nv_container/nv_image.coreimg.100.630.jpeg/1705025793566/geforce-rtx-4070-ti-super-product-photo-001.jpeg',
+  'NVIDIA GeForce RTX 4070 Super': 'https://www.nvidia.com/content/nvidiaGDC/us/en_US/geforce/graphics-cards/40-series/rtx-4070-super/_jcr_content/root/responsivegrid/nv_container_392921705/nv_container/nv_image.coreimg.100.630.jpeg/1705025793566/geforce-rtx-4070-super-product-photo-001.jpeg',
+  'NVIDIA GeForce RTX 4070': 'https://www.nvidia.com/content/nvidiaGDC/us/en_US/geforce/graphics-cards/40-series/rtx-4070/_jcr_content/root/responsivegrid/nv_container_392921705/nv_container/nv_image.coreimg.100.630.jpeg/1699469432574/geforce-rtx-4070-product-photo-001.jpeg',
+  'NVIDIA GeForce RTX 4060 Ti': 'https://www.nvidia.com/content/nvidiaGDC/us/en_US/geforce/graphics-cards/40-series/rtx-4060-ti/_jcr_content/root/responsivegrid/nv_container_392921705/nv_container/nv_image.coreimg.100.630.jpeg/1699469432574/geforce-rtx-4060-ti-product-photo-001.jpeg',
+  'NVIDIA GeForce RTX 4060': 'https://www.nvidia.com/content/nvidiaGDC/us/en_US/geforce/graphics-cards/40-series/rtx-4060/_jcr_content/root/responsivegrid/nv_container_392921705/nv_container/nv_image.coreimg.100.630.jpeg/1699469432574/geforce-rtx-4060-product-photo-001.jpeg',
+  // AMD GPUs
+  'AMD Radeon RX 7900 XTX': 'https://www.amd.com/system/files/2022-11/1207776-amd-radeon-rx-7900-xtx-600x450.png',
+  'AMD Radeon RX 7800 XT': 'https://www.amd.com/system/files/2023-08/1272476-amd-radeon-rx-7800-xt-600x450.png',
+  'AMD Radeon RX 7600': 'https://www.amd.com/system/files/2023-05/1253938-amd-radeon-rx-7600-600x450.png',
+  // CPUs
+  'Intel Core i9-14900K': 'https://www.intel.com/content/dam/www/central-libraries/us/en/images/2022-11/processor-core-i9-14900k-badge-left-angle.png',
+  'Intel Core i7-14700K': 'https://www.intel.com/content/dam/www/central-libraries/us/en/images/2022-11/processor-core-i7-14700k-badge-left-angle.png',
+  'Intel Core i5-14600K': 'https://www.intel.com/content/dam/www/central-libraries/us/en/images/2022-11/processor-core-i5-14600k-badge-left-angle.png',
+  'Intel Core i5-14400F': 'https://www.intel.com/content/dam/www/central-libraries/us/en/images/2022-11/processor-core-i5-14400f-badge-left-angle.png',
+  'Intel Core i3-14100F': 'https://www.intel.com/content/dam/www/central-libraries/us/en/images/2022-11/processor-core-i3-14100f-badge-left-angle.png',
+  'AMD Ryzen 9 9950X': 'https://www.amd.com/system/files/2024-07/amd-ryzen-9-9950x-PIB-left-facing.png',
+  'AMD Ryzen 7 9800X3D': 'https://www.amd.com/system/files/2024-10/amd-ryzen-7-9800x3d-PIB-left-facing.png',
+  'AMD Ryzen 9 7950X': 'https://www.amd.com/system/files/2022-08/amd-ryzen-9-7950x-PIB-left-facing.png',
+  'AMD Ryzen 7 7800X3D': 'https://www.amd.com/system/files/2023-01/amd-ryzen-7-7800x3d-PIB-left-facing.png',
+  'AMD Ryzen 5 9600X': 'https://www.amd.com/system/files/2024-07/amd-ryzen-5-9600x-PIB-left-facing.png',
+  'AMD Ryzen 5 7600X': 'https://www.amd.com/system/files/2022-08/amd-ryzen-5-7600x-PIB-left-facing.png',
+  'AMD Ryzen 5 5600X': 'https://www.amd.com/system/files/2021-03/amd-ryzen-5-5600x-PIB-left-facing.png',
+  'AMD Ryzen 7 5800X3D': 'https://www.amd.com/system/files/2022-03/amd-ryzen-7-5800x3d-PIB-left-facing.png',
+};
+
 const VISION_MODEL = 'meta-llama/llama-4-scout-17b-16e-instruct';
 
 const OCR_PROMPT = `You are an OCR engine. Extract ALL visible text from this image with maximum precision.
@@ -1203,7 +1219,6 @@ router.post('/analyze-image', optionalAuth, async (req, res) => {
         console.log('Spec DB hit:', mappedModel);
         fullSpecs = formatSpecEntry(dbEntry.key, dbEntry.value);
       } else {
-        // Use fallback model chain for specs
         const specsData = await groqChatWithFallback({
           max_tokens: 1500,
           temperature: 0.2,
@@ -1265,7 +1280,7 @@ router.post('/analyze-image', optionalAuth, async (req, res) => {
     let alt2 = extractField(rawOutput, 'ALTERNATIVE_2');
     const notes = extractField(rawOutput, 'NOTES');
 
-    // ── Verification pass for LOW/MEDIUM confidence ───────────────────────────
+    // ── Verification pass ─────────────────────────────────────────────────────
     if (conf === 'LOW' || conf === 'MEDIUM' || conf === '' || (!brand && !model)) {
       console.log(`Confidence ${conf || 'unknown'} — running verification pass...`);
       try {
@@ -1317,7 +1332,6 @@ ALTERNATIVE_2: [third most likely]`
       } catch (e) { console.warn('Verify pass failed:', e.message); }
     }
 
-    // ── Brand/category overrides ──────────────────────────────────────────────
     const brandLower = (brand || '').toLowerCase();
     const modelLower = (model || '').toLowerCase();
     const combined = `${brandLower} ${modelLower}`;
@@ -1399,8 +1413,6 @@ ALTERNATIVE_2: [third most likely]`
 
   } catch (error) {
     console.error('Image analysis error:', error.message);
-
-    // Return friendly rate limit message instead of generic 500
     if (
       error.message?.toLowerCase().includes('rate limit') ||
       error.message?.toLowerCase().includes('tokens per day') ||
@@ -1412,7 +1424,6 @@ ALTERNATIVE_2: [third most likely]`
         details: error.message,
       });
     }
-
     res.status(500).json({
       error: 'Failed to analyze image',
       details: process.env.NODE_ENV === 'development' ? error.message : undefined,
@@ -1429,7 +1440,6 @@ router.post('/chat', optionalAuth, async (req, res) => {
     if (!process.env.GROQ_API_KEY)
       return res.status(500).json({ error: 'Groq API key is not configured.' });
 
-    // ── Spec DB hit in chat ────────────────────────────────────────────────────
     const lastUserMsg = [...messages].reverse().find(m => m.role === 'user');
     if (lastUserMsg) {
       const msgText = typeof lastUserMsg.content === 'string' ? lastUserMsg.content : '';
@@ -1486,7 +1496,6 @@ router.post('/chat', optionalAuth, async (req, res) => {
 
   } catch (error) {
     console.error('AI chat error:', error.message);
-
     if (
       error.message?.toLowerCase().includes('rate limit') ||
       error.message?.toLowerCase().includes('all ai models') ||
@@ -1496,7 +1505,6 @@ router.post('/chat', optionalAuth, async (req, res) => {
         error: '⚠️ AI is temporarily rate limited. Please wait a few minutes and try again.',
       });
     }
-
     res.status(500).json({
       error: 'Failed to get AI response',
       details: process.env.NODE_ENV === 'development' ? error.message : undefined,
@@ -1504,7 +1512,7 @@ router.post('/chat', optionalAuth, async (req, res) => {
   }
 });
 
-// ─── Streaming helper — uses fallback chain ───────────────────────────────────
+// ─── Streaming helper ─────────────────────────────────────────────────────────
 async function handleStreamResponse(res, req, groqMessages) {
   const groqResponse = await groqStreamWithFallback({
     messages: groqMessages,
@@ -1568,6 +1576,123 @@ router.get('/spec-db', (req, res) => {
     verdict: SPEC_DB[name].verdict || '',
   }));
   res.json({ devices, count: devices.length });
+});
+
+// ─── GET /api/ai/product-image ────────────────────────────────────────────────
+router.get('/product-image', async (req, res) => {
+  try {
+    const { q } = req.query;
+    if (!q) return res.status(400).json({ error: 'Query required' });
+
+    // ── Step 1: Static map — instant, zero network calls ─────────────────────
+    // Exact match
+    if (STATIC_IMAGE_MAP[q]) {
+      return res.json({ url: STATIC_IMAGE_MAP[q], source: 'static' });
+    }
+    // Fuzzy match (case-insensitive partial)
+    const qLower = q.toLowerCase();
+    for (const [key, url] of Object.entries(STATIC_IMAGE_MAP)) {
+      if (key.toLowerCase().includes(qLower) || qLower.includes(key.toLowerCase())) {
+        return res.json({ url, source: 'static-fuzzy' });
+      }
+    }
+
+    // ── Step 2: Bing image search ─────────────────────────────────────────────
+    try {
+      const encoded = encodeURIComponent(`${q} official product`);
+      const bingRes = await fetch(
+        `https://www.bing.com/images/search?q=${encoded}&form=HDRSC2&first=1`,
+        {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml',
+            'Accept-Language': 'en-US,en;q=0.9',
+          },
+        }
+      );
+      if (bingRes.ok) {
+        const html = await bingRes.text();
+        const murlMatches = html.match(/murl&quot;:&quot;(https?[^&]+?)&quot;/g) || [];
+        const urls = murlMatches
+          .map(m => decodeURIComponent(m.replace('murl&quot;:&quot;', '').replace('&quot;', '')))
+          .filter(u =>
+            !u.toLowerCase().includes('icon') &&
+            !u.toLowerCase().includes('logo') &&
+            !u.toLowerCase().includes('avatar') &&
+            (u.includes('.jpg') || u.includes('.jpeg') || u.includes('.png') || u.includes('.webp'))
+          );
+        if (urls.length > 0) {
+          console.log(`[product-image] Bing hit for "${q}": ${urls[0].slice(0, 80)}`);
+          return res.json({ url: urls[0], source: 'bing' });
+        }
+      }
+    } catch (e) {
+      console.warn('[product-image] Bing failed:', e.message);
+    }
+
+    // ── Step 3: GSMArena for phones ───────────────────────────────────────────
+    const isPhone = /iphone|samsung|galaxy|xiaomi|redmi|poco|pixel|oneplus|oppo|vivo|realme|nothing|huawei/i.test(q);
+    if (isPhone) {
+      try {
+        const encoded = encodeURIComponent(q);
+        const gsmRes = await fetch(
+          `https://www.gsmarena.com/search.php3?sQuickSearch=${encoded}`,
+          { headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' } }
+        );
+        if (gsmRes.ok) {
+          const html = await gsmRes.text();
+          const imgMatch = html.match(/src="(https:\/\/fdn2\.gsmarena\.com\/vv\/bigpic\/[^"]+)"/);
+          if (imgMatch) {
+            console.log(`[product-image] GSMArena hit for "${q}"`);
+            return res.json({ url: imgMatch[1], source: 'gsmarena' });
+          }
+        }
+      } catch (e) {
+        console.warn('[product-image] GSMArena failed:', e.message);
+      }
+    }
+
+    // ── Step 4: DuckDuckGo fallback ───────────────────────────────────────────
+    try {
+      const encoded = encodeURIComponent(q);
+      const ddgRes = await fetch(
+        `https://duckduckgo.com/?q=${encoded}+product+official&iax=images&ia=images`,
+        { headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' } }
+      );
+      if (ddgRes.ok) {
+        const html = await ddgRes.text();
+        const vqdMatch = html.match(/vqd=['"]([^'"]+)['"]/);
+        if (vqdMatch) {
+          const imgRes = await fetch(
+            `https://duckduckgo.com/i.js?q=${encoded}&vqd=${vqdMatch[1]}&p=1`,
+            { headers: { 'User-Agent': 'Mozilla/5.0', 'Referer': 'https://duckduckgo.com/' } }
+          );
+          if (imgRes.ok) {
+            const imgData = await imgRes.json();
+            const filtered = (imgData?.results || []).filter(r =>
+              r.width >= 200 && r.height >= 200 &&
+              !r.image?.toLowerCase().includes('icon') &&
+              !r.image?.toLowerCase().includes('avatar')
+            );
+            if (filtered[0]) {
+              console.log(`[product-image] DDG hit for "${q}"`);
+              return res.json({ url: filtered[0].image, thumb: filtered[0].thumbnail, source: 'ddg' });
+            }
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('[product-image] DDG failed:', e.message);
+    }
+
+    // ── No image found ────────────────────────────────────────────────────────
+    console.log(`[product-image] No image found for "${q}"`);
+    return res.json({ url: null });
+
+  } catch (error) {
+    console.error('Product image error:', error.message);
+    res.json({ url: null });
+  }
 });
 
 export default router;
