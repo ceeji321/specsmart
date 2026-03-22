@@ -7,7 +7,11 @@ import { askAI } from '../services/aiService';
 import { Sparkles, AlertTriangle } from 'lucide-react';
 import { getBrandLogoUrl } from '../utils/brandLogo';
 
-// ── Category-specific spec rows — only relevant fields shown per device type ──
+const API_BASE = import.meta.env.DEV
+  ? 'http://localhost:5000'
+  : 'https://specsmart-production-ed74.up.railway.app';
+
+// ── Category-specific spec rows ───────────────────────────────────────────────
 const CATEGORY_ROWS = {
   Smartphone:  ['display', 'processor', 'chipset', 'ram', 'storage', 'mainCamera', 'battery', 'os', 'connectivity', 'sensor', 'weight', 'summary'],
   Laptop:      ['display', 'processor', 'ram', 'storage', 'battery', 'os', 'weight', 'connectivity', 'usbPorts', 'summary'],
@@ -78,7 +82,7 @@ const BRAND_COLORS = {
   'MSI': '#e4002b', 'Gigabyte': '#e31837', 'Corsair': '#ffd200',
   'G.Skill': '#cc0000', 'Kingston': '#e30613', 'Crucial': '#006400',
   'WD': '#0066cc', 'Seagate': '#00ae42', 'Seasonic': '#d4890a',
-  'be quiet!': '#333333', 'Thermaltake': '#c0392b',
+  'be quiet!': '#333333', 'Thermaltake': '#c0392b', 'Huawei': '#cf0a2c',
 };
 
 const GSMARENA_IMGS = {
@@ -110,7 +114,29 @@ const GSMARENA_IMGS = {
   'xiaomi 14 ultra': 'https://fdn2.gsmarena.com/vv/bigpic/xiaomi-14-ultra.jpg',
   'xiaomi 14': 'https://fdn2.gsmarena.com/vv/bigpic/xiaomi-14.jpg',
   'oneplus 12': 'https://fdn2.gsmarena.com/vv/bigpic/oneplus-12.jpg',
+  'huawei matebook d 15': 'https://fdn2.gsmarena.com/vv/bigpic/huawei-matebook-d-15-2021.jpg',
+  'huawei matebook x pro': 'https://fdn2.gsmarena.com/vv/bigpic/huawei-matebook-x-pro-2023.jpg',
+  'huawei matebook 14s': 'https://fdn2.gsmarena.com/vv/bigpic/huawei-matebook-14s.jpg',
 };
+
+// ─── Image cache ──────────────────────────────────────────────────────────────
+const imageCache = new Map();
+
+async function fetchProductImage(name) {
+  if (!name) return null;
+  if (imageCache.has(name)) return imageCache.get(name);
+  try {
+    const res = await fetch(`${API_BASE}/api/ai/product-image?q=${encodeURIComponent(name)}`);
+    if (!res.ok) { imageCache.set(name, null); return null; }
+    const data = await res.json();
+    const url = data.url || null;
+    imageCache.set(name, url);
+    return url;
+  } catch {
+    imageCache.set(name, null);
+    return null;
+  }
+}
 
 const deviceCache = new Map();
 
@@ -175,6 +201,82 @@ function matchLocalDevice(suggestion) {
   });
   return match || null;
 }
+
+// ─── Brand fallback card ──────────────────────────────────────────────────────
+const BrandCard = ({ brand, size = 34 }) => {
+  const color = BRAND_COLORS[brand] || '#6366f1';
+  const initial = (brand || '?')[0].toUpperCase();
+  return (
+    <div style={{
+      width: size, height: size, borderRadius: 9,
+      background: `linear-gradient(135deg, ${color}dd, ${color}88)`,
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      flexShrink: 0, userSelect: 'none',
+    }}>
+      <span style={{ color: 'white', fontWeight: 900, fontSize: size * 0.42, fontFamily: 'Syne, sans-serif' }}>{initial}</span>
+    </div>
+  );
+};
+
+// ─── SuggestionImage — fetches real product image from backend ────────────────
+const SuggestionImage = ({ name, brand }) => {
+  const [imgUrl, setImgUrl] = useState(null);
+  const [failed, setFailed] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setImgUrl(null); setFailed(false); setLoading(true);
+    if (!name) { setLoading(false); return; }
+
+    // 1. Check GSMARENA map first (instant)
+    const lower = name.toLowerCase();
+    for (const [key, url] of Object.entries(GSMARENA_IMGS)) {
+      if (lower === key || lower.includes(key) || key.includes(lower)) {
+        setImgUrl(url); setLoading(false); return;
+      }
+    }
+
+    // 2. Check cache
+    if (imageCache.has(name)) {
+      setImgUrl(imageCache.get(name));
+      setLoading(false);
+      return;
+    }
+
+    // 3. Fetch from backend
+    fetchProductImage(name).then(url => {
+      setImgUrl(url);
+      setLoading(false);
+    });
+  }, [name]);
+
+  if (loading) {
+    return (
+      <div style={{
+        width: 42, height: 42, borderRadius: 10,
+        background: 'linear-gradient(90deg, #2a2a2a 25%, #3a3a3a 50%, #2a2a2a 75%)',
+        backgroundSize: '200% 100%',
+        animation: 'shimmer 1.2s infinite',
+        flexShrink: 0,
+      }} />
+    );
+  }
+
+  if (imgUrl && !failed) {
+    return (
+      <div style={{ width: 42, height: 42, borderRadius: 10, background: 'white', overflow: 'hidden', flexShrink: 0, boxShadow: '0 1px 4px rgba(0,0,0,0.15)' }}>
+        <img
+          src={imgUrl}
+          alt={name}
+          onError={() => setFailed(true)}
+          style={{ width: '100%', height: '100%', objectFit: 'contain', padding: 3, boxSizing: 'border-box' }}
+        />
+      </div>
+    );
+  }
+
+  return <BrandCard brand={brand} size={42} />;
+};
 
 const BrandInitial = ({ brand, size = 36 }) => {
   const color  = BRAND_COLORS[brand] || '#6366f1';
@@ -277,8 +379,11 @@ async function fetchAIDevice(query) {
   return result;
 }
 
+// ─── SearchBox ────────────────────────────────────────────────────────────────
 const SearchBox = ({ containerRef, label, search, setSearch, showDropdown, setShowDropdown, localFiltered, aiSuggestions, suggestionsLoading, onSelectLocal, onSelectAISuggestion, aiLoading, device, activeCategory, setActiveCategory, lockedCategory }) => (
   <div ref={containerRef}>
+    {/* shimmer keyframe */}
+    <style>{`@keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }`}</style>
     <div style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 600 }}>
       {label}
       {lockedCategory && (
@@ -298,6 +403,8 @@ const SearchBox = ({ containerRef, label, search, setSearch, showDropdown, setSh
               ))}
             </div>
           )}
+
+          {/* In Database */}
           {localFiltered.length > 0 && (
             <>
               <div style={{ padding: '5px 14px', fontSize: 10, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.8px', background: 'var(--bg-3)' }}>In Database</div>
@@ -309,6 +416,8 @@ const SearchBox = ({ containerRef, label, search, setSearch, showDropdown, setSh
               ))}
             </>
           )}
+
+          {/* AI Suggestions */}
           <div style={{ padding: '5px 14px', fontSize: 10, fontWeight: 700, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.8px', background: 'var(--bg-3)', display: 'flex', alignItems: 'center', gap: 5 }}>
             <Sparkles size={10} /> AI Suggestions
           </div>
@@ -316,8 +425,12 @@ const SearchBox = ({ containerRef, label, search, setSearch, showDropdown, setSh
             <div style={{ padding: '12px 14px', fontSize: 12, color: 'var(--text-3)', display: 'flex', alignItems: 'center', gap: 8 }}><Sparkles size={12} style={{ color: 'var(--accent)' }} /> Finding suggestions...</div>
           ) : aiSuggestions.length > 0 ? (
             aiSuggestions.map((s, i) => (
-              <div key={i} onClick={() => !aiLoading && onSelectAISuggestion(s)} style={{ padding: '9px 14px', cursor: aiLoading ? 'default' : 'pointer', display: 'flex', gap: 10, alignItems: 'center', opacity: aiLoading ? 0.6 : 1 }} onMouseEnter={e => { if (!aiLoading) e.currentTarget.style.background = 'var(--bg-3)'; }} onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}>
-                <ThumbBox size={44}><DeviceImage device={s} size={42} /></ThumbBox>
+              <div key={i} onClick={() => !aiLoading && onSelectAISuggestion(s)}
+                style={{ padding: '9px 14px', cursor: aiLoading ? 'default' : 'pointer', display: 'flex', gap: 10, alignItems: 'center', opacity: aiLoading ? 0.6 : 1 }}
+                onMouseEnter={e => { if (!aiLoading) e.currentTarget.style.background = 'var(--bg-3)'; }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}>
+                {/* ── Real product image ── */}
+                <SuggestionImage name={s.name} brand={s.brand} />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)' }}>{s.name}</div>
                   <div style={{ fontSize: 11, color: 'var(--text-3)' }}>{s.category} · {s.brand}</div>
@@ -341,6 +454,7 @@ const SearchBox = ({ containerRef, label, search, setSearch, showDropdown, setSh
   </div>
 );
 
+// ─── ComparePage ──────────────────────────────────────────────────────────────
 export default function ComparePage() {
   const [searchParams] = useSearchParams();
   const [device1, setDevice1] = useState(null);
@@ -368,17 +482,14 @@ export default function ComparePage() {
   const lockedCategory2 = device1?.category || null;
   const lockedCategory1 = device2?.category || null;
 
-  // ── Derive detail rows based on category ──────────────────────────────────
   const sharedCategory = device1?.category || device2?.category;
   const detailRows = getDetailRows(sharedCategory);
 
-  // ── Only show rows that have at least one value ────────────────────────────
   const detailKeys = (device1 || device2)
     ? detailRows.filter(k => {
         if (k === 'summary') return device1?.summary || device2?.summary;
         const v1 = device1?.details?.[k];
         const v2 = device2?.details?.[k];
-        // Hide if both are null/undefined OR both are "Not applicable"
         const isEmpty = (v) => !v || String(v).toLowerCase() === 'not applicable' || String(v).toLowerCase() === 'n/a';
         return !isEmpty(v1) || !isEmpty(v2);
       })

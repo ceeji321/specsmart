@@ -16,10 +16,12 @@ export const useAuth = () => {
 };
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [user,     setUser]     = useState(null);
+  const [loading,  setLoading]  = useState(true);
+  // ✅ FIX: Store DB username separately — always fetched fresh from your database
+  const [dbUsername, setDbUsername] = useState('');
 
-  // ── Global axios interceptor — auto sign-out if account is archived/disabled
+  // ── Global axios interceptor ──────────────────────────────────────────────
   useEffect(() => {
     const interceptorId = axios.interceptors.response.use(
       response => response,
@@ -31,6 +33,7 @@ export function AuthProvider({ children }) {
         ) {
           await supabase.auth.signOut();
           setUser(null);
+          setDbUsername('');
           delete axios.defaults.headers.common['Authorization'];
           const msg = code === 'ACCOUNT_ARCHIVED'
             ? 'Your account has been archived. Please contact support.'
@@ -44,12 +47,35 @@ export function AuthProvider({ children }) {
     return () => axios.interceptors.response.eject(interceptorId);
   }, []);
 
+  // ✅ FIX: Fetch fresh username from YOUR database — not Supabase metadata
+  // This ensures web always shows the same name as the app
+  const fetchDbUsername = async (accessToken) => {
+    try {
+      const res = await fetch(`${API_URL}/api/users/profile`, {
+        headers: {
+          'Content-Type'  : 'application/json',
+          'Authorization' : `Bearer ${accessToken}`,
+        },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        // ✅ Prefer username (what Android updates) over name
+        const freshName = data.user?.username || data.user?.name || '';
+        if (freshName) setDbUsername(freshName);
+      }
+    } catch (e) {
+      // Non-fatal — fallback to metadata
+    }
+  };
+
   const refreshUser = async (accessToken) => {
     const { data: { user: freshUser } } = await supabase.auth.getUser();
     if (freshUser) {
       setUser(freshUser);
       if (accessToken) {
         axios.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
+        // ✅ Always fetch fresh username from DB on session refresh
+        await fetchDbUsername(accessToken);
       }
     }
   };
@@ -67,6 +93,7 @@ export function AuthProvider({ children }) {
         refreshUser(session.access_token);
       } else {
         setUser(null);
+        setDbUsername('');
         delete axios.defaults.headers.common['Authorization'];
       }
     });
@@ -79,9 +106,7 @@ export function AuthProvider({ children }) {
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
-        options: {
-          data: { name, username: email.split('@')[0] }
-        }
+        options: { data: { name, username: email.split('@')[0] } }
       });
       if (error) return { success: false, error: error.message };
       if (data.session) return { success: true, user: data.user };
@@ -93,11 +118,8 @@ export function AuthProvider({ children }) {
 
   const login = async (email, password) => {
     try {
-      // Step 1: Check backend — blocks archived/disabled accounts
-      // NOTE: No auth header needed here, this is a public route
       await axios.post(`${API_URL}/api/auth/login`, { email, password });
 
-      // Step 2: Create Supabase session
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) {
         if (error.message.includes('Invalid login credentials'))
@@ -106,41 +128,40 @@ export function AuthProvider({ children }) {
       }
 
       const token = data.session.access_token;
-
-      // Step 3: Set the auth header with the fresh token
       axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
 
-      // Step 4: FIX — explicitly update last_login using the fresh token
-      // The backend login in Step 1 already tried, but may have lacked auth.
-      // Here we call /me which is an authenticated route guaranteed to succeed.
       try {
         await axios.get(`${API_URL}/api/auth/me`, {
           headers: { Authorization: `Bearer ${token}` }
         });
-      } catch (_) {
-        // Non-fatal — last_login update failure shouldn't block login
-      }
+      } catch (_) { }
+
+      // ✅ Fetch fresh DB username right after login
+      await fetchDbUsername(token);
 
       return { success: true, user: data.user };
     } catch (e) {
       const serverError = e.response?.data?.error;
-      if (e.response?.status === 403 && serverError) {
+      if (e.response?.status === 403 && serverError)
         return { success: false, error: serverError };
-      }
-      if (e.response?.status === 401) {
+      if (e.response?.status === 401)
         return { success: false, error: 'Invalid email or password' };
-      }
       return { success: false, error: 'Login failed. Please try again.' };
     }
   };
 
   const logout = async () => {
+    setDbUsername('');
     await supabase.auth.signOut();
   };
 
   const updateUser = async (userData) => {
     const { data, error } = await supabase.auth.updateUser({ data: userData });
     if (!error && data.user) setUser(data.user);
+    // ✅ Also update dbUsername immediately so navbar reflects change
+    if (userData.name || userData.username) {
+      setDbUsername(userData.username || userData.name || dbUsername);
+    }
     return { success: !error, error: error?.message };
   };
 
@@ -150,11 +171,13 @@ export function AuthProvider({ children }) {
     user,
     loading,
     supabase,
-    isAuthenticated: !!user,
-    isAdmin: role === 'admin',
-    isManager: ['manager', 'admin'].includes(role),
-    userName: user?.user_metadata?.name || user?.email?.split('@')[0] || '',
-    userEmail: user?.email || '',
+    isAuthenticated : !!user,
+    isAdmin         : role === 'admin',
+    isManager       : ['manager', 'admin'].includes(role),
+    // ✅ FIX: userName now reads from DB first, falls back to Supabase metadata
+    // This means web always shows the same name as the Android app
+    userName  : dbUsername || user?.user_metadata?.name || user?.email?.split('@')[0] || '',
+    userEmail : user?.email || '',
     register,
     login,
     logout,
