@@ -999,6 +999,10 @@ const STATIC_IMAGE_MAP = {
   'AMD Ryzen 5 7600X': 'https://www.amd.com/system/files/2022-08/amd-ryzen-5-7600x-PIB-left-facing.png',
   'AMD Ryzen 5 5600X': 'https://www.amd.com/system/files/2021-03/amd-ryzen-5-5600x-PIB-left-facing.png',
   'AMD Ryzen 7 5800X3D': 'https://www.amd.com/system/files/2022-03/amd-ryzen-7-5800x3d-PIB-left-facing.png',
+  // ✅ MSI Laptops — added to prevent Bing from returning motherboard images
+  'MSI Titan GT77 HX': 'https://storage-asset.msi.com/global/picture/image/feature/nb/Titan-GT77-HX/Titan-GT77-HX-hero.png',
+  'MSI Raider GE78 HX': 'https://storage-asset.msi.com/global/picture/image/feature/nb/Raider-GE78-HX/kv.png',
+  'MSI Stealth 16 Mercedes-AMG': 'https://storage-asset.msi.com/global/picture/image/feature/nb/Stealth-16-Mercedes-AMG/kv.png',
 };
 
 const VISION_MODEL = 'meta-llama/llama-4-scout-17b-16e-instruct';
@@ -1585,11 +1589,9 @@ router.get('/product-image', async (req, res) => {
     if (!q) return res.status(400).json({ error: 'Query required' });
 
     // ── Step 1: Static map — instant, zero network calls ─────────────────────
-    // Exact match
     if (STATIC_IMAGE_MAP[q]) {
       return res.json({ url: STATIC_IMAGE_MAP[q], source: 'static' });
     }
-    // Fuzzy match (case-insensitive partial)
     const qLower = q.toLowerCase();
     for (const [key, url] of Object.entries(STATIC_IMAGE_MAP)) {
       if (key.toLowerCase().includes(qLower) || qLower.includes(key.toLowerCase())) {
@@ -1599,7 +1601,20 @@ router.get('/product-image', async (req, res) => {
 
     // ── Step 2: Bing image search ─────────────────────────────────────────────
     try {
-      const encoded = encodeURIComponent(`${q} official product`);
+      // ✅ FIX: Append category hint so Bing returns the right product type.
+      // Without this, "MSI Titan GT77 HX" returns a motherboard photo because
+      // MSI makes both laptops and motherboards.
+      const isLaptopQ = /laptop|notebook|macbook|matebook|thinkpad|ideapad|zenbook|vivobook|inspiron|pavilion|envy|spectre|omen|predator|nitro|swift|aspire|gram|razer blade|gt\d{2}|gp\d{2}|ge\d{2}|gf\d{2}|gl\d{2}|stealth \d|vector|crosshair|sword|katana|pulse|delta|bravo|alpha|creator|prestige|modern|summit/i.test(q);
+      const isGpuQ    = /rtx|gtx|radeon rx|arc a\d|graphics card/i.test(q);
+      const isCpuQ    = /ryzen|core i[0-9]|xeon|core ultra|athlon/i.test(q);
+      const isPhoneQ  = /iphone|samsung galaxy|xiaomi|redmi|poco|pixel|oneplus|oppo|vivo|realme|nothing phone|huawei/i.test(q);
+      const categoryHint = isLaptopQ ? 'laptop'
+        : isGpuQ    ? 'graphics card GPU'
+        : isCpuQ    ? 'processor CPU'
+        : isPhoneQ  ? 'smartphone'
+        : 'official product';
+      const encoded = encodeURIComponent(`${q} ${categoryHint}`);
+
       const bingRes = await fetch(
         `https://www.bing.com/images/search?q=${encoded}&form=HDRSC2&first=1`,
         {
