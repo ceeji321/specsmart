@@ -1604,7 +1604,7 @@ router.get('/product-image', async (req, res) => {
       // ✅ FIX: Append category hint so Bing returns the right product type.
       // Without this, "MSI Titan GT77 HX" returns a motherboard photo because
       // MSI makes both laptops and motherboards.
-      const isLaptopQ = /laptop|notebook|macbook|matebook|thinkpad|ideapad|zenbook|vivobook|inspiron|pavilion|envy|spectre|omen|predator|nitro|swift|aspire|gram|razer blade|gt\d{2}|gp\d{2}|ge\d{2}|gf\d{2}|gl\d{2}|stealth \d|vector|crosshair|sword|katana|pulse|delta|bravo|alpha|creator|prestige|modern|summit/i.test(q);
+      const isLaptopQ = /laptop|notebook|macbook|matebook|thinkpad|ideapad|zenbook|vivobook|inspiron|pavilion|envy|spectre|omen|predator|nitro|swift|aspire|gram|razer blade|gt\d{2}|gp\d{2}|ge\d{2}|gf\d{2}|gl\d{2}|gs\d{2}|stealth|vector|crosshair|sword|katana|pulse|delta|bravo|alpha|creator|prestige|modern|summit|msi gp|msi ge|msi gt|msi gs|msi gl|msi raider|msi sword|msi katana|msi bravo|msi creator|msi prestige|msi modern|msi summit|huawei matebook|asus rog|asus tuf|asus vivobook|asus zenbook|acer nitro|acer predator|acer swift|acer aspire|hp omen|hp envy|hp pavilion|hp spectre|dell xps|dell inspiron|dell alienware|lenovo legion|lenovo ideapad|lenovo thinkpad|lenovo yoga|apple macbook|lg gram|samsung galaxy book|razer blade|microsoft surface/i.test(q);
       const isGpuQ    = /rtx|gtx|radeon rx|arc a\d|graphics card/i.test(q);
       const isCpuQ    = /ryzen|core i[0-9]|xeon|core ultra|athlon/i.test(q);
       const isPhoneQ  = /iphone|samsung galaxy|xiaomi|redmi|poco|pixel|oneplus|oppo|vivo|realme|nothing phone|huawei/i.test(q);

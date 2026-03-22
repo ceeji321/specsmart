@@ -122,18 +122,22 @@ const GSMARENA_IMGS = {
 // ─── Image cache ──────────────────────────────────────────────────────────────
 const imageCache = new Map();
 
-async function fetchProductImage(name) {
+// ✅ FIX: Pass category so backend appends the right hint to Bing query
+async function fetchProductImage(name, category = '') {
   if (!name) return null;
-  if (imageCache.has(name)) return imageCache.get(name);
+  const cacheKey = `${name}::${category}`;
+  if (imageCache.has(cacheKey)) return imageCache.get(cacheKey);
   try {
-    const res = await fetch(`${API_BASE}/api/ai/product-image?q=${encodeURIComponent(name)}`);
-    if (!res.ok) { imageCache.set(name, null); return null; }
+    const params = new URLSearchParams({ q: name });
+    if (category) params.set('cat', category);
+    const res = await fetch(`${API_BASE}/api/ai/product-image?${params}`);
+    if (!res.ok) { imageCache.set(cacheKey, null); return null; }
     const data = await res.json();
     const url = data.url || null;
-    imageCache.set(name, url);
+    imageCache.set(cacheKey, url);
     return url;
   } catch {
-    imageCache.set(name, null);
+    imageCache.set(cacheKey, null);
     return null;
   }
 }
@@ -219,7 +223,8 @@ const BrandCard = ({ brand, size = 34 }) => {
 };
 
 // ─── SuggestionImage — fetches real product image from backend ────────────────
-const SuggestionImage = ({ name, brand }) => {
+// ✅ FIX: Accept category prop and pass it to fetchProductImage
+const SuggestionImage = ({ name, brand, category = '' }) => {
   const [imgUrl, setImgUrl] = useState(null);
   const [failed, setFailed] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -237,18 +242,19 @@ const SuggestionImage = ({ name, brand }) => {
     }
 
     // 2. Check cache
-    if (imageCache.has(name)) {
-      setImgUrl(imageCache.get(name));
+    const cacheKey = `${name}::${category}`;
+    if (imageCache.has(cacheKey)) {
+      setImgUrl(imageCache.get(cacheKey));
       setLoading(false);
       return;
     }
 
-    // 3. Fetch from backend
-    fetchProductImage(name).then(url => {
+    // 3. Fetch from backend — pass category so Bing gets the right hint
+    fetchProductImage(name, category).then(url => {
       setImgUrl(url);
       setLoading(false);
     });
-  }, [name]);
+  }, [name, category]);
 
   if (loading) {
     return (
@@ -313,25 +319,69 @@ const ThumbBox = ({ size = 44, children }) => (
   </div>
 );
 
-const DevicePreview = ({ device }) => (
-  <div style={{ marginTop: 12, border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden', background: 'var(--bg-2)' }}>
-    <div style={{ background: 'linear-gradient(135deg, rgba(99,102,241,0.18) 0%, rgba(99,102,241,0.04) 100%)', padding: '28px 20px 20px', textAlign: 'center', borderBottom: '1px solid var(--border)', position: 'relative' }}>
-      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: 'linear-gradient(90deg, var(--accent), #a5b4fc)' }} />
-      <div style={{ width: 90, height: 90, borderRadius: 18, background: 'white', margin: '0 auto 14px', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 8px 24px rgba(0,0,0,0.25)', overflow: 'hidden' }}>
-        <DeviceImage device={device} size={90} />
+// ✅ FIX: DevicePreview now fetches image with category hint
+const DevicePreview = ({ device }) => {
+  const [fetchedImg, setFetchedImg] = useState(null);
+  const [imgFailed, setImgFailed] = useState(false);
+
+  useEffect(() => {
+    setFetchedImg(null);
+    setImgFailed(false);
+    if (!device) return;
+
+    // Check GSMARENA map first
+    const lower = (device.name || '').toLowerCase();
+    for (const [key, url] of Object.entries(GSMARENA_IMGS)) {
+      if (lower === key || lower.includes(key) || key.includes(lower)) {
+        setFetchedImg(url);
+        return;
+      }
+    }
+
+    // Check local device image
+    const localUrl = getDeviceImageUrl(device);
+    if (localUrl) { setFetchedImg(localUrl); return; }
+
+    // ✅ Fetch from backend with category so Bing returns the right image
+    fetchProductImage(device.name, device.category).then(url => {
+      if (url) setFetchedImg(url);
+    });
+  }, [device?.name, device?.category]);
+
+  const imgSrc = fetchedImg
+    ? (fetchedImg.startsWith('http') ? `https://wsrv.nl/?url=${encodeURIComponent(fetchedImg)}&w=300&output=webp` : fetchedImg)
+    : null;
+
+  return (
+    <div style={{ marginTop: 12, border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden', background: 'var(--bg-2)' }}>
+      <div style={{ background: 'linear-gradient(135deg, rgba(99,102,241,0.18) 0%, rgba(99,102,241,0.04) 100%)', padding: '28px 20px 20px', textAlign: 'center', borderBottom: '1px solid var(--border)', position: 'relative' }}>
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: 'linear-gradient(90deg, var(--accent), #a5b4fc)' }} />
+        <div style={{ width: 90, height: 90, borderRadius: 18, background: 'white', margin: '0 auto 14px', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 8px 24px rgba(0,0,0,0.25)', overflow: 'hidden' }}>
+          {imgSrc && !imgFailed ? (
+            <img
+              src={imgSrc}
+              alt={device?.name}
+              onError={() => setImgFailed(true)}
+              referrerPolicy="no-referrer"
+              style={{ width: 90, height: 90, objectFit: 'contain', padding: 4, boxSizing: 'border-box' }}
+            />
+          ) : (
+            <DeviceImage device={device} size={90} />
+          )}
+        </div>
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.25)', color: 'var(--accent)', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', padding: '3px 12px', borderRadius: 20, marginBottom: 10 }}>
+          {device.category}
+        </div>
+        <div style={{ fontFamily: 'Syne', fontSize: 17, fontWeight: 800, lineHeight: 1.25, marginBottom: 4 }}>{device.name}</div>
+        <div style={{ fontSize: 11, color: 'var(--text-3)', fontWeight: 500 }}>{device.brand}</div>
       </div>
-      <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.25)', color: 'var(--accent)', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', padding: '3px 12px', borderRadius: 20, marginBottom: 10 }}>
-        {device.category}
+      <div style={{ padding: '14px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ fontSize: 12, color: 'var(--text-3)', maxWidth: '55%', lineHeight: 1.5 }}>{device.specs}</div>
+        <div style={{ fontFamily: 'Syne', fontSize: 16, fontWeight: 800, color: 'var(--accent)', textAlign: 'right' }}>{device.price}</div>
       </div>
-      <div style={{ fontFamily: 'Syne', fontSize: 17, fontWeight: 800, lineHeight: 1.25, marginBottom: 4 }}>{device.name}</div>
-      <div style={{ fontSize: 11, color: 'var(--text-3)', fontWeight: 500 }}>{device.brand}</div>
     </div>
-    <div style={{ padding: '14px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-      <div style={{ fontSize: 12, color: 'var(--text-3)', maxWidth: '55%', lineHeight: 1.5 }}>{device.specs}</div>
-      <div style={{ fontFamily: 'Syne', fontSize: 16, fontWeight: 800, color: 'var(--accent)', textAlign: 'right' }}>{device.price}</div>
-    </div>
-  </div>
-);
+  );
+};
 
 const MismatchWarning = ({ cat1, cat2, onClear }) => (
   <div style={{ display: 'flex', alignItems: 'center', gap: 12, background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.3)', borderRadius: 10, padding: '12px 16px', marginBottom: 20 }}>
@@ -382,7 +432,6 @@ async function fetchAIDevice(query) {
 // ─── SearchBox ────────────────────────────────────────────────────────────────
 const SearchBox = ({ containerRef, label, search, setSearch, showDropdown, setShowDropdown, localFiltered, aiSuggestions, suggestionsLoading, onSelectLocal, onSelectAISuggestion, aiLoading, device, activeCategory, setActiveCategory, lockedCategory }) => (
   <div ref={containerRef}>
-    {/* shimmer keyframe */}
     <style>{`@keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }`}</style>
     <div style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 600 }}>
       {label}
@@ -429,8 +478,8 @@ const SearchBox = ({ containerRef, label, search, setSearch, showDropdown, setSh
                 style={{ padding: '9px 14px', cursor: aiLoading ? 'default' : 'pointer', display: 'flex', gap: 10, alignItems: 'center', opacity: aiLoading ? 0.6 : 1 }}
                 onMouseEnter={e => { if (!aiLoading) e.currentTarget.style.background = 'var(--bg-3)'; }}
                 onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}>
-                {/* ── Real product image ── */}
-                <SuggestionImage name={s.name} brand={s.brand} />
+                {/* ✅ FIX: Pass category so image fetch uses right Bing hint */}
+                <SuggestionImage name={s.name} brand={s.brand} category={s.category || ''} />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)' }}>{s.name}</div>
                   <div style={{ fontSize: 11, color: 'var(--text-3)' }}>{s.category} · {s.brand}</div>
