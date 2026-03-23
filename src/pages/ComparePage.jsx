@@ -5,7 +5,6 @@ import { devices } from '../data/devices';
 import { saveComparison } from '../services/historyService';
 import { askAI } from '../services/aiService';
 import { Sparkles, AlertTriangle } from 'lucide-react';
-import { getBrandLogoUrl } from '../utils/brandLogo';
 
 const API_BASE = import.meta.env.DEV
   ? 'http://localhost:5000'
@@ -83,8 +82,10 @@ const BRAND_COLORS = {
   'G.Skill': '#cc0000', 'Kingston': '#e30613', 'Crucial': '#006400',
   'WD': '#0066cc', 'Seagate': '#00ae42', 'Seasonic': '#d4890a',
   'be quiet!': '#333333', 'Thermaltake': '#c0392b', 'Huawei': '#cf0a2c',
+  'ASRock': '#cc0000', 'Infinix': '#0066cc',
 };
 
+// ─── GSMARENA image map (phones) ──────────────────────────────────────────────
 const GSMARENA_IMGS = {
   'samsung galaxy s25 ultra': 'https://fdn2.gsmarena.com/vv/bigpic/samsung-galaxy-s25-ultra.jpg',
   'samsung galaxy s25+': 'https://fdn2.gsmarena.com/vv/bigpic/samsung-galaxy-s25plus.jpg',
@@ -93,6 +94,7 @@ const GSMARENA_IMGS = {
   'samsung galaxy s24+': 'https://fdn2.gsmarena.com/vv/bigpic/samsung-galaxy-s24plus-5g.jpg',
   'samsung galaxy s24': 'https://fdn2.gsmarena.com/vv/bigpic/samsung-galaxy-s24-5g.jpg',
   'samsung galaxy s23 ultra': 'https://fdn2.gsmarena.com/vv/bigpic/samsung-galaxy-s23-ultra-5g.jpg',
+  'samsung galaxy a55': 'https://fdn2.gsmarena.com/vv/bigpic/samsung-galaxy-a55.jpg',
   'apple iphone 16 pro max': 'https://fdn2.gsmarena.com/vv/bigpic/apple-iphone-16-pro-max.jpg',
   'apple iphone 16 pro': 'https://fdn2.gsmarena.com/vv/bigpic/apple-iphone-16-pro.jpg',
   'apple iphone 16 plus': 'https://fdn2.gsmarena.com/vv/bigpic/apple-iphone-16-plus.jpg',
@@ -114,15 +116,33 @@ const GSMARENA_IMGS = {
   'xiaomi 14 ultra': 'https://fdn2.gsmarena.com/vv/bigpic/xiaomi-14-ultra.jpg',
   'xiaomi 14': 'https://fdn2.gsmarena.com/vv/bigpic/xiaomi-14.jpg',
   'oneplus 12': 'https://fdn2.gsmarena.com/vv/bigpic/oneplus-12.jpg',
+  'asus rog phone 8 pro': 'https://fdn2.gsmarena.com/vv/bigpic/asus-rog-phone-8-pro.jpg',
+  'infinix hot 30': 'https://fdn2.gsmarena.com/vv/bigpic/infinix-hot-30.jpg',
+  'infinix note 30 pro': 'https://fdn2.gsmarena.com/vv/bigpic/infinix-note-30-pro.jpg',
   'huawei matebook d 15': 'https://fdn2.gsmarena.com/vv/bigpic/huawei-matebook-d-15-2021.jpg',
   'huawei matebook x pro': 'https://fdn2.gsmarena.com/vv/bigpic/huawei-matebook-x-pro-2023.jpg',
   'huawei matebook 14s': 'https://fdn2.gsmarena.com/vv/bigpic/huawei-matebook-14s.jpg',
 };
 
+// ─── Static HTTP image map for PC hardware ────────────────────────────────────
+// Only real working http URLs — no /images/ local paths which 404
+const STATIC_IMGS = {
+  'samsung 990 pro 2tb':             'https://semiconductor.samsung.com/us/consumer-storage/internal-ssd/990-pro/images/samsung-990-pro-nvme-m2-ssd-product.png',
+  'samsung 990 pro 1tb':             'https://semiconductor.samsung.com/us/consumer-storage/internal-ssd/990-pro/images/samsung-990-pro-nvme-m2-ssd-product.png',
+  'wd black sn850x 2tb':             'https://shop.westerndigital.com/content/dam/store/en-us/assets/products/internal-flash/wd-black-sn850x-nvme-m2-ssd/gallery/wd-black-sn850x-nvme-ssd-01.png',
+  'wd black sn850x 1tb':             'https://shop.westerndigital.com/content/dam/store/en-us/assets/products/internal-flash/wd-black-sn850x-nvme-m2-ssd/gallery/wd-black-sn850x-nvme-ssd-01.png',
+  'seagate firecuda 530 2tb':        'https://www.seagate.com/content/dam/seagate/migrated-assets/www-content/products/solidstate/firecuda-530/_shared/images/firecuda-530-m2-nvme-ssd-filer.png',
+  'samsung 870 evo 2tb':             'https://semiconductor.samsung.com/us/consumer-storage/internal-ssd/870-evo/images/samsung-870-evo-sata-ssd-product.png',
+  'samsung 870 evo 1tb':             'https://semiconductor.samsung.com/us/consumer-storage/internal-ssd/870-evo/images/samsung-870-evo-sata-ssd-product.png',
+  'wd blue 1tb':                     'https://shop.westerndigital.com/content/dam/store/en-us/assets/products/internal-flash/wd-blue-sata-ssd/gallery/wd-blue-sata-ssd-01.png',
+  'seasonic focus gx-1000':          'https://seasonic.com/pub/media/catalog/product/f/o/focus-gx-1000-product-main.png',
+  'seasonic focus gx-750':           'https://seasonic.com/pub/media/catalog/product/f/o/focus-gx-1000-product-main.png',
+  'thermaltake toughpower gf3 850w': 'https://www.thermaltake.com/uploads/Products/ps_000056/top_image/tt-toughpower-gf3-850w-gold-tt-premium-_-lf-top_800.jpg',
+};
+
 // ─── Image cache ──────────────────────────────────────────────────────────────
 const imageCache = new Map();
 
-// ✅ FIX: Pass category so backend appends the right hint to Bing query
 async function fetchProductImage(name, category = '') {
   if (!name) return null;
   const cacheKey = `${name}::${category}`;
@@ -165,14 +185,26 @@ function safeVal(val) {
   return String(val);
 }
 
-function getDeviceImageUrl(device) {
+// ✅ FIXED: Only returns real http URLs — never broken /images/ local paths
+function getStaticImageUrl(device) {
   if (!device) return null;
   const lower = (device.name || '').toLowerCase();
+
+  // 1. GSMARENA map (phones/laptops)
   for (const [key, url] of Object.entries(GSMARENA_IMGS)) {
     if (lower === key || lower.includes(key) || key.includes(lower)) return url;
   }
-  if (device.localImg) return device.localImg;
-  if (device.img && device.img.startsWith('http')) return device.img;
+
+  // 2. STATIC_IMGS map (PC hardware with real URLs)
+  for (const [key, url] of Object.entries(STATIC_IMGS)) {
+    if (lower === key || lower.includes(key) || key.includes(lower)) return url;
+  }
+
+  // 3. Only use device.image / device.img if they are real http URLs
+  if (device.image && device.image.startsWith('http')) return device.image;
+  if (device.img   && device.img.startsWith('http'))   return device.img;
+
+  // ✅ Never return /images/... paths — they 404 and cause wrong fallback images
   return null;
 }
 
@@ -206,42 +238,49 @@ function matchLocalDevice(suggestion) {
   return match || null;
 }
 
-// ─── Brand fallback card ──────────────────────────────────────────────────────
-const BrandCard = ({ brand, size = 34 }) => {
-  const color = BRAND_COLORS[brand] || '#6366f1';
-  const initial = (brand || '?')[0].toUpperCase();
+// ─── Brand initial (replaces Clearbit entirely — Clearbit is blocked by ad blockers) ──
+const BrandInitial = ({ brand, size = 36 }) => {
+  const color  = BRAND_COLORS[brand] || '#6366f1';
+  const letter = (brand || '?')[0].toUpperCase();
   return (
     <div style={{
-      width: size, height: size, borderRadius: 9,
+      width: size, height: size,
+      borderRadius: size > 50 ? 14 : '50%',
       background: `linear-gradient(135deg, ${color}dd, ${color}88)`,
       display: 'flex', alignItems: 'center', justifyContent: 'center',
-      flexShrink: 0, userSelect: 'none',
+      color: 'white', fontWeight: 900, fontSize: size * 0.42,
+      fontFamily: 'Syne, sans-serif', flexShrink: 0, userSelect: 'none',
     }}>
-      <span style={{ color: 'white', fontWeight: 900, fontSize: size * 0.42, fontFamily: 'Syne, sans-serif' }}>{initial}</span>
+      {letter}
     </div>
   );
 };
 
-// ─── SuggestionImage — fetches real product image from backend ────────────────
-// ✅ FIX: Accept category prop and pass it to fetchProductImage
+// ─── SuggestionImage — for AI dropdown results ────────────────────────────────
 const SuggestionImage = ({ name, brand, category = '' }) => {
-  const [imgUrl, setImgUrl] = useState(null);
-  const [failed, setFailed] = useState(false);
+  const [imgUrl,  setImgUrl]  = useState(null);
+  const [failed,  setFailed]  = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     setImgUrl(null); setFailed(false); setLoading(true);
     if (!name) { setLoading(false); return; }
 
-    // 1. Check GSMARENA map first (instant)
     const lower = name.toLowerCase();
+
+    // Check static maps first (instant, no network)
     for (const [key, url] of Object.entries(GSMARENA_IMGS)) {
       if (lower === key || lower.includes(key) || key.includes(lower)) {
         setImgUrl(url); setLoading(false); return;
       }
     }
+    for (const [key, url] of Object.entries(STATIC_IMGS)) {
+      if (lower === key || lower.includes(key) || key.includes(lower)) {
+        setImgUrl(url); setLoading(false); return;
+      }
+    }
 
-    // 2. Check cache
+    // Check cache
     const cacheKey = `${name}::${category}`;
     if (imageCache.has(cacheKey)) {
       setImgUrl(imageCache.get(cacheKey));
@@ -249,7 +288,7 @@ const SuggestionImage = ({ name, brand, category = '' }) => {
       return;
     }
 
-    // 3. Fetch from backend — pass category so Bing gets the right hint
+    // Fetch from backend with category hint
     fetchProductImage(name, category).then(url => {
       setImgUrl(url);
       setLoading(false);
@@ -259,11 +298,9 @@ const SuggestionImage = ({ name, brand, category = '' }) => {
   if (loading) {
     return (
       <div style={{
-        width: 42, height: 42, borderRadius: 10,
+        width: 42, height: 42, borderRadius: 10, flexShrink: 0,
         background: 'linear-gradient(90deg, #2a2a2a 25%, #3a3a3a 50%, #2a2a2a 75%)',
-        backgroundSize: '200% 100%',
-        animation: 'shimmer 1.2s infinite',
-        flexShrink: 0,
+        backgroundSize: '200% 100%', animation: 'shimmer 1.2s infinite',
       }} />
     );
   }
@@ -271,46 +308,48 @@ const SuggestionImage = ({ name, brand, category = '' }) => {
   if (imgUrl && !failed) {
     return (
       <div style={{ width: 42, height: 42, borderRadius: 10, background: 'white', overflow: 'hidden', flexShrink: 0, boxShadow: '0 1px 4px rgba(0,0,0,0.15)' }}>
-        <img
-          src={imgUrl}
-          alt={name}
-          onError={() => setFailed(true)}
-          style={{ width: '100%', height: '100%', objectFit: 'contain', padding: 3, boxSizing: 'border-box' }}
-        />
+        <img src={imgUrl} alt={name} onError={() => setFailed(true)}
+          style={{ width: '100%', height: '100%', objectFit: 'contain', padding: 3, boxSizing: 'border-box' }} />
       </div>
     );
   }
 
-  return <BrandCard brand={brand} size={42} />;
+  return <BrandInitial brand={brand} size={42} />;
 };
 
-const BrandInitial = ({ brand, size = 36 }) => {
-  const color  = BRAND_COLORS[brand] || '#6366f1';
-  const letter = (brand || '?')[0].toUpperCase();
-  return (
-    <div style={{ width: size, height: size, borderRadius: '50%', background: color, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 800, fontSize: size * 0.42, fontFamily: 'Syne, sans-serif', flexShrink: 0, userSelect: 'none' }}>
-      {letter}
-    </div>
-  );
-};
-
-const BrandLogoFallback = ({ brand, emoji, size = 30 }) => {
-  const [err, setErr] = useState(false);
-  const url = getBrandLogoUrl(brand);
-  if (!url || err) return emoji ? <span style={{ fontSize: size * 0.7, lineHeight: 1 }}>{emoji}</span> : <BrandInitial brand={brand} size={size} />;
-  return <img src={url} alt={brand} onError={() => setErr(true)} style={{ width: size, height: size, objectFit: 'contain' }} />;
-};
-
+// ─── DeviceImage — for "In Database" dropdown rows ────────────────────────────
 const DeviceImage = ({ device, size = 40 }) => {
-  const [localFailed,  setLocalFailed]  = useState(false);
-  const [remoteFailed, setRemoteFailed] = useState(false);
-  useEffect(() => { setLocalFailed(false); setRemoteFailed(false); }, [device?.name]);
+  const [fetchedImg, setFetchedImg] = useState(null);
+  const [imgFailed,  setImgFailed]  = useState(false);
+
+  useEffect(() => {
+    setFetchedImg(null);
+    setImgFailed(false);
+    if (!device) return;
+
+    // Try static maps first (instant, no network)
+    const staticUrl = getStaticImageUrl(device);
+    if (staticUrl) { setFetchedImg(staticUrl); return; }
+
+    // Fall back to backend fetch
+    fetchProductImage(device.name, device.category).then(url => {
+      if (url) setFetchedImg(url);
+    });
+  }, [device?.name]);
+
   const imgStyle = { width: size, height: size, objectFit: 'contain', padding: 3, boxSizing: 'border-box' };
-  const imageUrl = getDeviceImageUrl(device);
-  const proxySrc = imageUrl && imageUrl.startsWith('http') ? `https://wsrv.nl/?url=${encodeURIComponent(imageUrl)}&w=300&output=webp` : imageUrl;
-  if (device?.localImg && !localFailed) return <img src={device.localImg} alt={device?.name} onError={() => setLocalFailed(true)} style={imgStyle} />;
-  if (proxySrc && !remoteFailed) return <img src={proxySrc} alt={device?.name} referrerPolicy="no-referrer" onError={() => setRemoteFailed(true)} style={imgStyle} />;
-  return <BrandLogoFallback brand={device?.brand} emoji={device?.emoji} size={size - 10} />;
+
+  if (fetchedImg && !imgFailed) {
+    const proxySrc = fetchedImg.startsWith('http')
+      ? `https://wsrv.nl/?url=${encodeURIComponent(fetchedImg)}&w=300&output=webp`
+      : fetchedImg;
+    return (
+      <img src={proxySrc} alt={device?.name} referrerPolicy="no-referrer"
+        onError={() => setImgFailed(true)} style={imgStyle} />
+    );
+  }
+
+  return <BrandInitial brand={device?.brand} size={size - 8} />;
 };
 
 const ThumbBox = ({ size = 44, children }) => (
@@ -319,38 +358,29 @@ const ThumbBox = ({ size = 44, children }) => (
   </div>
 );
 
-// ✅ FIX: DevicePreview now fetches image with category hint
+// ─── DevicePreview — big card shown after selecting a device ──────────────────
 const DevicePreview = ({ device }) => {
   const [fetchedImg, setFetchedImg] = useState(null);
-  const [imgFailed, setImgFailed] = useState(false);
+  const [imgFailed,  setImgFailed]  = useState(false);
 
   useEffect(() => {
     setFetchedImg(null);
     setImgFailed(false);
     if (!device) return;
 
-    // Check GSMARENA map first
-    const lower = (device.name || '').toLowerCase();
-    for (const [key, url] of Object.entries(GSMARENA_IMGS)) {
-      if (lower === key || lower.includes(key) || key.includes(lower)) {
-        setFetchedImg(url);
-        return;
-      }
-    }
+    // Try static maps first (instant)
+    const staticUrl = getStaticImageUrl(device);
+    if (staticUrl) { setFetchedImg(staticUrl); return; }
 
-    // Check local device image
-    const localUrl = getDeviceImageUrl(device);
-    if (localUrl) { setFetchedImg(localUrl); return; }
-
-    // ✅ Fetch from backend with category so Bing returns the right image
+    // Fall back to backend fetch with category hint
     fetchProductImage(device.name, device.category).then(url => {
       if (url) setFetchedImg(url);
     });
   }, [device?.name, device?.category]);
 
-  const imgSrc = fetchedImg
-    ? (fetchedImg.startsWith('http') ? `https://wsrv.nl/?url=${encodeURIComponent(fetchedImg)}&w=300&output=webp` : fetchedImg)
-    : null;
+  const imgSrc = fetchedImg && fetchedImg.startsWith('http')
+    ? `https://wsrv.nl/?url=${encodeURIComponent(fetchedImg)}&w=300&output=webp`
+    : fetchedImg || null;
 
   return (
     <div style={{ marginTop: 12, border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden', background: 'var(--bg-2)' }}>
@@ -358,15 +388,11 @@ const DevicePreview = ({ device }) => {
         <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: 'linear-gradient(90deg, var(--accent), #a5b4fc)' }} />
         <div style={{ width: 90, height: 90, borderRadius: 18, background: 'white', margin: '0 auto 14px', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 8px 24px rgba(0,0,0,0.25)', overflow: 'hidden' }}>
           {imgSrc && !imgFailed ? (
-            <img
-              src={imgSrc}
-              alt={device?.name}
-              onError={() => setImgFailed(true)}
+            <img src={imgSrc} alt={device?.name} onError={() => setImgFailed(true)}
               referrerPolicy="no-referrer"
-              style={{ width: 90, height: 90, objectFit: 'contain', padding: 4, boxSizing: 'border-box' }}
-            />
+              style={{ width: 90, height: 90, objectFit: 'contain', padding: 4, boxSizing: 'border-box' }} />
           ) : (
-            <DeviceImage device={device} size={90} />
+            <BrandInitial brand={device?.brand} size={60} />
           )}
         </div>
         <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.25)', color: 'var(--accent)', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', padding: '3px 12px', borderRadius: 20, marginBottom: 10 }}>
@@ -405,7 +431,7 @@ async function fetchAISuggestions(query, category) {
   const response = await askAI([{ role: 'user', content: `List up to 6 real PC hardware or smartphone products matching: "${query}".${catFilter}\nRespond with JSON only (no markdown):\n[{ "name": "Product Name", "category": "CPU/GPU/RAM/SSD/Smartphone/Motherboard/PSU/Laptop/etc", "brand": "Brand", "emoji": "emoji", "specs": "short one-line spec" }]\nOnly return products that actually exist. Be specific with model names.` }]);
   const parsed = safeParseJSON(response);
   const suggestions = Array.isArray(parsed) ? parsed : [];
-  const result = suggestions.map(s => { const local = matchLocalDevice(s); return { ...s, img: local?.img || local?.image || null, localImg: local?.localImg || null }; });
+  const result = suggestions.map(s => { const local = matchLocalDevice(s); return { ...s, img: local?.img || local?.image || null }; });
   deviceCache.set(cacheKey, result);
   return result;
 }
@@ -423,7 +449,13 @@ async function fetchAIDevice(query) {
       result.details = flat;
     }
     const local = matchLocalDevice(result);
-    if (local) { result.img = result.img || local.img || local.image || null; result.localImg = result.localImg || local.localImg || null; }
+    if (local) {
+      // Only copy real http image URLs — skip broken /images/ paths
+      const localImg = local.image?.startsWith('http') ? local.image
+                     : local.img?.startsWith('http')   ? local.img
+                     : null;
+      if (localImg) result.img = result.img || localImg;
+    }
   }
   deviceCache.set(cacheKey, result);
   return result;
@@ -478,7 +510,6 @@ const SearchBox = ({ containerRef, label, search, setSearch, showDropdown, setSh
                 style={{ padding: '9px 14px', cursor: aiLoading ? 'default' : 'pointer', display: 'flex', gap: 10, alignItems: 'center', opacity: aiLoading ? 0.6 : 1 }}
                 onMouseEnter={e => { if (!aiLoading) e.currentTarget.style.background = 'var(--bg-3)'; }}
                 onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}>
-                {/* ✅ FIX: Pass category so image fetch uses right Bing hint */}
                 <SuggestionImage name={s.name} brand={s.brand} category={s.category || ''} />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)' }}>{s.name}</div>
