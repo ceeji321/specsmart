@@ -10,14 +10,14 @@ const API_BASE = import.meta.env.DEV
   : 'https://specsmart-production-ed74.up.railway.app';
 
 // ─── Validation rules ──────────────────────────────────────────────────────────
-const NAME_REGEX = /^[a-zA-Z]+$/;
+const NAME_REGEX  = /^[a-zA-Z]+$/;
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
 const PASSWORD_RULES = [
-  { id: 'length',    label: 'At least 8 characters',               test: (p) => p.length >= 8 },
-  { id: 'uppercase', label: 'At least 1 uppercase letter (A-Z)',    test: (p) => /[A-Z]/.test(p) },
-  { id: 'number',    label: 'At least 1 number (0-9)',              test: (p) => /[0-9]/.test(p) },
-  { id: 'special',   label: 'At least 1 special character (@!#$%^&*)',
-                                                                     test: (p) => /[@!#$%^&*()\-_=+\[\]{};:'",.<>?/\\|`~]/.test(p) },
+  { id: 'length',    label: 'At least 8 characters',                  test: (p) => p.length >= 8 },
+  { id: 'uppercase', label: 'At least 1 uppercase letter (A-Z)',       test: (p) => /[A-Z]/.test(p) },
+  { id: 'number',    label: 'At least 1 number (0-9)',                 test: (p) => /[0-9]/.test(p) },
+  { id: 'special',   label: 'At least 1 special character (@!#$%^&*)', test: (p) => /[@!#$%^&*()\-_=+\[\]{};:'",.<>?/\\|`~]/.test(p) },
 ];
 
 function isPasswordValid(password) {
@@ -70,6 +70,7 @@ const AuthModal = ({ isOpen, onClose, defaultMode = 'login' }) => {
   const [success, setSuccess]           = useState('');
   const [loading, setLoading]           = useState(false);
   const [nameErrors, setNameErrors]     = useState({ firstName: '', lastName: '' });
+  const [emailError, setEmailError]     = useState('');
   const [touched, setTouched]           = useState({});
 
   const { login, register } = useAuth();
@@ -83,6 +84,7 @@ const AuthModal = ({ isOpen, onClose, defaultMode = 'login' }) => {
       setSuccess('');
       setFormData({ email: '', password: '', firstName: '', lastName: '', confirmPassword: '' });
       setNameErrors({ firstName: '', lastName: '' });
+      setEmailError('');
       setTouched({});
     }
   }, [isOpen]);
@@ -105,6 +107,20 @@ const AuthModal = ({ isOpen, onClose, defaultMode = 'login' }) => {
   const handleNameKeyDown = (e) => {
     if (e.key.length > 1) return;
     if (!/[a-zA-Z]/.test(e.key)) e.preventDefault();
+  };
+
+  // ── Email change handler ───────────────────────────────────────────────────
+  const handleEmailChange = (e) => {
+    // Strip whitespace and control characters in real-time
+    const cleaned = e.target.value.replace(/\s/g, '');
+    setFormData((prev) => ({ ...prev, email: cleaned }));
+    setError('');
+    if (cleaned === '') { setEmailError(''); return; }
+    if (!EMAIL_REGEX.test(cleaned)) {
+      setEmailError('Please enter a valid email address (e.g. you@example.com)');
+    } else {
+      setEmailError('');
+    }
   };
 
   const handleChange = (e) => {
@@ -138,6 +154,7 @@ const AuthModal = ({ isOpen, onClose, defaultMode = 'login' }) => {
         const email = formData.email.trim();
         if (!email) { setError('Email is required'); setLoading(false); return; }
         if (email.length > 254) { setError('Email address is too long'); setLoading(false); return; }
+        if (!EMAIL_REGEX.test(email)) { setError('Please enter a valid email address (e.g. you@example.com)'); setLoading(false); return; }
 
         if (!isPasswordValid(formData.password)) {
           if (formData.password.length < 8) setError('Password must be at least 8 characters');
@@ -150,6 +167,7 @@ const AuthModal = ({ isOpen, onClose, defaultMode = 'login' }) => {
         if (formData.password.length > 128) { setError('Password is too long (max 128 characters)'); setLoading(false); return; }
         if (formData.password !== formData.confirmPassword) { setError('Passwords do not match'); setLoading(false); return; }
         if (nameErrors.firstName || nameErrors.lastName) { setError('Please fix the name fields before submitting'); setLoading(false); return; }
+        if (emailError) { setError('Please enter a valid email address'); setLoading(false); return; }
 
         const result = await register({
           email,
@@ -169,14 +187,14 @@ const AuthModal = ({ isOpen, onClose, defaultMode = 'login' }) => {
         }
 
       } else if (mode === 'forgot') {
-        // ── FIX: Call YOUR OWN backend, not Supabase directly ──────────────
-        // The old code called supabase.auth.resetPasswordForEmail() which sends
-        // a Supabase-style link that ResetPasswordPage.jsx cannot read.
-        // Your ResetPasswordPage expects ?token= from /api/auth/forgot-password.
+        const email = formData.email.trim();
+        if (!email) { setError('Email is required'); setLoading(false); return; }
+        if (!EMAIL_REGEX.test(email)) { setError('Please enter a valid email address'); setLoading(false); return; }
+
         const res = await fetch(`${API_BASE}/api/auth/forgot-password`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: formData.email.trim() }),
+          body: JSON.stringify({ email }),
         });
 
         const data = await res.json();
@@ -186,11 +204,13 @@ const AuthModal = ({ isOpen, onClose, defaultMode = 'login' }) => {
         } else {
           setSuccess('Check your email for a password reset link!');
         }
-        // ──────────────────────────────────────────────────────────────────
 
       } else {
         if (!formData.email.trim() || !formData.password) {
           setError('Email and password are required'); setLoading(false); return;
+        }
+        if (!EMAIL_REGEX.test(formData.email.trim())) {
+          setError('Please enter a valid email address'); setLoading(false); return;
         }
         const result = await login(formData.email.trim(), formData.password);
         if (result.success) { onClose(); navigate('/dashboard'); }
@@ -208,6 +228,7 @@ const AuthModal = ({ isOpen, onClose, defaultMode = 'login' }) => {
     setError(''); setSuccess('');
     setFormData({ email: '', password: '', firstName: '', lastName: '', confirmPassword: '' });
     setNameErrors({ firstName: '', lastName: '' });
+    setEmailError('');
     setTouched({});
   };
 
@@ -219,6 +240,9 @@ const AuthModal = ({ isOpen, onClose, defaultMode = 'login' }) => {
   };
 
   const showStrength = mode === 'register' && formData.password.length > 0;
+
+  const emailIsValid   = EMAIL_REGEX.test(formData.email);
+  const emailIsTouched = touched.email && formData.email;
 
   return (
     <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
@@ -290,10 +314,33 @@ const AuthModal = ({ isOpen, onClose, defaultMode = 'login' }) => {
             <div className="form-group">
               <label className="form-label">Email Address</label>
               <input
-                type="email" name="email" value={formData.email}
-                onChange={handleChange} className="form-input"
-                placeholder="you@example.com" required maxLength={254}
+                type="text"
+                name="email"
+                value={formData.email}
+                onChange={handleEmailChange}
+                onBlur={handleBlur('email')}
+                className="form-input"
+                placeholder="you@example.com"
+                required
+                maxLength={254}
+                autoComplete="email"
+                style={{
+                  borderColor:
+                    emailIsTouched && !emailIsValid
+                      ? 'rgba(248,113,113,0.6)'
+                      : emailIsTouched && emailIsValid
+                      ? 'rgba(74,222,128,0.5)'
+                      : undefined,
+                }}
               />
+              {emailIsTouched && !emailIsValid && (
+                <p style={{ fontSize: 11, color: '#f87171', marginTop: 4, lineHeight: 1.4 }}>
+                  Please enter a valid email address (e.g. you@example.com)
+                </p>
+              )}
+              {emailIsTouched && emailIsValid && (
+                <p style={{ fontSize: 11, color: '#22c55e', marginTop: 4 }}>✓ Valid email address</p>
+              )}
             </div>
 
             {/* ── Password ── */}
